@@ -174,11 +174,21 @@ DXF opens cleanly in a CAD viewer.
 
 ---
 
-## Open questions (decide before Phase 0 merges)
+## Resolved decisions
 
-1. **License:** MIT or Apache-2.0. Apache-2.0 adds an explicit patent grant, which matters more
-   for an engineering-calculation tool; MIT is shorter and more common in the JS ecosystem.
-2. **`RustProp` availability and license** — confirm the crate exists under a permissive license
-   and covers sub-zero/high-pressure formulations. If not, Phase 1 grows to include implementing
-   the ASHRAE formulations directly, and should be split into 1a (formulations) and 1b (API).
-3. **DXF export path:** an existing permissive Rust/JS DXF writer, or hand-rolled minimal R12 output.
+1. **License: MIT.** Applied in `LICENSE` and declared in the Cargo workspace and
+   `web/package.json`.
+2. **`RustProp` is a first-party product** owned by the maintainer, so it needs no
+   third-party license audit. Phase 1 keeps it behind the `psychro-core` API anyway, so
+   the dependency stays swappable and the calculation surface stays independently testable.
+3. **DXF export stays in scope** for Phase 11. The writer choice (existing permissive
+   crate vs. minimal hand-rolled R12) is a Phase 11 implementation detail, not a
+   blocker for earlier phases.
+
+## Still open
+
+- **How `RustProp` is consumed by the build** — crates.io, a git dependency, or vendored
+  into the workspace. This determines the Phase 1 `Cargo.toml` and whether CI needs
+  credentials, so it must be settled before Phase 1 starts. It does not block Phase 0.
+- **TypeScript 7 upgrade.** The scaffold pins TypeScript 6 because `typescript-eslint`
+  declares `typescript <6.1.0`. Revisit once that peer range widens.

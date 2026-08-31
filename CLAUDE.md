@@ -4,10 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-The repo currently contains documentation only — no application code is scaffolded yet.
-`REQUIREMENTS.md` is the product spec and the source of truth; `DEVELOPMENT_PLAN.md` holds
-the phased build order. Do not infer that a build tool, test runner, or directory exists
-until it has actually been created. Update the Commands section below as each phase lands.
+Phase 0 of `DEVELOPMENT_PLAN.md` is complete: the Cargo workspace, the React/Vite app, and
+CI exist, but no psychrometric logic is implemented yet. `REQUIREMENTS.md` is the product
+spec and the source of truth; `DEVELOPMENT_PLAN.md` holds the phased build order and the
+open decisions. Update the Commands section below as each phase lands.
+
+`RustProp` is a first-party product of the maintainer. Phase 1 wraps it behind the
+`psychro-core` API so the dependency stays swappable; how it is consumed by the build
+(crates.io / git / vendored) is still open and must be settled before Phase 1.
 
 ## Branch policy
 
@@ -21,24 +25,29 @@ git push -u origin HEAD
 gh pr create --fill
 ```
 
-## Planned toolchain (not yet scaffolded)
+## Commands
 
-Target commands once the corresponding phase exists — verify against the real
-`package.json` / `Cargo.toml` before relying on them.
+Verified against the current scaffold. Frontend commands run from `web/`.
 
 | Purpose | Command |
 |---|---|
-| Build the WASM engine | `wasm-pack build crates/psychro-wasm --target web --out-dir ../../web/src/wasm` |
+| Build the WASM engine | `npm run wasm` |
+| Frontend dev server | `npm run dev` (rebuilds WASM first) |
+| Frontend typecheck / lint / test | `npm run typecheck` / `npm run lint` / `npm run test` |
+| Single frontend test | `npx vitest run src/App.test.tsx -t "renders the application shell"` |
 | Rust tests | `cargo test --workspace` |
-| Single Rust test | `cargo test -p psychro-core <test_name> -- --exact --nocapture` |
-| Rust format / lint | `cargo fmt --all && cargo clippy --workspace -- -D warnings` |
-| Frontend dev server | `npm run dev` (from `web/`) |
-| Frontend tests | `npm run test` (Vitest) |
-| Single frontend test | `npx vitest run src/stores/psychStore.test.ts -t "adds a point"` |
-| Frontend lint / typecheck | `npm run lint && npx tsc --noEmit` |
+| Single Rust test | `cargo test -p psychro-core <name> -- --exact --nocapture` |
+| Rust format / lint | `cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings` |
 
-The WASM package must be rebuilt before the frontend can typecheck against it — a stale
-`out-dir` is the usual cause of "module has no exported member" errors on generated types.
+`web/src/wasm/` is generated and gitignored, so it must be built before the frontend can
+typecheck against it — a missing or stale `out-dir` is the usual cause of "module has no
+exported member" errors on generated types.
+
+Clippy runs with `-D warnings` and the workspace sets `missing_docs = "warn"`, so an
+undocumented public Rust item fails CI.
+
+TypeScript is pinned to 6.x: `typescript-eslint` declares a peer range of `<6.1.0` and does
+not support TypeScript 7 yet.
 
 ## Architecture
 
