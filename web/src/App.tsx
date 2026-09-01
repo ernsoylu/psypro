@@ -1,25 +1,11 @@
+import { DebugPanel } from './DebugPanel';
+
 /**
- * Application shell placeholder.
+ * Application shell.
  *
  * Phase 4 replaces this with the real top nav / toolbox / viewport / properties
- * layout. It exists now only so the scaffold renders something and the theme
- * variables are exercised end to end.
+ * layout. For now it hosts the engine debug panel.
  */
 export function App() {
-  return (
-    <main
-      style={{
-        display: 'grid',
-        placeContent: 'center',
-        height: '100%',
-        gap: '0.5rem',
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ margin: 0, fontSize: '1.25rem' }}>PsyPro</h1>
-      <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>
-        Scaffold only — see DEVELOPMENT_PLAN.md for the build order.
-      </p>
-    </main>
-  );
+  return <DebugPanel />;
 }

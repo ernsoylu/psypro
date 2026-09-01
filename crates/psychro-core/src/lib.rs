@@ -13,6 +13,7 @@
 pub mod constants;
 pub mod saturation;
 pub mod state;
+pub mod units;
 
 pub use state::StatePoint;
 
