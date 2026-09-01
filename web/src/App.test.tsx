@@ -14,7 +14,22 @@ vi.mock('./psychro', async () => {
     DbtHumidityRatio: 3,
     DbtEnthalpy: 4,
   } as const;
+  const ChartLayout = { Ashrae: 0, MollierIx: 1 } as const;
+  const CurveFamilyId = {
+    DryBulb: 0,
+    HumidityRatio: 1,
+    RelativeHumidity: 2,
+    WetBulb: 3,
+    Enthalpy: 4,
+    SpecificVolume: 5,
+  } as const;
   return {
+    ChartLayout,
+    CurveFamilyId,
+    generate_base_grid: () => [
+      { family: 2, value: 1, coords: [0, 0, 30, 0.03] },
+    ],
+    get_chart_extent: () => ({ x_min: -10, x_max: 52, y_min: 0, y_max: 0.03 }),
     InputState,
     StatePointInput: class {
       constructor(

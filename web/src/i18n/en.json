@@ -25,7 +25,13 @@
   "tool.group.view": "View",
 
   "viewport.label": "Psychrometric chart",
-  "viewport.pending": "The chart renders here in Phase 5.",
+
+  "axis.dryBulb": "DRY-BULB TEMPERATURE  —  {unit}",
+  "axis.humidityRatio": "HUMIDITY RATIO  —  kg moisture / kg dry air",
+
+  "layout.label": "Chart layout",
+  "layout.ashrae": "ASHRAE",
+  "layout.mollier": "Mollier i-x",
 
   "panel.label": "Properties",
   "panel.title": "State point",

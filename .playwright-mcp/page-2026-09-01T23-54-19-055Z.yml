@@ -1,0 +1,115 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]: PsyPro
+      - generic [ref=f2e11]: Untitled Project
+      - generic [ref=f2e12]: engine 0.1.0
+    - generic [ref=f2e13]:
+      - button "Save" [ref=f2e14] [cursor=pointer]
+      - button "Open" [ref=f2e17] [cursor=pointer]
+      - button "Export" [ref=f2e20] [cursor=pointer]
+    - generic [ref=f2e23]:
+      - group "Unit system" [ref=f2e24]:
+        - button "IP" [ref=f2e25] [cursor=pointer]
+        - button "SI" [pressed] [ref=f2e26] [cursor=pointer]
+      - combobox "Chart layout" [active] [ref=f2e27]:
+        - option "ASHRAE"
+        - option "Mollier i-x" [selected]
+      - generic [ref=f2e28]:
+        - generic [ref=f2e31]: Elev
+        - textbox "Site elevation" [ref=f2e32]: "0"
+        - generic [ref=f2e33]: m
+      - button "Switch to dark theme" [ref=f2e34] [cursor=pointer]
+  - generic [ref=f2e37]:
+    - navigation [ref=f2e38]:
+      - group "Tools" [ref=f2e39]:
+        - button "Select" [pressed] [ref=f2e40] [cursor=pointer]
+        - button "Add state point" [ref=f2e43] [cursor=pointer]
+        - button "Draw process line" [ref=f2e46] [cursor=pointer]
+        - button "Draw shape" [ref=f2e49] [cursor=pointer]
+        - button "Crosshair mode" [ref=f2e52] [cursor=pointer]
+      - group "View" [ref=f2e56]:
+        - button "Zoom in" [ref=f2e57] [cursor=pointer]
+        - button "Zoom out" [ref=f2e60] [cursor=pointer]
+        - button "Fit to window" [ref=f2e63] [cursor=pointer]
+    - main "Psychrometric chart" [ref=f2e66]
+    - complementary "Properties" [ref=f2e67]:
+      - generic [ref=f2e68]:
+        - generic [ref=f2e69]: State point
+        - button "Panel menu" [ref=f2e71] [cursor=pointer]
+      - heading "KNOWN INPUTS" [level=2] [ref=f2e74]
+      - generic [ref=f2e75]:
+        - generic [ref=f2e76]:
+          - generic [ref=f2e77]:
+            - text: Dry-bulb temperature
+            - generic [ref=f2e78]: °C
+          - textbox "Dry-bulb temperature °C" [ref=f2e79]: "24"
+        - generic [ref=f2e80]:
+          - generic [ref=f2e81]: Second known property
+          - combobox "Second known property" [ref=f2e82]:
+            - option "Relative humidity" [selected]
+            - option "Wet-bulb temperature (thermodynamic)"
+            - option "Dew point"
+            - option "Humidity ratio"
+            - option "Enthalpy"
+        - generic [ref=f2e83]:
+          - generic [ref=f2e84]:
+            - text: Relative humidity
+            - generic [ref=f2e85]: "%"
+          - textbox "Relative humidity %" [ref=f2e86]: "50"
+        - generic [ref=f2e87]:
+          - checkbox "Real-gas enhancement factor Off = ideal gas, for teaching" [checked] [ref=f2e88]
+          - generic [ref=f2e89]:
+            - text: Real-gas enhancement factor
+            - generic [ref=f2e90]: Off = ideal gas, for teaching
+      - heading "DERIVED PROPERTIES" [level=2] [ref=f2e94]
+      - table [ref=f2e95]:
+        - rowgroup [ref=f2e96]:
+          - row [ref=f2e97]:
+            - rowheader "Dry-bulb temperature" [ref=f2e98]
+            - cell "24.00" [ref=f2e99]
+            - cell "°C" [ref=f2e100]
+          - row [ref=f2e101]:
+            - rowheader "Wet-bulb temperature (thermodynamic)" [ref=f2e102]
+            - cell "17.06" [ref=f2e103]
+            - cell "°C" [ref=f2e104]
+          - row [ref=f2e105]:
+            - rowheader "Dew point" [ref=f2e106]
+            - cell "12.95" [ref=f2e107]
+            - cell "°C" [ref=f2e108]
+          - row [ref=f2e109]:
+            - rowheader "Humidity ratio" [ref=f2e110]
+            - cell "0.009340" [ref=f2e111]
+            - cell "kg/kg" [ref=f2e112]
+          - row [ref=f2e113]:
+            - rowheader "Humidity ratio" [ref=f2e114]
+            - cell "65.4" [ref=f2e115]
+            - cell "gr/lb" [ref=f2e116]
+          - row [ref=f2e117]:
+            - rowheader "Relative humiditypᵥ/pᵥₛ" [ref=f2e118]
+            - cell "50.00" [ref=f2e119]
+            - cell "%" [ref=f2e120]
+          - row [ref=f2e121]:
+            - rowheader "Degree of saturationW/Wₛ" [ref=f2e122]
+            - cell "49.25" [ref=f2e123]
+            - cell "%" [ref=f2e124]
+          - row [ref=f2e125]:
+            - rowheader "Enthalpy" [ref=f2e126]
+            - cell "47.909" [ref=f2e127]
+            - cell "kJ/kg" [ref=f2e128]
+          - row [ref=f2e129]:
+            - rowheader "Specific volume (dry-air basis)" [ref=f2e130]
+            - cell "0.85411" [ref=f2e131]
+            - cell "m³/kg" [ref=f2e132]
+          - row [ref=f2e133]:
+            - rowheader "Moist-air density (reference only)" [ref=f2e134]
+            - cell "1.18174" [ref=f2e135]
+            - cell "kg/m³" [ref=f2e136]
+          - row [ref=f2e137]:
+            - rowheader "Vapour pressure" [ref=f2e138]
+            - cell "1.4921" [ref=f2e139]
+            - cell "kPa" [ref=f2e140]
+          - row [ref=f2e141]:
+            - rowheader "Barometric pressure" [ref=f2e142]
+            - cell "101.3250" [ref=f2e143]
+            - cell "kPa" [ref=f2e144]

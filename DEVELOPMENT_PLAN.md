@@ -74,7 +74,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 3 — Coordinate transformation | **Done** — oblique construction, both layouts, 22 tests |
 | 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 17 components contributed upstream, closing the §4 catalogue |
 | 4 — Application shell and theme | **Done** — shell, palette, i18n, and a test that fails the build on a literal |
-| 5–13 | Not started |
+| 5 — Canvas Layer 0 (base grid) | **Done** — both layouts, pan/zoom, grid cached and the cache asserted |
+| 6–13 | Not started |
 
 ---
 
@@ -258,6 +259,23 @@ ahead of the feature that needs them; they come back in Phase 6 with the click-t
 
 **Exit:** Both chart layouts render correctly, pan/zoom stay smooth, and the grid is *not*
 regenerated on pan/zoom (assert via a render counter in a test).
+
+**Done.** `src/chart/cache.test.ts` counts `generate_base_grid` calls across 30 pans, four
+zooms and ten re-renders and asserts it stays at one — and that it goes to two the moment
+altitude or layout changes, because a cache that never invalidates would draw a sea-level
+chart for a site in Denver.
+
+Two things worth recording:
+
+- **The two chart axes are scaled independently.** They carry different quantities — the
+  reduced coordinate in kJ/kg_da against humidity ratio in kg/kg_da — differing by three
+  orders of magnitude over a comfort-range domain. A uniform scale collapses the chart to a
+  horizontal line, which is what it did on screen before this was written down. The invariant
+  that *does* hold is that a zoom multiplies both by the same factor, so the aspect a fit
+  establishes never changes; that is what keeps the SHR protractor readable.
+- **Axis numerals are derived from the grid, never recomputed.** Every tick anchor is an
+  endpoint of a curve the engine already produced, so the numerals cannot drift from the lines
+  they label — and no `σ = t·(c_p,da + c_p,wv·W)` gets reimplemented in TypeScript.
 
 ---
 
