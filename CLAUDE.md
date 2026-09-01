@@ -77,6 +77,19 @@ All thermodynamics lives in Rust, wrapping the `RustProp` library, compiled via 
 Core contracts (see `REQUIREMENTS.md` §3 and the blueprint):
 `calculate_state`, `mix_air`, `get_coordinate_mapping`, `bin_weather_data`.
 
+**Formulation constants are load-bearing — do not "simplify" them.** `psychro-core` implements
+IAPWS-IF97 over water and IAPWS-06/08 over ice, with ASHRAE RP-1485 constants
+(`h_g,ref = 2499.86`, `cp_wv = 1.84`, `M_wv/M_da = 0.621945`, `R_da = 287.042`). The widely
+copied `2501`/`1.86` values and a single Magnus fit are both wrong — the latter by over 20%
+at −20 °C, because it has no ice branch. `crates/psychro-core/tests/ashrae_conformance.rs`
+pins all of this against published reference values and is the acceptance gate for any change
+to the calculation layer; it stays valid whichever library does the arithmetic.
+
+Three distinctions the code and UI must preserve (they are the field's most common errors,
+per Gatley's *Understanding Psychrometrics*): relative humidity `p_wv/p_ws` is not degree of
+saturation `W/W_s`; thermodynamic wet-bulb is not psychrometer wet-bulb; and mass balances use
+dry-air mass flow `V̇ / v_da`, never `V̇ · ρ_moist`.
+
 ### 2. Coordinate transformation — two distinct stages
 
 Do not collapse these into one function; they change for different reasons.

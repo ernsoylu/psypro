@@ -27,15 +27,20 @@ Dependencies are noted where a phase can be parallelised; everything else is str
 ## Phase 1 — Rust thermodynamic core
 **Goal:** Correct psychrometrics, headless, with no WASM or UI involved.
 
-- `RustProp` wrapped behind our own `psychro-core` API so the dependency stays swappable.
-- `InputState` enum (DbtWbt, DbtRh, DbtEnthalpy, …), `StatePointInput`, `StatePointOutput`.
-- IP/SI handling and altitude → barometric pressure; high-pressure support to 100 PSI.
-- Sub-zero saturation: Goff-Gratch / ASHRAE ice-vs-water branch below 0 °C.
-- Fog region: saturation vs. mixture enthalpy.
-- Rustdoc on every public item.
+**Status: substantially landed.** `psychro-core` now implements the formulations below with a
+14-case conformance suite; `RustProp` integration and the fog region remain.
 
-**Exit:** `cargo test` passes a table of ASHRAE Handbook reference values (sea level, altitude,
-sub-zero, and high-pressure cases) within a documented tolerance. No UI exists yet.
+- IAPWS-IF97 saturation over liquid water, IAPWS-06/08 over ice — both branches, always.
+- ASHRAE RP-1485 constants; real-gas enhancement factor with an ideal-gas mode for teaching.
+- `Atmosphere` carries barometric pressure and the real-gas flag as explicit inputs.
+- Enthalpy, specific volume, dry-air mass flow, relative humidity **and** degree of saturation.
+- Thermodynamic wet-bulb with separate liquid and ice branches; dew/frost point by inversion.
+- Altitude → pressure via the ICAO standard atmosphere.
+- Remaining: `RustProp` wrapping, the `InputState` enum surface, fog region, high-pressure
+  validation to 100 PSI.
+
+**Exit:** `cargo test -p psychro-core` passes the ASHRAE/IAPWS reference table including
+sub-zero and altitude cases. Achieved for the items above.
 
 ---
 
