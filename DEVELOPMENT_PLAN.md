@@ -52,14 +52,15 @@ PsyPro is the psychrometric *application*: the chart, the document model, the in
 profiles, the teaching affordances. Where the engine is missing something PsyPro needs, the
 fix goes **upstream into frees** rather than being reimplemented here.
 
-Two gaps are already identified:
+Two gaps were identified on adoption, and both are now closed **upstream** — the rule being
+that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 
-1. **Chart geometry.** `frees-core/src/props/psychro.rs` generates a *rectangular* chart —
+1. **Chart geometry.** `frees-core/src/props/psychro.rs` generated a *rectangular* chart —
    dry-bulb on x, humidity ratio on y — with no oblique construction and no Mollier i-x
-   layout. `psychro-core/src/chart.rs` has the derived oblique transform for both layouts.
-   That is a contribution, not a local workaround.
-2. **Component coverage.** `moistair.frees` and `ac.frees` ship 26 components. The catalogue
-   in `REQUIREMENTS.md` §4 has 37, and the gaps are listed in Phase 2.5 below.
+   layout. Contributed as `frees_core::props::psychrochart`, both layouts, 7 tests.
+2. **Component coverage.** `moistair.frees` shipped 19 moist-air components against a
+   37-entry catalogue in `REQUIREMENTS.md` §4. Seventeen were contributed across two waves;
+   `moistair.frees` now carries 36, and the catalogue is covered. See Phase 2.5c.
 
 ---
 
@@ -71,7 +72,7 @@ Two gaps are already identified:
 | 1 — Psychrometric core | **Superseded by frees.** The reference implementation and its 14-case ASHRAE conformance suite stay as the grading gate |
 | 2 — WASM bridge | **Done** — typed handshake, IP/SI at the boundary, debug panel |
 | 3 — Coordinate transformation | **Done** — oblique construction, both layouts, 22 tests |
-| 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 7 components contributed upstream |
+| 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 17 components contributed upstream, closing the §4 catalogue |
 | 4–13 | Not started |
 
 ---
@@ -98,29 +99,59 @@ the ASHRAE oblique construction and the Mollier i-x layout it currently lacks.
 
 **Exit:** a PR against `ernsoylu/frees-wasm` with the round-trip and straightness tests.
 
-### 2.5c — Contribute the missing components — **done**, 7 of the gaps closed
-`moistair.frees` and `ac.frees` cover 26 of the catalogue's 37. What frees already has —
-including several PsyPro had not catalogued — is: MoistAirSource/Sink, HeatingCoil,
-Humidifier, MixingBox, CoolingCoil, MoistAirWallHX, MoistAirFan, MoistAirDamper,
+### 2.5c — Contribute the missing components — **done**, the catalogue is closed
+`moistair.frees` now carries **36 components**, up from 19 when PsyPro adopted frees. What
+frees already had — including several PsyPro had not catalogued — is: MoistAirSource/Sink,
+HeatingCoil, Humidifier, MixingBox, CoolingCoil, MoistAirWallHX, MoistAirFan, MoistAirDamper,
 EvaporativeCooler, CabinZone, MembraneHumidifier, MoistAirDuct, AirFilter, Diffuser, VAVBox,
 EnthalpyWheel, Infiltration, AHU, Chiller, EXV/EXVCmd, AirCoil, TXV, Radiator, HeaterCore.
 
-`CabinZone`, `HeaterCore` and `Radiator` mean the **automotive profile is already well
+`CabinZone`, `HeaterCore` and `Radiator` mean the **automotive profile was already well
 served** — a significant finding, since that was expected to be the thinnest of the three.
 
-Gaps, in the order they earn their place:
+Contributed upstream in two waves, seventeen components in total:
 
-| Family | Missing |
+| Wave | Contributed |
 |---|---|
-| Energy recovery | Fixed plate, membrane plate, sensible heat wheel, heat pipe, run-around coil loop, thermosiphon, twin towers |
-| Dehumidification | Solid desiccant wheel, liquid desiccant, heat-pipe wrap-around |
-| Coils | Face-and-bypass, run-around recuperative loop |
-| Evaporative | Indirect (IEC), indirect/direct two-stage |
-| Airside | Economizer changeover |
-| Terminal units | Fan-powered box, induction unit, active and passive chilled beam, fan coil unit, radiant panel, DOAS |
+| 1 | SensibleAirToAirHX, DesiccantWheel, IndirectEvaporativeCooler, SteamHumidifier, ChilledBeam, FanPoweredBox |
+| 2 | ApparatusDewPointCoil, FaceAndBypassCoil, HeatPipeWrapAround, TotalEnergyExchanger, LiquidDesiccantContactor, IndirectDirectEvaporativeCooler, Economizer, InductionUnit, FanCoilUnit, RadiantPanel, DOAS |
 
-**Exit:** each contributed component has a fixture in the frees corpus that solves, and the
-governing equation in `REQUIREMENTS.md` §4 is the one implemented.
+Three of the §4 entries are **configurations of one component, not components of their own**,
+following frees' own precedent of one model with documented rating bands:
+
+| §4 entry | Served by | Rating |
+|---|---|---|
+| Fixed plate, heat wheel, heat pipe, run-around loop, thermosiphon | `SensibleAirToAirHX` | eff 40–85%, eatr 0–10%, oacf 0.97–1.2 |
+| Membrane plate, twin towers | `TotalEnergyExchanger` | eps_s/eps_L 40–75%, eatr 0–5% |
+| Run-around recuperative loop | `HeatPipeWrapAround` | same topology, pumped rather than passive |
+
+The PsyPro palette maps the catalogue name to `(component, preset)`; that mapping is a UI
+concern and does not belong upstream.
+
+**Two gaps found in frees while closing PsyPro's**, both now fixed there:
+
+- **No apparatus-dew-point coil.** `CoolingCoil` drives the leaving air to *saturation* at a
+  given temperature — a perfect coil, BF = 0. Real coils leave air at 85–95% RH. Since the
+  ADP/bypass-factor construction is the centre of every psychrometric design, this was the
+  largest single gap in the library, not a refinement.
+- **EATR and OACF were missing from the sensible recovery family.** §4.5 names both as
+  things a credible tool must not omit. Both are now required parameters — defaulting them
+  to zero would answer a cross-contamination question wrongly and silently.
+
+Adding EATR and OACF made `SensibleHeatWheel` equation-for-equation identical to
+`SensibleAirToAirHX`, so the two were consolidated into one.
+
+**Exit:** each contributed component solves and is gated by a test asserting its *defining
+property*, and the governing equation in `REQUIREMENTS.md` §4 is the one implemented.
+
+Not the frees **corpus**, deliberately: corpus fixtures are graded against golden values from
+the Java reference, and none of these seventeen has a Java counterpart, so there is no golden
+to grade them by. `crates/frees-core/tests/moistair_recovery.rs` and `moistair_design.rs`
+(20 tests) assert what a regression would actually break instead — a sensible exchanger that
+starts moving moisture, a wrap-around loop that invents energy, a coil whose three
+bypass-factor forms stop agreeing, a chilled beam that condenses without saying so. All of
+those stay dimensionally consistent and would sail through a residual check; they just would
+not be the device any more.
 
 ---
 

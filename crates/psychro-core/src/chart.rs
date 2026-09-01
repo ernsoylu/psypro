@@ -34,6 +34,15 @@
 //!
 //! Because both families are straight in this space, a renderer needs only two
 //! endpoints per enthalpy or dry-bulb line rather than a sampled polyline.
+//!
+//! # Where the transform lives
+//!
+//! The construction above is **not implemented here**. It was contributed to
+//! frees as [`frees_core::props::psychrochart`] and is re-exported below, so
+//! there is one implementation of the geometry rather than two that can drift.
+//! What stays in this module is the part that is about *drawing* a chart rather
+//! than about the coordinates: which families to generate, how densely to sample
+//! the curved ones, and where to clip them against saturation.
 
 use crate::constants::{CP_DA, CP_WV, H_G_REF};
 use crate::saturation::p_ws;
@@ -41,43 +50,10 @@ use crate::state::{
     humidity_ratio_from_p_wv, humidity_ratio_from_wet_bulb, saturation_humidity_ratio, Atmosphere,
 };
 
-/// Which chart layout the coordinates are expressed in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ChartLayout {
-    /// ASHRAE format: reduced sensible coordinate horizontal, humidity ratio vertical.
-    Ashrae,
-    /// Mollier i-x diagram: humidity ratio horizontal, reduced sensible coordinate vertical.
-    ///
-    /// The 0 °C isotherm is horizontal at `y = 0`, which is the defining feature
-    /// of the layout.
-    MollierIx,
-}
-
-/// A point in chart space.
-///
-/// Units are those of the reduced coordinate (kJ/kg_da) on one axis and humidity
-/// ratio (kg/kg_da) on the other; which is which depends on the layout. The view
-/// layer scales these to pixels.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ChartPoint {
-    /// Horizontal chart coordinate.
-    pub x: f64,
-    /// Vertical chart coordinate.
-    pub y: f64,
-}
-
-/// An axis-aligned region of chart space.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ChartBounds {
-    /// Minimum horizontal coordinate.
-    pub x_min: f64,
-    /// Maximum horizontal coordinate.
-    pub x_max: f64,
-    /// Minimum vertical coordinate.
-    pub y_min: f64,
-    /// Maximum vertical coordinate.
-    pub y_max: f64,
-}
+pub use frees_core::props::psychrochart::{
+    bounds as chart_space_bounds, from_chart, reduced_coordinate, temperature_from_reduced,
+    to_chart, ChartBounds, ChartLayout, ChartPoint,
+};
 
 /// The physical extent a chart is drawn over.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -103,71 +79,22 @@ impl Default for ChartDomain {
     }
 }
 
-/// The reduced sensible coordinate `σ = h − h_g,ref·W = t·(c_p,da + c_p,wv·W)`.
-#[must_use]
-pub fn reduced_coordinate(t_db: f64, w: f64) -> f64 {
-    t_db * (CP_DA + CP_WV * w)
-}
-
-/// Recovers dry-bulb temperature from the reduced coordinate and humidity ratio.
-///
-/// Exact inverse of [`reduced_coordinate`]; the denominator is bounded below by
-/// `c_p,da` for any physical `W ≥ 0`, so this cannot divide by zero.
-#[must_use]
-pub fn temperature_from_reduced(sigma: f64, w: f64) -> f64 {
-    sigma / (CP_DA + CP_WV * w)
-}
-
-/// Maps a state's dry-bulb temperature and humidity ratio into chart space.
-#[must_use]
-pub fn to_chart(t_db: f64, w: f64, layout: ChartLayout) -> ChartPoint {
-    let sigma = reduced_coordinate(t_db, w);
-    match layout {
-        ChartLayout::Ashrae => ChartPoint { x: sigma, y: w },
-        ChartLayout::MollierIx => ChartPoint { x: w, y: sigma },
-    }
-}
-
-/// Recovers dry-bulb temperature and humidity ratio from a chart-space point.
-///
-/// Exact inverse of [`to_chart`]. This is the path a pointer drag takes: screen
-/// coordinates become chart coordinates in the view layer, then properties here.
-#[must_use]
-pub fn from_chart(point: ChartPoint, layout: ChartLayout) -> (f64, f64) {
-    let (sigma, w) = match layout {
-        ChartLayout::Ashrae => (point.x, point.y),
-        ChartLayout::MollierIx => (point.y, point.x),
-    };
-    (temperature_from_reduced(sigma, w), w)
-}
-
 /// The chart-space bounds of a physical domain.
 ///
-/// The reduced coordinate depends on `W` as well as `t`, so the extremes are
-/// taken over the domain's corners rather than assumed to lie at the temperature
-/// limits.
+/// A [`ChartDomain`]-shaped wrapper over
+/// [`frees_core::props::psychrochart::bounds`], which takes the four limits
+/// loose. The corners matter rather than the temperature limits: the reduced
+/// coordinate depends on `W` as well as `t`, so the extremes need not lie where
+/// the temperatures do.
 #[must_use]
 pub fn bounds(domain: &ChartDomain, layout: ChartLayout) -> ChartBounds {
-    let corners = [
-        (domain.t_min, domain.w_min),
-        (domain.t_min, domain.w_max),
-        (domain.t_max, domain.w_min),
-        (domain.t_max, domain.w_max),
-    ];
-    let mut b = ChartBounds {
-        x_min: f64::INFINITY,
-        x_max: f64::NEG_INFINITY,
-        y_min: f64::INFINITY,
-        y_max: f64::NEG_INFINITY,
-    };
-    for (t, w) in corners {
-        let p = to_chart(t, w, layout);
-        b.x_min = b.x_min.min(p.x);
-        b.x_max = b.x_max.max(p.x);
-        b.y_min = b.y_min.min(p.y);
-        b.y_max = b.y_max.max(p.y);
-    }
-    b
+    chart_space_bounds(
+        domain.t_min,
+        domain.t_max,
+        domain.w_min,
+        domain.w_max,
+        layout,
+    )
 }
 
 /// Which family a generated curve belongs to.

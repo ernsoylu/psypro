@@ -172,16 +172,20 @@ Sensible `ε_s = (t_1 − t_2)/(t_1 − t_3)`, total `ε_t` on enthalpy, latent 
 Two parameters that a credible tool must not omit: **EATR** (exhaust air transfer ratio, the
 cross-contamination fraction) and **OACF** (outdoor air correction factor).
 
-| Device | Sensible ε | Latent ε | EATR | Chart behaviour |
-|---|---|---|---|---|
-| Fixed plate | 50–80% | 0 | 0–5% | Horizontal, `W` constant |
-| Membrane plate | 50–75% | 50–73% | 0–5% | Diagonal toward other stream |
-| Energy (enthalpy) wheel | 50–85% | 50–85% | 0.5–10% | Straight line toward other stream's state |
-| Heat wheel (sensible) | 50–85% | 0 | 0.5–10% | Horizontal |
-| Heat pipe | 45–65% | 0 | 0–1% | Horizontal |
-| Run-around coil loop | 55–65% | 0 | 0 | Horizontal |
-| Thermosiphon | 40–60% | 0 | 0 | Horizontal |
-| Twin towers | 40–60% | yes | 0 | Diagonal |
+| Device | Sensible ε | Latent ε | EATR | OACF | Chart behaviour |
+|---|---|---|---|---|---|
+| Fixed plate | 50–80% | 0 | 0–5% | 0.97–1.06 | Horizontal, `W` constant |
+| Membrane plate | 50–75% | 50–73% | 0–5% | 0.97–1.06 | Diagonal toward other stream |
+| Energy (enthalpy) wheel | 50–85% | 50–85% | 0.5–10% | 0.99–1.1 | Straight line toward other stream's state |
+| Heat wheel (sensible) | 50–85% | 0 | 0.5–10% | 1.0–1.2 | Horizontal |
+| Heat pipe | 45–65% | 0 | 0–1% | 0.99–1.01 | Horizontal |
+| Run-around coil loop | 55–65% | 0 | 0 | 1.0 | Horizontal |
+| Thermosiphon | 40–60% | 0 | 0 | 1.0 | Horizontal |
+| Twin towers | 40–60% | 40–60% | 0 | 1.0 | Diagonal |
+
+Twin towers circulate a sorbent solution between two physically separate contactor towers, so
+`EATR = 0` and `OACF = 1` there are structural rather than ratings — there is no shared
+surface for air to cross.
 
 For an enthalpy wheel with equal sensible and latent effectiveness, the supply-air process
 vector runs in a straight line from the supply state toward the exhaust state, and its length

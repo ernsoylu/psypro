@@ -37,10 +37,18 @@ without the exclusion its `workspace = true` inheritance resolves against the wr
 production path. `tests/frees_backend_parity.rs` holds the two against each other; frees wins
 any disagreement.
 
-**Gaps in frees get fixed upstream, not worked around here.** Two are open: the oblique chart
-geometry (`props/psychro.rs` draws a rectangular chart with no Mollier layout) and eleven
-missing components against the `REQUIREMENTS.md` §4 catalogue. See `DEVELOPMENT_PLAN.md`
+**Gaps in frees get fixed upstream, not worked around here.** The two that were open on
+adoption are closed there: `frees_core::props::psychrochart` now carries the oblique chart
+geometry for both layouts, and `moistair.frees` carries 36 components against the
+`REQUIREMENTS.md` §4 catalogue (17 contributed from here). See `DEVELOPMENT_PLAN.md`
 Phase 2.5.
+
+One engine gap remains, and it is in **rustprop**, not frees: rustprop calls `std`'s
+`f64::exp`/`ln`/`powf` (768 sites, zero `libm::`) where frees-core routes every
+transcendental through `libm` so native and wasm agree bit-for-bit. glibc and Rust's bundled
+wasm32 `libm` differ by one ulp on ~11% of `exp` arguments, and 107 of the 1095 frees corpus
+documents return different numbers in the browser as a result. **PsyPro is the browser**, so
+a green native CI run is not evidence about the numbers a user sees.
 
 ## Branch policy
 
