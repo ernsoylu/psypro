@@ -1,0 +1,391 @@
+/*
+ * Shell layout and chrome.
+ *
+ * Every colour and dimension here resolves through a variable declared in
+ * `theme.css`. There are no literals below except structural ones that carry no
+ * brand — border widths, flex factors, and the like. `src/theme.test.ts` fails
+ * the build on a hard-coded colour.
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg);
+}
+
+.shell__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Top navigation ─────────────────────────────────────────────────────── */
+
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  height: var(--layout-topnav-height);
+  flex: none;
+  padding: 0 var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topnav__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.topnav__group:nth-child(2) {
+  gap: var(--space-1);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-accent);
+}
+
+.brand__name {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.topnav__project,
+.topnav__engine {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-numeric);
+  white-space: nowrap;
+}
+
+.topnav__engine {
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-section);
+}
+
+.rule {
+  width: 1px;
+  height: 18px;
+  flex: none;
+  background: var(--color-border);
+}
+
+.rule--horizontal {
+  width: 28px;
+  height: 1px;
+  margin: var(--space-2) 0;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-numeric);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.btn:hover {
+  background: var(--color-hover);
+}
+
+.btn--icon {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* ── Segmented control (unit system) ────────────────────────────────────── */
+
+.segmented {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.segmented__option {
+  padding: var(--space-2) var(--space-5);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-numeric);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.segmented__option[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+/* ── Inline field (elevation) ───────────────────────────────────────────── */
+
+.field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.field-inline__label,
+.field-inline__unit {
+  font-size: var(--font-size-label);
+}
+
+.field-inline__input {
+  width: 4ch;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-numeric);
+  font-weight: 500;
+  text-align: right;
+}
+
+.field-inline__input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+
+.field-inline:focus-within {
+  border-color: var(--color-accent);
+}
+
+/* ── Toolbox ────────────────────────────────────────────────────────────── */
+
+.toolbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: var(--layout-toolbox-width);
+  flex: none;
+  padding: var(--space-5) var(--space-4);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.toolbox__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tool-size);
+  height: var(--tool-size);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.tool:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.tool[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+/* ── Viewport ───────────────────────────────────────────────────────────── */
+
+.viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.viewport__pending {
+  margin: 0;
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+/* ── Properties panel ───────────────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: var(--layout-properties-width);
+  flex: none;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-numeric);
+  font-weight: 600;
+}
+
+.panel__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chart-point);
+}
+
+.panel__section {
+  margin: 0;
+  padding: var(--space-6) var(--space-6) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+}
+
+.panel__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+}
+
+.panel__error {
+  margin: var(--space-4) var(--space-6);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-danger);
+  font-size: var(--font-size-label);
+}
+
+/* ── Fields ─────────────────────────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.field__unit {
+  font-family: var(--font-numeric);
+}
+
+.field__input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-numeric);
+  font-weight: 500;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.checkbox__hint {
+  display: block;
+  color: var(--color-text-muted);
+  opacity: 0.75;
+}
+
+/* ── Derived-property readout ───────────────────────────────────────────── */
+
+.readout {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.readout tr:nth-child(even) {
+  background: var(--color-bg);
+}
+
+.readout__label {
+  padding: var(--space-2) var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: normal;
+  text-align: left;
+}
+
+.readout__detail {
+  margin-left: var(--space-2);
+  font-family: var(--font-numeric);
+  opacity: 0.7;
+}
+
+.readout__value {
+  padding: var(--space-2) 0;
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-numeric);
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.readout__unit {
+  padding: var(--space-2) var(--space-6) var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-section);
+  white-space: nowrap;
+}

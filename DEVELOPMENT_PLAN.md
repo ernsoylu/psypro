@@ -73,7 +73,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 2 — WASM bridge | **Done** — typed handshake, IP/SI at the boundary, debug panel |
 | 3 — Coordinate transformation | **Done** — oblique construction, both layouts, 22 tests |
 | 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 17 components contributed upstream, closing the §4 catalogue |
-| 4–13 | Not started |
+| 4 — Application shell and theme | **Done** — shell, palette, i18n, and a test that fails the build on a literal |
+| 5–13 | Not started |
 
 ---
 
@@ -238,6 +239,13 @@ layouts — plus curve generation benchmarked so a full grid regenerates in well
 
 **Exit:** No hard-coded color or user-facing string anywhere in `web/src`; swapping `theme.css`
 visibly retextures the whole shell.
+
+**Done.** `src/theme.test.ts` is the gate rather than the promise: it reads the source files and
+fails on a colour literal outside `theme.css`, a `var(--…)` nothing declares, a palette colour
+missing from either theme, a `t('key')` the bundle has no entry for, a bundle entry nothing
+renders, and a user-facing literal typed into a component — including `aria-label`, `title`,
+`placeholder` and `alt`, which are the ones a translator never sees. It caught three keys added
+ahead of the feature that needs them; they come back in Phase 6 with the click-to-place toggle.
 
 ---
 
