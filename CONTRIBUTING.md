@@ -1,4 +1,4 @@
-# Contributing to HDPsyChart
+# Contributing to PsyPro
 
 Thanks for your interest. This project is MIT-licensed and welcomes contributions.
 

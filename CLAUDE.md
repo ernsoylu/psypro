@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project identity
+
+This project is **PsyPro**, an open-source psychrometric chart application. HDPsyChart is a
+separate proprietary product used only as an early functional reference — never name PsyPro
+after it, describe PsyPro as a clone or successor of it, or copy its branding or assets.
+
 ## Repository status
 
 Phase 0 of `DEVELOPMENT_PLAN.md` is complete: the Cargo workspace, the React/Vite app, and

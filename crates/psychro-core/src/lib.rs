@@ -1,4 +1,4 @@
-//! Psychrometric calculations for HDPsyChart.
+//! Psychrometric calculations for PsyPro.
 //!
 //! This crate holds every thermodynamic and chart-geometry calculation in the
 //! project. It is deliberately free of WASM, browser, and UI concerns so that it

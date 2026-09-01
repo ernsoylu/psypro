@@ -1,4 +1,10 @@
-# Product Requirements Document: HDPsyChart Web Application (Open-Source Edition)
+# Product Requirements Document: PsyPro Web Application (Open-Source Edition)
+
+> **Naming note.** This project is **PsyPro**. HDPsyChart is a separate, proprietary
+> product referenced only as an early functional benchmark for what a psychrometric
+> chart tool should do. PsyPro is an independent open-source implementation: do not
+> copy its assets, branding, or code, and do not describe PsyPro as a version, clone,
+> or successor of it.
 
 ## 1. Open-Source Philosophy & Licensing
 *   **Licensing:** Open-source license (exact license TBD). All selected third-party dependencies, libraries, and Rust crates must be audited to ensure compliance with permissive open-source standards (e.g., MIT, Apache 2.0).

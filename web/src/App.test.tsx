@@ -6,6 +6,6 @@ import { App } from './App';
 describe('App', () => {
   it('renders the application shell', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'HDPsyChart' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'PsyPro' })).toBeInTheDocument();
   });
 });

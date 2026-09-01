@@ -1,4 +1,4 @@
-# HDPsyChart — Phased Development Plan
+# PsyPro — Phased Development Plan
 
 Each phase is **atomic**: it lands as one pull request, leaves `main` in a working and
 demonstrable state, and has an exit criterion that can be checked without reading the diff.

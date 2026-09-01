@@ -16,7 +16,7 @@ export function App() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, fontSize: '1.25rem' }}>HDPsyChart</h1>
+      <h1 style={{ margin: 0, fontSize: '1.25rem' }}>PsyPro</h1>
       <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>
         Scaffold only — see DEVELOPMENT_PLAN.md for the build order.
       </p>
