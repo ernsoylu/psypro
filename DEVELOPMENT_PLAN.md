@@ -198,6 +198,8 @@ case, which must not be treated as degenerate.
 - **Process Design page** — the AHU schematic (OA → recovery → mixing → preheat → cooling →
   reheat → fan → room → return), each block bound to its process object, with the results
   strip and coil calculators alongside. This is the page the data table and chart both feed.
+  **Designed** in `design.pen`; components not in the active cycle render as inactive rather
+  than being hidden, so the available palette stays visible without implying they are running.
 
 **Exit:** A macro run on a known design case reproduces published cycle values, and the coil's
 three bypass-factor forms agree to within tolerance on the same case.
