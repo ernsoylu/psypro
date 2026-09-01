@@ -99,43 +99,137 @@ teach them:
 
 ## 4. Process Analysis & Equipment Models
 
-Each process is a first-class object with its own inputs, outputs and chart geometry.
+### 4.1 The process vocabulary
 
-### 4.1 Elementary processes
-*   **Sensible heating / cooling** (`W` constant — a horizontal line).
-*   **Cooling with dehumidification** (see the coil model below).
-*   **Adiabatic mixing** of two streams, on a dry-air mass basis:
-    `W_mix = (ṁ₁W₁ + ṁ₂W₂)/ṁ_mix`, `h_mix = (ṁ₁h₁ + ṁ₂h₂)/ṁ_mix`. Includes "Winter V"
-    mixing where the mix line crosses saturation and condensation occurs.
-*   **Steam (isothermal) humidification** — `t_db` approximately constant;
-    `ṁ_steam = ṁ_da·(W_target − W_in)`.
-*   **Evaporative (adiabatic) humidification** — along a constant wet-bulb line, with
-    saturation effectiveness `ε_w = (t_in − t_out)/(t_in − t_wb,in)`.
-*   **General linear process** between two arbitrary states.
+Every component reduces to one or more of these vectors on the chart. The tool models the
+*vectors*; components are named configurations of them. Directions below are for the ASHRAE
+layout (T_db horizontal, W vertical).
 
-### 4.2 Equipment models
-*   **Cooling coil — ADP and bypass factor.** Bypass factor must be exposed in all three
-    equivalent forms so the tool can be checked against any textbook:
+| Process | Direction | Held constant |
+|---|---|---|
+| Sensible heating | → right | `W`, `t_dp`, `p_wv` |
+| Sensible cooling | ← left | `W`, `t_dp`, `p_wv` |
+| Humidification only (isothermal) | ↑ up | `t_db` |
+| Dehumidification only | ↓ down | `t_db` |
+| Evaporative cooling / adiabatic humidification | ↖ up-left | `t_wb` (≈ `h`) |
+| Desiccant dehumidification | ↘ down-right | `t_wb` (≈ `h`) |
+| Cooling with dehumidification | ↙ toward ADP | — |
+| Heating with humidification | ↗ | — |
+| Adiabatic mixing | straight line between the two states | — |
+| Total-energy (enthalpy) exchange | straight line toward the other stream's state | — |
+
+**Desiccant dehumidification is the mirror image of evaporative cooling** — the latent heat
+released as vapour is sorbed reappears as sensible heat, so the air leaves *warmer and drier*.
+A tool whose process vocabulary only goes down-and-left cannot represent it.
+
+**Sensible cooling has a practical limit at roughly 85% RH.** Beyond that, condensation begins
+and the process is no longer sensible-only. The engine flags this rather than extrapolating a
+horizontal line into the saturation curve.
+
+### 4.2 Coils and heat-transfer devices
+*   **Cooling coil (chilled water or DX)** — apparatus dew point and bypass factor, in all
+    three equivalent forms so results check against any textbook:
     `BF = (t_lvg − t_adp)/(t_ent − t_adp) = (W_lvg − W_adp)/(W_ent − W_adp) = (h_lvg − h_adp)/(h_ent − h_adp)`.
-    Apparatus dew point is the intersection of the extended process line with saturation.
-    **Coil SHR** `= c_p,ma·(t_ent − t_lvg)/(h_ent − h_lvg)`.
-    **Total coil load** `q = ṁ_da·(h_ent − h_lvg) − ṁ_cond·h_f,cond` — the condensate
-    enthalpy term is small but must not be silently dropped.
-*   **Preheat and reheat coils** — sensible, `q = ṁ_da·c_p,ma·Δt`.
-*   **Airside economizer** — modulates outdoor-air fraction on a dry-bulb or enthalpy
-    changeover; reports hours of operation against imported weather data.
-*   **Energy recovery (ERV/HRV)** — sensible and latent effectiveness
-    `ε_s = (t_oa,in − t_oa,out)/(t_oa,in − t_ex,in)`, `ε_L` likewise on `W`.
+    Coil SHR `= c_p,ma·(t_ent − t_lvg)/(h_ent − h_lvg)`. Total load
+    `q = ṁ_da·(h_ent − h_lvg) − ṁ_cond·h_f,cond`; the condensate term is small but must not be
+    silently dropped. DX coils additionally carry an anti-ice limit on leaving air temperature.
+*   **Heating coil** (hot water, steam, electric), **preheat**, **reheat** — sensible,
+    `q = ṁ_da·c_p,ma·Δt`.
+*   **Face-and-bypass coil** — the airstream splits, one part reaching the coil condition and
+    one bypassing unchanged, then the two mix adiabatically. Capacity is modulated by damper
+    position rather than water flow, so `BF = ṁ_bypass/ṁ_total` is a *control* variable here,
+    not just a coil characteristic.
+*   **Heat-pipe wrap-around** — three vectors in sequence: sensible precool (`W` constant),
+    cooling with dehumidification, then sensible reheat (`W` constant) using the recovered
+    heat. It raises latent capacity and provides reheat with no new energy, which is why it
+    displaces the "new energy" reheat that many codes restrict.
+*   **Recuperative run-around with cooling** — the same idea using coupled water/glycol coils.
 
-### 4.3 Design derivation
-*   **Room sensible heat ratio** `RSHF = q_s,room / q_t,room`, drawn as the room condition
-    line through the room design state.
-*   **Supply airflow** `ṁ_da = q_s,room / (c_p,ma·(t_room − t_SA))`, with
-    `V̇ = ṁ_da · v_SA`. Supply temperature difference typically 10–14 K.
+### 4.3 Humidification
+*   **Steam / isothermal** — a near-vertical line at constant `t_db`. The latent heat was
+    supplied in the boiler, so this is closer to mixing two gases than to heating air.
+    `ṁ_steam = ṁ_da·(W_out − W_in)`, with process slope `Δh/ΔW = h_g` of the injected steam.
+*   **Evaporative / adiabatic** — wetted rigid media, atomising spray, high-pressure fog, or an
+    air washer. Follows constant `t_wb` up and to the left.
+    Saturation effectiveness `ε = (t_in − t_out)/(t_in − t_wb,in)`.
+    Typical values: air washer with opposed spray banks 95–98%; 300 mm rigid media 88–91%;
+    residential aspen or mesh media 50–60%.
+
+### 4.4 Dehumidification
+*   **Cooling coil** — as §4.2.
+*   **Solid desiccant wheel (active)** — sorbs vapour, releasing its latent heat as sensible
+    heat: the process runs down and to the right at roughly constant enthalpy.
+    `ṁ_water = ṁ_da·(W_in − W_out)`, latent effectiveness `ε_L = (W_in − W_out)/(W_in − W_eq)`.
+    Requires a regeneration airstream at elevated temperature.
+*   **Liquid desiccant** — same chart behaviour; the equilibrium humidity ratio is set by
+    solution concentration and temperature rather than by a wheel position.
+*   **Heat-pipe wrap-around** and **condensate reheat** — as §4.2.
+
+### 4.5 Air-to-air energy recovery
+
+All follow ASHRAE Standard 84: `ε = actual transfer ÷ maximum possible transfer`.
+Sensible `ε_s = (t_1 − t_2)/(t_1 − t_3)`, total `ε_t` on enthalpy, latent on `W`.
+Two parameters that a credible tool must not omit: **EATR** (exhaust air transfer ratio, the
+cross-contamination fraction) and **OACF** (outdoor air correction factor).
+
+| Device | Sensible ε | Latent ε | EATR | Chart behaviour |
+|---|---|---|---|---|
+| Fixed plate | 50–80% | 0 | 0–5% | Horizontal, `W` constant |
+| Membrane plate | 50–75% | 50–73% | 0–5% | Diagonal toward other stream |
+| Energy (enthalpy) wheel | 50–85% | 50–85% | 0.5–10% | Straight line toward other stream's state |
+| Heat wheel (sensible) | 50–85% | 0 | 0.5–10% | Horizontal |
+| Heat pipe | 45–65% | 0 | 0–1% | Horizontal |
+| Run-around coil loop | 55–65% | 0 | 0 | Horizontal |
+| Thermosiphon | 40–60% | 0 | 0 | Horizontal |
+| Twin towers | 40–60% | yes | 0 | Diagonal |
+
+For an enthalpy wheel with equal sensible and latent effectiveness, the supply-air process
+vector runs in a straight line from the supply state toward the exhaust state, and its length
+relative to the full separation *is* the effectiveness. That is a directly drawable construction
+and belongs in teaching mode.
+
+### 4.6 Evaporative cooling
+*   **Direct (DEC)** — constant `t_wb`, `ε_e = (t_1 − t_2)/(t_1 − t'_s)`.
+*   **Indirect (IEC)** — primary air is cooled sensibly at constant `W` while secondary air is
+    evaporatively cooled. Wet-bulb depression efficiency
+    `WBDE = (t_pri,in − t_pri,out)/(t_pri,in − t_wb,sec,in)`, typically 60–80%.
+*   **Indirect/direct two-stage** — sensible precool lowers the entering wet-bulb, so the
+    following direct stage reaches a lower dry-bulb than direct cooling alone. 40–50% energy
+    saving in moderate-humidity zones.
+
+### 4.7 Airside components
+*   **Mixing box** — adiabatic mixing on a dry-air mass basis.
+    `W_mix = (ṁ₁W₁ + ṁ₂W₂)/ṁ_mix`, `h_mix` likewise. The volumetric approximation for `t_mix`
+    carries <1% error and is offered only as a labelled approximation. Includes "Winter V"
+    mixing where the mix line crosses saturation and condensation occurs.
+*   **Fan** — a real sensible heating process from motor and shaft work; not zero.
+*   **Airside economizer** — dry-bulb or enthalpy changeover, reporting operating hours against
+    imported weather data.
+*   **Filters, dampers, sound attenuators, plenums** — **no psychrometric process**. They are
+    modelled for pressure drop and for the layout diagram only, and must not appear as a
+    process vector. A plenum may still carry a heat gain, which is a sensible process.
+
+### 4.8 Terminal units
+*   **VAV box** (with or without reheat), **fan-powered box** (series and parallel),
+    **induction unit**, **active and passive chilled beam**, **fan coil unit**,
+    **radiant panel**.
+*   **DOAS (dedicated outdoor air system)** — conditions ventilation air separately from
+    recirculated air, which **separates the sensible and latent loads** and is the reason it
+    pairs with terminal units that handle sensible load only (chilled beams, radiant panels,
+    fan coils, VRF). A tool that assumes one coil serves both loads cannot represent a DOAS.
+*   Chilled beams and radiant panels are **sensible-only** devices: they must never be given a
+    latent capacity, and a design that relies on them requires the dew point to be controlled
+    upstream or condensation results.
+
+### 4.9 Design derivation
+*   **Room sensible heat ratio** `RSHF = q_s,room / q_t,room`, drawn as the room condition line
+    through the room design state.
+*   **Supply airflow** `ṁ_da = q_s,room / (c_p,ma·(t_room − t_SA))`, `V̇ = ṁ_da·v_SA`.
+    Supply temperature difference typically 10–14 K.
 *   **Automated cycle macros** — primary and secondary return-air cycles computed and plotted
     in one action, reporting sensible/latent/total load and moisture rates.
-*   **SHR and Δh/ΔW protractor** for drawing parallel reference lines. The protractor scales
-    are related by `Δh/ΔW = 2499.86/(1 − SHR)`.
+*   **SHR and Δh/ΔW protractor** for parallel reference lines; the scales relate by
+    `Δh/ΔW = 2499.86/(1 − SHR)`.
 
 ## 5. Climatic Data & Standards Integration
 

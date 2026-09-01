@@ -34,7 +34,14 @@ re-litigates them mid-build.
 3. **Automotive's binding constraint is fogging**, `t_dp,cabin ≥ t_glass,inner`. That check is
    the reason the automotive profile needs the sub-freezing branch of the engine, and it makes
    the ice-side formulations load-bearing rather than completeness for its own sake.
-4. **Three distinctions must survive into the UI**, not just the engine: RH vs. degree of
+4. **The component palette is far wider than one AHU arrangement.** `REQUIREMENTS.md` §4 now
+   catalogues 37 components across seven families. Two consequences for the model: desiccant
+   dehumidification runs **down and to the right** (the mirror of evaporative cooling — latent
+   heat released on sorption reappears as sensible heat), so a process vocabulary that only
+   goes down-and-left cannot represent it; and filters, dampers and attenuators have **no**
+   psychrometric process at all, so the component model must allow a component that draws no
+   vector. Phase 7 builds the vector vocabulary in §4.1; Phase 8 builds components on top.
+5. **Three distinctions must survive into the UI**, not just the engine: RH vs. degree of
    saturation, thermodynamic vs. psychrometer wet-bulb, and dry-air-basis mass flow. These are
    the field's most common errors; they drive Phase 6's property panel and Phase 11's teaching
    affordances.
