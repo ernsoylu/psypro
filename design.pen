@@ -844,8 +844,8 @@
                   "id": "zZIgX",
                   "x": 0,
                   "y": 0,
-                  "name": "Zone — ASHRAE TC 9.9 Datacenter",
-                  "geometry": "M374.8 640.82l149.4 0 0-124.92-62.42 0 0 0.08-6.64 6.32-6.64 6.18-6.64 6.05-6.64 5.92-6.64 5.79-6.64 5.65-6.64 5.54-6.64 5.41-6.64 5.29-6.64 5.18-6.64 5.05-6.64 4.95-6.64 4.84-0.66 0.47z",
+                  "name": "Zone — TC 9.9 Recommended",
+                  "geometry": "M374.8 587.27l8.3-6.1 8.3-6.27 8.3-6.45 8.3-6.64 8.3-6.82 8.3-7.01 8.3-7.22 8.3-7.41 8.3-7.63 8.3-7.83 8.3-2.99 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 0 218.26 0 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0z",
                   "viewBox": [
                     0,
                     0,
@@ -1971,6 +1971,357 @@
                 },
                 {
                   "type": "frame",
+                  "id": "ocf9H",
+                  "x": 160,
+                  "y": 266,
+                  "name": "Protractor Key",
+                  "width": 208,
+                  "fill": "$color-bg",
+                  "cornerRadius": 6,
+                  "stroke": "$color-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "J9W8O",
+                      "name": "Key SHR",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "RyZxr",
+                          "name": "Key SHR Label",
+                          "fill": "$chart-grid-rh",
+                          "content": "SENSIBLE HEAT / TOTAL HEAT",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "Vg2Bm",
+                          "name": "Key SHR Unit",
+                          "fill": "$color-text-muted",
+                          "content": "SHR",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "E9XDVP",
+                      "name": "Key MJ/kg",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jzsnm",
+                          "name": "Key MJ/kg Label",
+                          "fill": "$chart-grid-enthalpy",
+                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "A9fi6Q",
+                          "name": "Key MJ/kg Unit",
+                          "fill": "$color-text-muted",
+                          "content": "MJ/kg",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "path",
+                  "id": "L13PA",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Mixing Legs (OA + RA → MA)",
+                  "opacity": 0.8,
+                  "geometry": "M640.4 322.1l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-3 4m-2.3 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-51.5 69.3l3-4m2.4-3.2l3-4.1m2.3-3.2l3-4m2.4-3.2l3-4m2.4-3.2l3-4m2.3-3.2l3-4m2.4-3.3l3-4m2.4-3.2l3-4m2.4-3.2l2.9-4m2.4-3.2l2.1-2.8",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$color-text-muted",
+                  "strokeWidth": 1.6,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "Ejz74",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Lines — AHU Cycle",
+                  "geometry": "M524.8 480.2l-266.2 105.8m0 0l23.2 0m0 0l192.6-38",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$chart-process",
+                  "strokeWidth": 2.4,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "oV1lR",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Direction Arrows",
+                  "geometry": "M384.3 536l11.6-9.7 3.5 8.9z m-106.1 50l-14.4 4.7 0-9.5z m107.8-20.6l-13.2 7.5-1.9-9.4z",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "$chart-process",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "#00000000"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DSJ09",
+                  "x": 633.4000000000001,
+                  "y": 315.12262004219605,
+                  "name": "State Point OA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "jfCpi",
+                  "x": 651.4000000000001,
+                  "y": 297.12262004219605,
+                  "name": "State Point OA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jrpOb",
+                      "name": "State Point OA Text",
+                      "fill": "$chart-point",
+                      "content": "OA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "BVj5b",
+                  "x": 467.4,
+                  "y": 540.9833627295645,
+                  "name": "State Point RA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "V01p96",
+                  "x": 485.4,
+                  "y": 522.9833627295645,
+                  "name": "State Point RA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "RRDON",
+                      "name": "State Point RA Text",
+                      "fill": "$chart-point",
+                      "content": "RA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RQECs",
+                  "x": 517.7773969230743,
+                  "y": 473.22513992335394,
+                  "name": "State Point MA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "cf9g9",
+                  "x": 535.7773969230743,
+                  "y": 455.22513992335394,
+                  "name": "State Point MA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iTMlZ",
+                      "name": "State Point MA Text",
+                      "fill": "$chart-point",
+                      "content": "MA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ugwcN",
+                  "x": 251.60000000000002,
+                  "y": 578.9535640255149,
+                  "name": "State Point CL",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "dqYP0",
+                  "x": 269.6,
+                  "y": 560.9535640255149,
+                  "name": "State Point CL Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DCmmS",
+                      "name": "State Point CL Text",
+                      "fill": "$chart-point",
+                      "content": "CL",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "l4IA2w",
+                  "x": 274.84000000000003,
+                  "y": 578.9535640255149,
+                  "name": "State Point SA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "RWqMt",
+                  "x": 292.84000000000003,
+                  "y": 560.9535640255149,
+                  "name": "State Point SA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YX3xw",
+                      "name": "State Point SA Text",
+                      "fill": "$chart-point",
+                      "content": "SA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "siGxS",
                   "x": 672,
                   "y": 592,
@@ -2003,7 +2354,7 @@
                       "id": "F1GKDQ",
                       "name": "Legend Title",
                       "fill": "$color-text",
-                      "content": "SEA LEVEL · 101.325 kPa",
+                      "content": "SEA LEVEL · 101.325 kPa · IAPWS-IF97",
                       "fontFamily": "$font-ui",
                       "fontSize": 8.5,
                       "fontWeight": "700",
@@ -2215,214 +2566,6 @@
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "ocf9H",
-                  "x": 160,
-                  "y": 266,
-                  "name": "Protractor Key",
-                  "width": 208,
-                  "fill": "$color-bg",
-                  "cornerRadius": 6,
-                  "stroke": "$color-border",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "layout": "vertical",
-                  "gap": 3,
-                  "padding": [
-                    8,
-                    10
-                  ],
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "J9W8O",
-                      "name": "Key SHR",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "RyZxr",
-                          "name": "Key SHR Label",
-                          "fill": "$chart-grid-rh",
-                          "content": "SENSIBLE HEAT / TOTAL HEAT",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "Vg2Bm",
-                          "name": "Key SHR Unit",
-                          "fill": "$color-text-muted",
-                          "content": "SHR",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "E9XDVP",
-                      "name": "Key MJ/kg",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "jzsnm",
-                          "name": "Key MJ/kg Label",
-                          "fill": "$chart-grid-enthalpy",
-                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "A9fi6Q",
-                          "name": "Key MJ/kg Unit",
-                          "fill": "$color-text-muted",
-                          "content": "MJ/kg",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "path",
-                  "id": "yPhbi",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Line — SP1 to SP2",
-                  "geometry": "M474.4 549.7l-215.8 37.5",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "#00000000",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "$chart-process",
-                  "strokeWidth": 2.4,
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "path",
-                  "id": "z3zLMu",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Direction Arrow",
-                  "geometry": "M357.6 570l15.1-8.1 1.8 10.6z",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "$chart-process",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "#00000000",
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "ellipse",
-                  "id": "NqnEN",
-                  "x": 467.4,
-                  "y": 542.6607537837701,
-                  "name": "State Point 1",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "ZZAjT",
-                  "x": 486.4,
-                  "y": 525.6607537837701,
-                  "name": "State Point 1 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "dsaVp",
-                      "name": "State Point 1 Text",
-                      "fill": "$chart-point",
-                      "content": "SP1",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "ellipse",
-                  "id": "k6dyB",
-                  "x": 251.60000000000002,
-                  "y": 580.2200399915894,
-                  "name": "State Point 2",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "lXfBN",
-                  "x": 270.6,
-                  "y": 563.2200399915894,
-                  "name": "State Point 2 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "DHfOB",
-                      "name": "State Point 2 Text",
-                      "fill": "$chart-point",
-                      "content": "SP2",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
                   "type": "path",
                   "id": "LIfNr",
                   "x": 0,
@@ -2571,7 +2714,7 @@
                               "id": "M83EU",
                               "name": "Tooltip Wet-bulb Number",
                               "fill": "$color-text",
-                              "content": "25.42",
+                              "content": "25.68",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -2624,7 +2767,7 @@
                               "id": "mzslS",
                               "name": "Tooltip Dew point Number",
                               "fill": "$color-text",
-                              "content": "22.82",
+                              "content": "22.70",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -2730,7 +2873,7 @@
                               "id": "mWwBe",
                               "name": "Tooltip Rel. humidity Number",
                               "fill": "$color-text",
-                              "content": "52.2",
+                              "content": "51.8",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -2783,7 +2926,7 @@
                               "id": "fnnAw",
                               "name": "Tooltip Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "79.08",
+                              "content": "79.05",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -2857,7 +3000,7 @@
                           "id": "IgOqZ",
                           "name": "Panel Title",
                           "fill": "$color-text",
-                          "content": "State Point 1",
+                          "content": "RA — Return air",
                           "fontFamily": "$font-ui",
                           "fontSize": 13.5,
                           "fontWeight": "600"
@@ -3182,7 +3325,7 @@
                               "id": "xDna2",
                               "name": "Wet-bulb temperature Number",
                               "fill": "$color-text",
-                              "content": "17.01",
+                              "content": "17.06",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3236,7 +3379,7 @@
                               "id": "EbKDM",
                               "name": "Dew point Number",
                               "fill": "$color-text",
-                              "content": "12.94",
+                              "content": "12.95",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3290,7 +3433,7 @@
                               "id": "fL8xU",
                               "name": "Humidity ratio Number",
                               "fill": "$color-text",
-                              "content": "0.009276",
+                              "content": "0.009345",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3344,7 +3487,7 @@
                               "id": "mKxA2",
                               "name": "Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "47.75",
+                              "content": "47.92",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3398,7 +3541,7 @@
                               "id": "DxFiQ",
                               "name": "Specific volume Number",
                               "fill": "$color-text",
-                              "content": "0.8543",
+                              "content": "0.8544",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3452,7 +3595,7 @@
                               "id": "eABTB",
                               "name": "Density Number",
                               "fill": "$color-text",
-                              "content": "1.1814",
+                              "content": "1.1813",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3506,7 +3649,7 @@
                               "id": "T13tP",
                               "name": "Vapour pressure Number",
                               "fill": "$color-text",
-                              "content": "1.489",
+                              "content": "1.493",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -3517,6 +3660,79 @@
                               "name": "Vapour pressure Unit",
                               "fill": "$color-text-muted",
                               "content": "kPa",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JrEc0",
+                      "name": "Degree of saturation Row",
+                      "width": "fill_container",
+                      "fill": "$color-bg",
+                      "padding": [
+                        7,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "v8noH",
+                          "name": "Degree of saturation Row Label Group",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "kBR5F",
+                              "name": "Degree of saturation Row Label",
+                              "fill": "$color-text-muted",
+                              "content": "Degree of saturation  μ",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "DJaFG",
+                              "name": "Degree of saturation Info",
+                              "width": 11,
+                              "height": 11,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$color-accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vi2uv",
+                          "name": "Degree of saturation Row Value",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Kw7A9",
+                              "name": "Degree of saturation Number",
+                              "fill": "$color-text",
+                              "content": "49.25",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 12.5,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "LqQ71",
+                              "name": "Degree of saturation Unit",
+                              "fill": "$color-text-muted",
+                              "content": "%",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -3650,7 +3866,7 @@
                                   "id": "CBnPA",
                                   "name": "Sensible Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−8.42 kW",
+                                  "content": "−19.01 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -3679,7 +3895,7 @@
                                   "id": "ELqU7",
                                   "name": "Latent Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−3.10 kW",
+                                  "content": "−12.60 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -3708,7 +3924,7 @@
                                   "id": "G2qRY9",
                                   "name": "Path Metric Value",
                                   "fill": "$color-text",
-                                  "content": "SP1 → SP2",
+                                  "content": "MA → CL",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -4573,8 +4789,8 @@
                   "id": "D6fAP",
                   "x": 0,
                   "y": 0,
-                  "name": "Zone — ASHRAE TC 9.9 Datacenter",
-                  "geometry": "M374.8 640.82l149.4 0 0-124.92-62.42 0 0 0.08-6.64 6.32-6.64 6.18-6.64 6.05-6.64 5.92-6.64 5.79-6.64 5.65-6.64 5.54-6.64 5.41-6.64 5.29-6.64 5.18-6.64 5.05-6.64 4.95-6.64 4.84-0.66 0.47z",
+                  "name": "Zone — TC 9.9 Recommended",
+                  "geometry": "M374.8 587.27l8.3-6.1 8.3-6.27 8.3-6.45 8.3-6.64 8.3-6.82 8.3-7.01 8.3-7.22 8.3-7.41 8.3-7.63 8.3-7.83 8.3-2.99 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 0 218.26 0 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0z",
                   "viewBox": [
                     0,
                     0,
@@ -5700,6 +5916,357 @@
                 },
                 {
                   "type": "frame",
+                  "id": "MZ7RQ",
+                  "x": 160,
+                  "y": 266,
+                  "name": "Protractor Key",
+                  "width": 208,
+                  "fill": "$color-bg",
+                  "cornerRadius": 6,
+                  "stroke": "$color-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h87DxI",
+                      "name": "Key SHR",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CkSYU",
+                          "name": "Key SHR Label",
+                          "fill": "$chart-grid-rh",
+                          "content": "SENSIBLE HEAT / TOTAL HEAT",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "syzFf",
+                          "name": "Key SHR Unit",
+                          "fill": "$color-text-muted",
+                          "content": "SHR",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EoN9E",
+                      "name": "Key MJ/kg",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "K7w4CD",
+                          "name": "Key MJ/kg Label",
+                          "fill": "$chart-grid-enthalpy",
+                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "A0b1r",
+                          "name": "Key MJ/kg Unit",
+                          "fill": "$color-text-muted",
+                          "content": "MJ/kg",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "path",
+                  "id": "H7Czog",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Mixing Legs (OA + RA → MA)",
+                  "opacity": 0.8,
+                  "geometry": "M640.4 322.1l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-3 4m-2.3 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-51.5 69.3l3-4m2.4-3.2l3-4.1m2.3-3.2l3-4m2.4-3.2l3-4m2.4-3.2l3-4m2.3-3.2l3-4m2.4-3.3l3-4m2.4-3.2l3-4m2.4-3.2l2.9-4m2.4-3.2l2.1-2.8",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$color-text-muted",
+                  "strokeWidth": 1.6,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "VQPsz",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Lines — AHU Cycle",
+                  "geometry": "M524.8 480.2l-266.2 105.8m0 0l23.2 0m0 0l192.6-38",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$chart-process",
+                  "strokeWidth": 2.4,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "uGQUK",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Direction Arrows",
+                  "geometry": "M384.3 536l11.6-9.7 3.5 8.9z m-106.1 50l-14.4 4.7 0-9.5z m107.8-20.6l-13.2 7.5-1.9-9.4z",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "$chart-process",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "#00000000"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ELDDM",
+                  "x": 633.4000000000001,
+                  "y": 315.12262004219605,
+                  "name": "State Point OA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "L76PAg",
+                  "x": 651.4000000000001,
+                  "y": 297.12262004219605,
+                  "name": "State Point OA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SJgCO",
+                      "name": "State Point OA Text",
+                      "fill": "$chart-point",
+                      "content": "OA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Ykdjq",
+                  "x": 467.4,
+                  "y": 540.9833627295645,
+                  "name": "State Point RA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "z37CZ",
+                  "x": 485.4,
+                  "y": 522.9833627295645,
+                  "name": "State Point RA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Q3K9A5",
+                      "name": "State Point RA Text",
+                      "fill": "$chart-point",
+                      "content": "RA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PSlU8",
+                  "x": 517.7773969230743,
+                  "y": 473.22513992335394,
+                  "name": "State Point MA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "M0oh5L",
+                  "x": 535.7773969230743,
+                  "y": 455.22513992335394,
+                  "name": "State Point MA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "x3Yf1",
+                      "name": "State Point MA Text",
+                      "fill": "$chart-point",
+                      "content": "MA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hzT4x",
+                  "x": 251.60000000000002,
+                  "y": 578.9535640255149,
+                  "name": "State Point CL",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "t7VoS",
+                  "x": 269.6,
+                  "y": 560.9535640255149,
+                  "name": "State Point CL Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zy2AK",
+                      "name": "State Point CL Text",
+                      "fill": "$chart-point",
+                      "content": "CL",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Xjh1v",
+                  "x": 274.84000000000003,
+                  "y": 578.9535640255149,
+                  "name": "State Point SA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "fu417",
+                  "x": 292.84000000000003,
+                  "y": 560.9535640255149,
+                  "name": "State Point SA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "UAxaj",
+                      "name": "State Point SA Text",
+                      "fill": "$chart-point",
+                      "content": "SA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "OSEFn",
                   "x": 672,
                   "y": 592,
@@ -5732,7 +6299,7 @@
                       "id": "AHLvh",
                       "name": "Legend Title",
                       "fill": "$color-text",
-                      "content": "SEA LEVEL · 101.325 kPa",
+                      "content": "SEA LEVEL · 101.325 kPa · IAPWS-IF97",
                       "fontFamily": "$font-ui",
                       "fontSize": 8.5,
                       "fontWeight": "700",
@@ -5944,214 +6511,6 @@
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "MZ7RQ",
-                  "x": 160,
-                  "y": 266,
-                  "name": "Protractor Key",
-                  "width": 208,
-                  "fill": "$color-bg",
-                  "cornerRadius": 6,
-                  "stroke": "$color-border",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "layout": "vertical",
-                  "gap": 3,
-                  "padding": [
-                    8,
-                    10
-                  ],
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "h87DxI",
-                      "name": "Key SHR",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "CkSYU",
-                          "name": "Key SHR Label",
-                          "fill": "$chart-grid-rh",
-                          "content": "SENSIBLE HEAT / TOTAL HEAT",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "syzFf",
-                          "name": "Key SHR Unit",
-                          "fill": "$color-text-muted",
-                          "content": "SHR",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "EoN9E",
-                      "name": "Key MJ/kg",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "K7w4CD",
-                          "name": "Key MJ/kg Label",
-                          "fill": "$chart-grid-enthalpy",
-                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "A0b1r",
-                          "name": "Key MJ/kg Unit",
-                          "fill": "$color-text-muted",
-                          "content": "MJ/kg",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "path",
-                  "id": "YrQfC",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Line — SP1 to SP2",
-                  "geometry": "M474.4 549.7l-215.8 37.5",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "#00000000",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "$chart-process",
-                  "strokeWidth": 2.4,
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "path",
-                  "id": "bWR4q",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Direction Arrow",
-                  "geometry": "M357.6 570l15.1-8.1 1.8 10.6z",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "$chart-process",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "#00000000",
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "ellipse",
-                  "id": "m4A1N",
-                  "x": 467.4,
-                  "y": 542.6607537837701,
-                  "name": "State Point 1",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "I900d",
-                  "x": 486.4,
-                  "y": 525.6607537837701,
-                  "name": "State Point 1 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "I0g7D",
-                      "name": "State Point 1 Text",
-                      "fill": "$chart-point",
-                      "content": "SP1",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "ellipse",
-                  "id": "IAkma",
-                  "x": 251.60000000000002,
-                  "y": 580.2200399915894,
-                  "name": "State Point 2",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "WFMlC",
-                  "x": 270.6,
-                  "y": 563.2200399915894,
-                  "name": "State Point 2 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "heFAN",
-                      "name": "State Point 2 Text",
-                      "fill": "$chart-point",
-                      "content": "SP2",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
                   "type": "path",
                   "id": "BCZwC",
                   "x": 0,
@@ -6300,7 +6659,7 @@
                               "id": "RpW4Q",
                               "name": "Tooltip Wet-bulb Number",
                               "fill": "$color-text",
-                              "content": "25.42",
+                              "content": "25.68",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -6353,7 +6712,7 @@
                               "id": "cEK34",
                               "name": "Tooltip Dew point Number",
                               "fill": "$color-text",
-                              "content": "22.82",
+                              "content": "22.70",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -6459,7 +6818,7 @@
                               "id": "YbuVD",
                               "name": "Tooltip Rel. humidity Number",
                               "fill": "$color-text",
-                              "content": "52.2",
+                              "content": "51.8",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -6512,7 +6871,7 @@
                               "id": "EtGIc",
                               "name": "Tooltip Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "79.08",
+                              "content": "79.05",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -6586,7 +6945,7 @@
                           "id": "upW7S",
                           "name": "Panel Title",
                           "fill": "$color-text",
-                          "content": "State Point 1",
+                          "content": "RA — Return air",
                           "fontFamily": "$font-ui",
                           "fontSize": 13.5,
                           "fontWeight": "600"
@@ -6911,7 +7270,7 @@
                               "id": "tJLKq",
                               "name": "Wet-bulb temperature Number",
                               "fill": "$color-text",
-                              "content": "17.01",
+                              "content": "17.06",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -6965,7 +7324,7 @@
                               "id": "dHMkr",
                               "name": "Dew point Number",
                               "fill": "$color-text",
-                              "content": "12.94",
+                              "content": "12.95",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -7019,7 +7378,7 @@
                               "id": "ZJnl7",
                               "name": "Humidity ratio Number",
                               "fill": "$color-text",
-                              "content": "0.009276",
+                              "content": "0.009345",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -7073,7 +7432,7 @@
                               "id": "IniEN",
                               "name": "Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "47.75",
+                              "content": "47.92",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -7127,7 +7486,7 @@
                               "id": "OyQEG",
                               "name": "Specific volume Number",
                               "fill": "$color-text",
-                              "content": "0.8543",
+                              "content": "0.8544",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -7181,7 +7540,7 @@
                               "id": "ZQdl2",
                               "name": "Density Number",
                               "fill": "$color-text",
-                              "content": "1.1814",
+                              "content": "1.1813",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -7235,7 +7594,7 @@
                               "id": "niMTN",
                               "name": "Vapour pressure Number",
                               "fill": "$color-text",
-                              "content": "1.489",
+                              "content": "1.493",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -7246,6 +7605,79 @@
                               "name": "Vapour pressure Unit",
                               "fill": "$color-text-muted",
                               "content": "kPa",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tQqGm",
+                      "name": "Degree of saturation Row",
+                      "width": "fill_container",
+                      "fill": "$color-bg",
+                      "padding": [
+                        7,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vaBAu",
+                          "name": "Degree of saturation Row Label Group",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "jIp6Z",
+                              "name": "Degree of saturation Row Label",
+                              "fill": "$color-text-muted",
+                              "content": "Degree of saturation  μ",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "J1wjBX",
+                              "name": "Degree of saturation Info",
+                              "width": 11,
+                              "height": 11,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$color-accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "tto50",
+                          "name": "Degree of saturation Row Value",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "V8X2z",
+                              "name": "Degree of saturation Number",
+                              "fill": "$color-text",
+                              "content": "49.25",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 12.5,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "BtOO2",
+                              "name": "Degree of saturation Unit",
+                              "fill": "$color-text-muted",
+                              "content": "%",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -7379,7 +7811,7 @@
                                   "id": "y5QLFR",
                                   "name": "Sensible Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−8.42 kW",
+                                  "content": "−19.01 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -7408,7 +7840,7 @@
                                   "id": "uYXT2",
                                   "name": "Latent Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−3.10 kW",
+                                  "content": "−12.60 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -7437,7 +7869,7 @@
                                   "id": "z8wlFX",
                                   "name": "Path Metric Value",
                                   "fill": "$color-text",
-                                  "content": "SP1 → SP2",
+                                  "content": "MA → CL",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -8299,8 +8731,8 @@
                   "id": "AJteB",
                   "x": 0,
                   "y": 0,
-                  "name": "Zone — ASHRAE TC 9.9 Datacenter",
-                  "geometry": "M374.8 640.82l149.4 0 0-124.92-62.42 0 0 0.08-6.64 6.32-6.64 6.18-6.64 6.05-6.64 5.92-6.64 5.79-6.64 5.65-6.64 5.54-6.64 5.41-6.64 5.29-6.64 5.18-6.64 5.05-6.64 4.95-6.64 4.84-0.66 0.47z",
+                  "name": "Zone — TC 9.9 Recommended",
+                  "geometry": "M374.8 587.27l8.3-6.1 8.3-6.27 8.3-6.45 8.3-6.64 8.3-6.82 8.3-7.01 8.3-7.22 8.3-7.41 8.3-7.63 8.3-7.83 8.3-2.99 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 0 218.26 0 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0z",
                   "viewBox": [
                     0,
                     0,
@@ -9426,6 +9858,357 @@
                 },
                 {
                   "type": "frame",
+                  "id": "Xy9zn",
+                  "x": 160,
+                  "y": 266,
+                  "name": "Protractor Key",
+                  "width": 208,
+                  "fill": "$color-bg",
+                  "cornerRadius": 6,
+                  "stroke": "$color-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s1ws9o",
+                      "name": "Key SHR",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "L4pgx",
+                          "name": "Key SHR Label",
+                          "fill": "$chart-grid-rh",
+                          "content": "SENSIBLE HEAT / TOTAL HEAT",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "XADUj",
+                          "name": "Key SHR Unit",
+                          "fill": "$color-text-muted",
+                          "content": "SHR",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QM1g6",
+                      "name": "Key MJ/kg",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rwqZt",
+                          "name": "Key MJ/kg Label",
+                          "fill": "$chart-grid-enthalpy",
+                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "l9uXIm",
+                          "name": "Key MJ/kg Unit",
+                          "fill": "$color-text-muted",
+                          "content": "MJ/kg",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "path",
+                  "id": "gBCui",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Mixing Legs (OA + RA → MA)",
+                  "opacity": 0.8,
+                  "geometry": "M640.4 322.1l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-3 4m-2.3 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-51.5 69.3l3-4m2.4-3.2l3-4.1m2.3-3.2l3-4m2.4-3.2l3-4m2.4-3.2l3-4m2.3-3.2l3-4m2.4-3.3l3-4m2.4-3.2l3-4m2.4-3.2l2.9-4m2.4-3.2l2.1-2.8",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$color-text-muted",
+                  "strokeWidth": 1.6,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "t5VQBF",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Lines — AHU Cycle",
+                  "geometry": "M524.8 480.2l-266.2 105.8m0 0l23.2 0m0 0l192.6-38",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$chart-process",
+                  "strokeWidth": 2.4,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "umLen",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Direction Arrows",
+                  "geometry": "M384.3 536l11.6-9.7 3.5 8.9z m-106.1 50l-14.4 4.7 0-9.5z m107.8-20.6l-13.2 7.5-1.9-9.4z",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "$chart-process",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "#00000000"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "bKKrG",
+                  "x": 633.4000000000001,
+                  "y": 315.12262004219605,
+                  "name": "State Point OA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "OL9FN",
+                  "x": 651.4000000000001,
+                  "y": 297.12262004219605,
+                  "name": "State Point OA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "O21m1b",
+                      "name": "State Point OA Text",
+                      "fill": "$chart-point",
+                      "content": "OA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dHaad",
+                  "x": 467.4,
+                  "y": 540.9833627295645,
+                  "name": "State Point RA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "xOuj1",
+                  "x": 485.4,
+                  "y": 522.9833627295645,
+                  "name": "State Point RA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "q4bg98",
+                      "name": "State Point RA Text",
+                      "fill": "$chart-point",
+                      "content": "RA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dlCYu",
+                  "x": 517.7773969230743,
+                  "y": 473.22513992335394,
+                  "name": "State Point MA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "w644i",
+                  "x": 535.7773969230743,
+                  "y": 455.22513992335394,
+                  "name": "State Point MA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LDkbb",
+                      "name": "State Point MA Text",
+                      "fill": "$chart-point",
+                      "content": "MA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "EeLsu",
+                  "x": 251.60000000000002,
+                  "y": 578.9535640255149,
+                  "name": "State Point CL",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "ZhNoP",
+                  "x": 269.6,
+                  "y": 560.9535640255149,
+                  "name": "State Point CL Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VI92q",
+                      "name": "State Point CL Text",
+                      "fill": "$chart-point",
+                      "content": "CL",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V6Dnwo",
+                  "x": 274.84000000000003,
+                  "y": 578.9535640255149,
+                  "name": "State Point SA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "BId32",
+                  "x": 292.84000000000003,
+                  "y": 560.9535640255149,
+                  "name": "State Point SA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FUJcg",
+                      "name": "State Point SA Text",
+                      "fill": "$chart-point",
+                      "content": "SA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "gRLt1",
                   "x": 672,
                   "y": 592,
@@ -9458,7 +10241,7 @@
                       "id": "AFBNf",
                       "name": "Legend Title",
                       "fill": "$color-text",
-                      "content": "SEA LEVEL · 101.325 kPa",
+                      "content": "SEA LEVEL · 101.325 kPa · IAPWS-IF97",
                       "fontFamily": "$font-ui",
                       "fontSize": 8.5,
                       "fontWeight": "700",
@@ -9670,214 +10453,6 @@
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "Xy9zn",
-                  "x": 160,
-                  "y": 266,
-                  "name": "Protractor Key",
-                  "width": 208,
-                  "fill": "$color-bg",
-                  "cornerRadius": 6,
-                  "stroke": "$color-border",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "layout": "vertical",
-                  "gap": 3,
-                  "padding": [
-                    8,
-                    10
-                  ],
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "s1ws9o",
-                      "name": "Key SHR",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "L4pgx",
-                          "name": "Key SHR Label",
-                          "fill": "$chart-grid-rh",
-                          "content": "SENSIBLE HEAT / TOTAL HEAT",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "XADUj",
-                          "name": "Key SHR Unit",
-                          "fill": "$color-text-muted",
-                          "content": "SHR",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "QM1g6",
-                      "name": "Key MJ/kg",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "rwqZt",
-                          "name": "Key MJ/kg Label",
-                          "fill": "$chart-grid-enthalpy",
-                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "l9uXIm",
-                          "name": "Key MJ/kg Unit",
-                          "fill": "$color-text-muted",
-                          "content": "MJ/kg",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "path",
-                  "id": "b4wlc",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Line — SP1 to SP2",
-                  "geometry": "M474.4 549.7l-215.8 37.5",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "#00000000",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "$chart-process",
-                  "strokeWidth": 2.4,
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "path",
-                  "id": "RCtxo",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Direction Arrow",
-                  "geometry": "M357.6 570l15.1-8.1 1.8 10.6z",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "$chart-process",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "#00000000",
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "ellipse",
-                  "id": "cNcdG",
-                  "x": 467.4,
-                  "y": 542.6607537837701,
-                  "name": "State Point 1",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "GiEXG",
-                  "x": 486.4,
-                  "y": 525.6607537837701,
-                  "name": "State Point 1 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "FYht1",
-                      "name": "State Point 1 Text",
-                      "fill": "$chart-point",
-                      "content": "SP1",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "ellipse",
-                  "id": "hvvVW",
-                  "x": 251.60000000000002,
-                  "y": 580.2200399915894,
-                  "name": "State Point 2",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "ccyJQ",
-                  "x": 270.6,
-                  "y": 563.2200399915894,
-                  "name": "State Point 2 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "P7StlN",
-                      "name": "State Point 2 Text",
-                      "fill": "$chart-point",
-                      "content": "SP2",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
                   "type": "path",
                   "id": "ziCwT",
                   "x": 0,
@@ -10026,7 +10601,7 @@
                               "id": "jLGbX",
                               "name": "Tooltip Wet-bulb Number",
                               "fill": "$color-text",
-                              "content": "25.42",
+                              "content": "25.68",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -10079,7 +10654,7 @@
                               "id": "pd22Y",
                               "name": "Tooltip Dew point Number",
                               "fill": "$color-text",
-                              "content": "22.82",
+                              "content": "22.70",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -10185,7 +10760,7 @@
                               "id": "dQUbj",
                               "name": "Tooltip Rel. humidity Number",
                               "fill": "$color-text",
-                              "content": "52.2",
+                              "content": "51.8",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -10238,7 +10813,7 @@
                               "id": "roPnY",
                               "name": "Tooltip Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "79.08",
+                              "content": "79.05",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -10312,7 +10887,7 @@
                           "id": "bt6nQ",
                           "name": "Panel Title",
                           "fill": "$color-text",
-                          "content": "State Point 1",
+                          "content": "RA — Return air",
                           "fontFamily": "$font-ui",
                           "fontSize": 13.5,
                           "fontWeight": "600"
@@ -10637,7 +11212,7 @@
                               "id": "WwnKk",
                               "name": "Wet-bulb temperature Number",
                               "fill": "$color-text",
-                              "content": "17.01",
+                              "content": "17.06",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10691,7 +11266,7 @@
                               "id": "Kswvz",
                               "name": "Dew point Number",
                               "fill": "$color-text",
-                              "content": "12.94",
+                              "content": "12.95",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10745,7 +11320,7 @@
                               "id": "i5KItp",
                               "name": "Humidity ratio Number",
                               "fill": "$color-text",
-                              "content": "0.009276",
+                              "content": "0.009345",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10799,7 +11374,7 @@
                               "id": "JeoS2",
                               "name": "Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "47.75",
+                              "content": "47.92",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10853,7 +11428,7 @@
                               "id": "wyVRu",
                               "name": "Specific volume Number",
                               "fill": "$color-text",
-                              "content": "0.8543",
+                              "content": "0.8544",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10907,7 +11482,7 @@
                               "id": "i618e",
                               "name": "Density Number",
                               "fill": "$color-text",
-                              "content": "1.1814",
+                              "content": "1.1813",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10961,7 +11536,7 @@
                               "id": "MTFKm",
                               "name": "Vapour pressure Number",
                               "fill": "$color-text",
-                              "content": "1.489",
+                              "content": "1.493",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -10972,6 +11547,79 @@
                               "name": "Vapour pressure Unit",
                               "fill": "$color-text-muted",
                               "content": "kPa",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O5uTc6",
+                      "name": "Degree of saturation Row",
+                      "width": "fill_container",
+                      "fill": "$color-bg",
+                      "padding": [
+                        7,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "RN7ET",
+                          "name": "Degree of saturation Row Label Group",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "rUiQy",
+                              "name": "Degree of saturation Row Label",
+                              "fill": "$color-text-muted",
+                              "content": "Degree of saturation  μ",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "a79tr",
+                              "name": "Degree of saturation Info",
+                              "width": 11,
+                              "height": 11,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$color-accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WrC2I",
+                          "name": "Degree of saturation Row Value",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EgxIN",
+                              "name": "Degree of saturation Number",
+                              "fill": "$color-text",
+                              "content": "49.25",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 12.5,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "AXsbw",
+                              "name": "Degree of saturation Unit",
+                              "fill": "$color-text-muted",
+                              "content": "%",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -11105,7 +11753,7 @@
                                   "id": "l3g83",
                                   "name": "Sensible Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−8.42 kW",
+                                  "content": "−19.01 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -11134,7 +11782,7 @@
                                   "id": "GZYsa",
                                   "name": "Latent Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−3.10 kW",
+                                  "content": "−12.60 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -11163,7 +11811,7 @@
                                   "id": "N4Zh1z",
                                   "name": "Path Metric Value",
                                   "fill": "$color-text",
-                                  "content": "SP1 → SP2",
+                                  "content": "MA → CL",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -11342,7 +11990,8 @@
                       "fill": "$color-text-muted",
                       "content": "Line styling",
                       "fontFamily": "$font-ui",
-                      "fontSize": 12.5
+                      "fontSize": 12.5,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -11368,7 +12017,8 @@
                       "fill": "$color-text-muted",
                       "content": "Axes & units",
                       "fontFamily": "$font-ui",
-                      "fontSize": 12.5
+                      "fontSize": 12.5,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -11394,7 +12044,8 @@
                       "fill": "$color-text-muted",
                       "content": "Zones",
                       "fontFamily": "$font-ui",
-                      "fontSize": 12.5
+                      "fontSize": 12.5,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -12039,7 +12690,8 @@
                                   "fill": "$color-text-muted",
                                   "content": "Top left",
                                   "fontFamily": "$font-ui",
-                                  "fontSize": 11
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -12064,7 +12716,8 @@
                                   "fill": "$color-text-muted",
                                   "content": "Top right",
                                   "fontFamily": "$font-ui",
-                                  "fontSize": 11
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -12089,7 +12742,8 @@
                                   "fill": "$color-text-muted",
                                   "content": "Bottom left",
                                   "fontFamily": "$font-ui",
-                                  "fontSize": 11
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -12114,7 +12768,8 @@
                                   "fill": "$color-text-muted",
                                   "content": "Bottom right",
                                   "fontFamily": "$font-ui",
-                                  "fontSize": 11
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -13096,8 +13751,8 @@
                   "id": "xJLgx",
                   "x": 0,
                   "y": 0,
-                  "name": "Zone — ASHRAE TC 9.9 Datacenter",
-                  "geometry": "M374.8 640.82l149.4 0 0-124.92-62.42 0 0 0.08-6.64 6.32-6.64 6.18-6.64 6.05-6.64 5.92-6.64 5.79-6.64 5.65-6.64 5.54-6.64 5.41-6.64 5.29-6.64 5.18-6.64 5.05-6.64 4.95-6.64 4.84-0.66 0.47z",
+                  "name": "Zone — TC 9.9 Recommended",
+                  "geometry": "M374.8 587.27l8.3-6.1 8.3-6.27 8.3-6.45 8.3-6.64 8.3-6.82 8.3-7.01 8.3-7.22 8.3-7.41 8.3-7.63 8.3-7.83 8.3-2.99 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 8.3 0 0 218.26 0 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0-8.3 0z",
                   "viewBox": [
                     0,
                     0,
@@ -14223,6 +14878,357 @@
                 },
                 {
                   "type": "frame",
+                  "id": "N07Jt9",
+                  "x": 160,
+                  "y": 266,
+                  "name": "Protractor Key",
+                  "width": 208,
+                  "fill": "$color-bg",
+                  "cornerRadius": 6,
+                  "stroke": "$color-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kntxM",
+                      "name": "Key SHR",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OXH8P",
+                          "name": "Key SHR Label",
+                          "fill": "$chart-grid-rh",
+                          "content": "SENSIBLE HEAT / TOTAL HEAT",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "bFpPN",
+                          "name": "Key SHR Unit",
+                          "fill": "$color-text-muted",
+                          "content": "SHR",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Wh28w",
+                      "name": "Key MJ/kg",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Hs5ig",
+                          "name": "Key MJ/kg Label",
+                          "fill": "$chart-grid-enthalpy",
+                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 7.5,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "text",
+                          "id": "a4OKDK",
+                          "name": "Key MJ/kg Unit",
+                          "fill": "$color-text-muted",
+                          "content": "MJ/kg",
+                          "fontFamily": "$font-numeric",
+                          "fontSize": 7.5,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "path",
+                  "id": "yGv6o",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Mixing Legs (OA + RA → MA)",
+                  "opacity": 0.8,
+                  "geometry": "M640.4 322.1l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.3 3.2l-3 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-2.9 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-2.4 3.3l-3 4m-2.3 3.2l-3 4.1m-2.3 3.2l-3 4m-2.3 3.3l-3 4m-2.4 3.2l-2.9 4.1m-2.4 3.2l-2.9 4m-51.5 69.3l3-4m2.4-3.2l3-4.1m2.3-3.2l3-4m2.4-3.2l3-4m2.4-3.2l3-4m2.3-3.2l3-4m2.4-3.3l3-4m2.4-3.2l3-4m2.4-3.2l2.9-4m2.4-3.2l2.1-2.8",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$color-text-muted",
+                  "strokeWidth": 1.6,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "afxEq",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Lines — AHU Cycle",
+                  "geometry": "M524.8 480.2l-266.2 105.8m0 0l23.2 0m0 0l192.6-38",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "#00000000",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "$chart-process",
+                  "strokeWidth": 2.4,
+                  "strokeLinejoin": "round",
+                  "strokeLinecap": "round"
+                },
+                {
+                  "type": "path",
+                  "id": "Do87r",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Process Direction Arrows",
+                  "geometry": "M384.3 536l11.6-9.7 3.5 8.9z m-106.1 50l-14.4 4.7 0-9.5z m107.8-20.6l-13.2 7.5-1.9-9.4z",
+                  "viewBox": [
+                    0,
+                    0,
+                    1056,
+                    852
+                  ],
+                  "fill": "$chart-process",
+                  "width": 1056,
+                  "height": 852,
+                  "stroke": "#00000000"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ooden",
+                  "x": 633.4000000000001,
+                  "y": 315.12262004219605,
+                  "name": "State Point OA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "Eah7E",
+                  "x": 651.4000000000001,
+                  "y": 297.12262004219605,
+                  "name": "State Point OA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Fckcp",
+                      "name": "State Point OA Text",
+                      "fill": "$chart-point",
+                      "content": "OA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "amQkS",
+                  "x": 467.4,
+                  "y": 540.9833627295645,
+                  "name": "State Point RA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "XZcwh",
+                  "x": 485.4,
+                  "y": 522.9833627295645,
+                  "name": "State Point RA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CVsBh",
+                      "name": "State Point RA Text",
+                      "fill": "$chart-point",
+                      "content": "RA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "p80Ot",
+                  "x": 517.7773969230743,
+                  "y": 473.22513992335394,
+                  "name": "State Point MA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "UvunI",
+                  "x": 535.7773969230743,
+                  "y": 455.22513992335394,
+                  "name": "State Point MA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WI8NJ",
+                      "name": "State Point MA Text",
+                      "fill": "$chart-point",
+                      "content": "MA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "P8mtgQ",
+                  "x": 251.60000000000002,
+                  "y": 578.9535640255149,
+                  "name": "State Point CL",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "h0yDn",
+                  "x": 269.6,
+                  "y": 560.9535640255149,
+                  "name": "State Point CL Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xgIXA",
+                      "name": "State Point CL Text",
+                      "fill": "$chart-point",
+                      "content": "CL",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "ellipse",
+                  "id": "p19myv",
+                  "x": 274.84000000000003,
+                  "y": 578.9535640255149,
+                  "name": "State Point SA",
+                  "fill": "$chart-point",
+                  "width": 14,
+                  "height": 14,
+                  "stroke": "$color-bg",
+                  "strokeWidth": 2.5,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "anCSh",
+                  "x": 292.84000000000003,
+                  "y": 560.9535640255149,
+                  "name": "State Point SA Label",
+                  "fill": "$color-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$chart-point",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Pt16b",
+                      "name": "State Point SA Text",
+                      "fill": "$chart-point",
+                      "content": "SA",
+                      "fontFamily": "$font-numeric",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "UaLNP",
                   "x": 672,
                   "y": 592,
@@ -14255,7 +15261,7 @@
                       "id": "PuhSj",
                       "name": "Legend Title",
                       "fill": "$color-text",
-                      "content": "SEA LEVEL · 101.325 kPa",
+                      "content": "SEA LEVEL · 101.325 kPa · IAPWS-IF97",
                       "fontFamily": "$font-ui",
                       "fontSize": 8.5,
                       "fontWeight": "700",
@@ -14467,214 +15473,6 @@
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "N07Jt9",
-                  "x": 160,
-                  "y": 266,
-                  "name": "Protractor Key",
-                  "width": 208,
-                  "fill": "$color-bg",
-                  "cornerRadius": 6,
-                  "stroke": "$color-border",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "layout": "vertical",
-                  "gap": 3,
-                  "padding": [
-                    8,
-                    10
-                  ],
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "kntxM",
-                      "name": "Key SHR",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "OXH8P",
-                          "name": "Key SHR Label",
-                          "fill": "$chart-grid-rh",
-                          "content": "SENSIBLE HEAT / TOTAL HEAT",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "bFpPN",
-                          "name": "Key SHR Unit",
-                          "fill": "$color-text-muted",
-                          "content": "SHR",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Wh28w",
-                      "name": "Key MJ/kg",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "Hs5ig",
-                          "name": "Key MJ/kg Label",
-                          "fill": "$chart-grid-enthalpy",
-                          "content": "Δ ENTHALPY / Δ HUMIDITY RATIO",
-                          "fontFamily": "$font-ui",
-                          "fontSize": 7.5,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.3
-                        },
-                        {
-                          "type": "text",
-                          "id": "a4OKDK",
-                          "name": "Key MJ/kg Unit",
-                          "fill": "$color-text-muted",
-                          "content": "MJ/kg",
-                          "fontFamily": "$font-numeric",
-                          "fontSize": 7.5,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "path",
-                  "id": "e28HIU",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Line — SP1 to SP2",
-                  "geometry": "M474.4 549.7l-215.8 37.5",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "#00000000",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "$chart-process",
-                  "strokeWidth": 2.4,
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "path",
-                  "id": "zJv5L",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Process Direction Arrow",
-                  "geometry": "M357.6 570l15.1-8.1 1.8 10.6z",
-                  "viewBox": [
-                    0,
-                    0,
-                    1056,
-                    852
-                  ],
-                  "fill": "$chart-process",
-                  "width": 1056,
-                  "height": 852,
-                  "stroke": "#00000000",
-                  "strokeLinejoin": "round",
-                  "strokeLinecap": "round"
-                },
-                {
-                  "type": "ellipse",
-                  "id": "KlvKx",
-                  "x": 467.4,
-                  "y": 542.6607537837701,
-                  "name": "State Point 1",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "s7GRxs",
-                  "x": 486.4,
-                  "y": 525.6607537837701,
-                  "name": "State Point 1 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "JSBxA",
-                      "name": "State Point 1 Text",
-                      "fill": "$chart-point",
-                      "content": "SP1",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "ellipse",
-                  "id": "u5TwyN",
-                  "x": 251.60000000000002,
-                  "y": 580.2200399915894,
-                  "name": "State Point 2",
-                  "fill": "$chart-point",
-                  "width": 14,
-                  "height": 14,
-                  "stroke": "$color-bg",
-                  "strokeWidth": 2.5,
-                  "strokeAlignment": "inner"
-                },
-                {
-                  "type": "frame",
-                  "id": "GucYZ",
-                  "x": 270.6,
-                  "y": 563.2200399915894,
-                  "name": "State Point 2 Label",
-                  "fill": "$color-bg",
-                  "cornerRadius": 4,
-                  "stroke": "$chart-point",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    3,
-                    7
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "NRW1g",
-                      "name": "State Point 2 Text",
-                      "fill": "$chart-point",
-                      "content": "SP2",
-                      "fontFamily": "$font-numeric",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
                   "type": "path",
                   "id": "ndHNi",
                   "x": 0,
@@ -14823,7 +15621,7 @@
                               "id": "cAtQN",
                               "name": "Tooltip Wet-bulb Number",
                               "fill": "$color-text",
-                              "content": "25.42",
+                              "content": "25.68",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -14876,7 +15674,7 @@
                               "id": "NPXLR",
                               "name": "Tooltip Dew point Number",
                               "fill": "$color-text",
-                              "content": "22.82",
+                              "content": "22.70",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -14982,7 +15780,7 @@
                               "id": "i4QTrH",
                               "name": "Tooltip Rel. humidity Number",
                               "fill": "$color-text",
-                              "content": "52.2",
+                              "content": "51.8",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -15035,7 +15833,7 @@
                               "id": "iBAjE",
                               "name": "Tooltip Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "79.08",
+                              "content": "79.05",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -15109,7 +15907,7 @@
                           "id": "espa0",
                           "name": "Panel Title",
                           "fill": "$color-text",
-                          "content": "State Point 1",
+                          "content": "RA — Return air",
                           "fontFamily": "$font-ui",
                           "fontSize": 13.5,
                           "fontWeight": "600"
@@ -15434,7 +16232,7 @@
                               "id": "ctp5R",
                               "name": "Wet-bulb temperature Number",
                               "fill": "$color-text",
-                              "content": "17.01",
+                              "content": "17.06",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15488,7 +16286,7 @@
                               "id": "Xcat2",
                               "name": "Dew point Number",
                               "fill": "$color-text",
-                              "content": "12.94",
+                              "content": "12.95",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15542,7 +16340,7 @@
                               "id": "xsjx2",
                               "name": "Humidity ratio Number",
                               "fill": "$color-text",
-                              "content": "0.009276",
+                              "content": "0.009345",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15596,7 +16394,7 @@
                               "id": "cs5fb",
                               "name": "Enthalpy Number",
                               "fill": "$color-text",
-                              "content": "47.75",
+                              "content": "47.92",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15650,7 +16448,7 @@
                               "id": "XXAh2",
                               "name": "Specific volume Number",
                               "fill": "$color-text",
-                              "content": "0.8543",
+                              "content": "0.8544",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15704,7 +16502,7 @@
                               "id": "jR4z1",
                               "name": "Density Number",
                               "fill": "$color-text",
-                              "content": "1.1814",
+                              "content": "1.1813",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15758,7 +16556,7 @@
                               "id": "kNLTI",
                               "name": "Vapour pressure Number",
                               "fill": "$color-text",
-                              "content": "1.489",
+                              "content": "1.493",
                               "fontFamily": "$font-numeric",
                               "fontSize": 12.5,
                               "fontWeight": "500"
@@ -15769,6 +16567,79 @@
                               "name": "Vapour pressure Unit",
                               "fill": "$color-text-muted",
                               "content": "kPa",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mnhfA",
+                      "name": "Degree of saturation Row",
+                      "width": "fill_container",
+                      "fill": "$color-bg",
+                      "padding": [
+                        7,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "s06aPa",
+                          "name": "Degree of saturation Row Label Group",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "BE5MD",
+                              "name": "Degree of saturation Row Label",
+                              "fill": "$color-text-muted",
+                              "content": "Degree of saturation  μ",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "Ak1Yt",
+                              "name": "Degree of saturation Info",
+                              "width": 11,
+                              "height": 11,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$color-accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "zwceC",
+                          "name": "Degree of saturation Row Value",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "R4g52Q",
+                              "name": "Degree of saturation Number",
+                              "fill": "$color-text",
+                              "content": "49.25",
+                              "fontFamily": "$font-numeric",
+                              "fontSize": 12.5,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "V53tbQ",
+                              "name": "Degree of saturation Unit",
+                              "fill": "$color-text-muted",
+                              "content": "%",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11,
                               "fontWeight": "normal"
@@ -15902,7 +16773,7 @@
                                   "id": "v6nYg",
                                   "name": "Sensible Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−8.42 kW",
+                                  "content": "−19.01 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -15931,7 +16802,7 @@
                                   "id": "VhLNy",
                                   "name": "Latent Metric Value",
                                   "fill": "$color-text",
-                                  "content": "−3.10 kW",
+                                  "content": "−12.60 kW",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -15960,7 +16831,7 @@
                                   "id": "I3jHzR",
                                   "name": "Path Metric Value",
                                   "fill": "$color-text",
-                                  "content": "SP1 → SP2",
+                                  "content": "MA → CL",
                                   "fontFamily": "$font-numeric",
                                   "fontSize": 11.5,
                                   "fontWeight": "500"
@@ -16112,7 +16983,8 @@
                       "fill": "$color-text-muted",
                       "content": "Layers",
                       "fontFamily": "$font-ui",
-                      "fontSize": 12.5
+                      "fontSize": 12.5,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -16165,7 +17037,8 @@
                       "fill": "$color-text-muted",
                       "content": "Axes & units",
                       "fontFamily": "$font-ui",
-                      "fontSize": 12.5
+                      "fontSize": 12.5,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -16191,7 +17064,8 @@
                       "fill": "$color-text-muted",
                       "content": "Zones",
                       "fontFamily": "$font-ui",
-                      "fontSize": 12.5
+                      "fontSize": 12.5,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -18170,7 +19044,8 @@
                           "fill": "$color-text-muted",
                           "content": "Chart",
                           "fontFamily": "$font-ui",
-                          "fontSize": 12.5
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -18245,7 +19120,8 @@
                           "fill": "$color-text-muted",
                           "content": "Process design",
                           "fontFamily": "$font-ui",
-                          "fontSize": 12.5
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -18282,7 +19158,8 @@
                           "fill": "$color-text-muted",
                           "content": "Weather data",
                           "fontFamily": "$font-ui",
-                          "fontSize": 12.5
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -18319,7 +19196,8 @@
                           "fill": "$color-text-muted",
                           "content": "Report",
                           "fontFamily": "$font-ui",
-                          "fontSize": 12.5
+                          "fontSize": 12.5,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -18371,7 +19249,7 @@
                               "id": "hO7xT",
                               "name": "Row Count",
                               "fill": "$color-text-muted",
-                              "content": "5 points · 3 processes",
+                              "content": "5 points · 4 processes · ṁ(da) 1.153 kg/s",
                               "fontFamily": "$font-numeric",
                               "fontSize": 10.5,
                               "fontWeight": "normal"
@@ -18420,7 +19298,8 @@
                               "fill": "$color-text",
                               "content": "Columns",
                               "fontFamily": "$font-ui",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -18457,7 +19336,8 @@
                               "fill": "$color-text",
                               "content": "Add point",
                               "fontFamily": "$font-ui",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -19084,7 +19964,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 68,
-                              "content": "26.33",
+                              "content": "26.32",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19097,7 +19977,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 68,
-                              "content": "23.69",
+                              "content": "23.68",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19110,7 +19990,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "0.01847",
+                              "content": "0.018602",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19136,7 +20016,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "81.57",
+                              "content": "81.87",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19149,7 +20029,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "0.8960",
+                              "content": "0.8961",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19162,7 +20042,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 72,
-                              "content": "1.1367",
+                              "content": "1.1366",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19175,7 +20055,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "2.923",
+                              "content": "2.929",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19188,7 +20068,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.200",
+                              "content": "1.1535",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19286,7 +20166,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 68,
-                              "content": "17.07",
+                              "content": "17.06",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19299,7 +20179,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 68,
-                              "content": "12.94",
+                              "content": "12.95",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19312,7 +20192,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "0.00928",
+                              "content": "0.009345",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19338,7 +20218,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "47.76",
+                              "content": "47.92",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19351,7 +20231,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "0.8543",
+                              "content": "0.8544",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19377,7 +20257,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.489",
+                              "content": "1.493",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19390,7 +20270,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.200",
+                              "content": "1.1535",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19488,7 +20368,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 68,
-                              "content": "20.24",
+                              "content": "20.22",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19514,7 +20394,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "0.01203",
+                              "content": "0.012122",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19540,7 +20420,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "57.90",
+                              "content": "58.10",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19553,7 +20433,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "0.8668",
+                              "content": "0.8670",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19566,7 +20446,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 72,
-                              "content": "1.1675",
+                              "content": "1.1674",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19579,7 +20459,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.923",
+                              "content": "1.928",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19592,7 +20472,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.200",
+                              "content": "1.1535",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19716,7 +20596,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "0.00774",
+                              "content": "0.007789",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19742,7 +20622,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "30.57",
+                              "content": "30.69",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19781,7 +20661,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.245",
+                              "content": "1.247",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19794,7 +20674,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.200",
+                              "content": "1.1535",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19918,7 +20798,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "0.00774",
+                              "content": "0.007789",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19944,7 +20824,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "32.00",
+                              "content": "32.12",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19957,7 +20837,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "0.8190",
+                              "content": "0.8191",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19970,7 +20850,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 72,
-                              "content": "1.2305",
+                              "content": "1.2304",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19983,7 +20863,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.245",
+                              "content": "1.247",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -19996,7 +20876,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 74,
-                              "content": "1.200",
+                              "content": "1.1535",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20518,7 +21398,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "+0.00276",
+                              "content": "+0.002777",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20531,7 +21411,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "+10.14",
+                              "content": "+10.19",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20677,7 +21557,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "−0.00430",
+                              "content": "−0.004333",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20690,7 +21570,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "−27.33",
+                              "content": "−27.41",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20703,7 +21583,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "−19.89",
+                              "content": "−19.02",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20716,7 +21596,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "−12.90",
+                              "content": "−12.60",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20729,7 +21609,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 82,
-                              "content": "−32.79",
+                              "content": "−31.61",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20742,7 +21622,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 62,
-                              "content": "0.607",
+                              "content": "0.602",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20836,7 +21716,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "+0.00000",
+                              "content": "+0.000000",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20862,7 +21742,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "+1.71",
+                              "content": "+1.65",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20875,7 +21755,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "0.00",
+                              "content": "+0.00",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20888,7 +21768,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 82,
-                              "content": "+1.71",
+                              "content": "+1.65",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -20995,7 +21875,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 88,
-                              "content": "+0.00154",
+                              "content": "+0.001556",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -21008,7 +21888,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "+15.76",
+                              "content": "+15.79",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -21021,7 +21901,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "+14.29",
+                              "content": "+13.65",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -21034,7 +21914,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 78,
-                              "content": "+4.62",
+                              "content": "+4.57",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -21047,7 +21927,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 82,
-                              "content": "+18.91",
+                              "content": "+18.22",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -21060,7 +21940,7 @@
                               "fill": "$color-text",
                               "textGrowth": "fixed-width",
                               "width": 62,
-                              "content": "0.756",
+                              "content": "0.749",
                               "textAlign": "right",
                               "fontFamily": "$font-numeric",
                               "fontSize": 11.5,
@@ -21142,7 +22022,7 @@
                               "id": "L33la",
                               "name": "Card Total cooling Number",
                               "fill": "$color-accent-contrast",
-                              "content": "32.79",
+                              "content": "31.61",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"
@@ -21219,7 +22099,7 @@
                               "id": "D9emT",
                               "name": "Card Sensible Number",
                               "fill": "$color-text",
-                              "content": "19.89",
+                              "content": "19.02",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"
@@ -21295,7 +22175,7 @@
                               "id": "BBnAi",
                               "name": "Card Latent Number",
                               "fill": "$color-text",
-                              "content": "12.90",
+                              "content": "12.60",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"
@@ -21371,7 +22251,7 @@
                               "id": "sFFEH",
                               "name": "Card Coil SHR Number",
                               "fill": "$color-text",
-                              "content": "0.607",
+                              "content": "0.602",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"
@@ -21437,7 +22317,7 @@
                               "id": "E4bq6",
                               "name": "Card Moisture removal Number",
                               "fill": "$color-text",
-                              "content": "18.57",
+                              "content": "17.99",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"
@@ -21513,7 +22393,7 @@
                               "id": "nwxTl",
                               "name": "Card Apparatus dew point Number",
                               "fill": "$color-text",
-                              "content": "9.37",
+                              "content": "9.38",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"
@@ -21589,7 +22469,7 @@
                               "id": "qGe7x",
                               "name": "Card Bypass factor Number",
                               "fill": "$color-text",
-                              "content": "0.0920",
+                              "content": "0.0919",
                               "fontFamily": "$font-numeric",
                               "fontSize": 19,
                               "fontWeight": "600"

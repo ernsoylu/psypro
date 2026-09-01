@@ -7,7 +7,7 @@ Thanks for your interest. This project is MIT-licensed and welcomes contribution
 | Tool | Version | Notes |
 |---|---|---|
 | Rust | stable | `rust-toolchain.toml` pins the components and the `wasm32-unknown-unknown` target |
-| wasm-pack | 0.13+ | `cargo install wasm-pack` |
+| wasm-pack | 0.13+ | `cargo install wasm-pack`. Older versions cannot parse `license.workspace = true`; CI pins v0.15.0. |
 | Node.js | 20+ | |
 
 ## Local setup
