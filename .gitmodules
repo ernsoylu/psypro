@@ -1,0 +1,3 @@
+[submodule "vendor/frees-wasm"]
+	path = vendor/frees-wasm
+	url = https://github.com/ernsoylu/frees-wasm.git

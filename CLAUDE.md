@@ -15,9 +15,32 @@ CI exist, but no psychrometric logic is implemented yet. `REQUIREMENTS.md` is th
 spec and the source of truth; `DEVELOPMENT_PLAN.md` holds the phased build order and the
 open decisions. Update the Commands section below as each phase lands.
 
-`RustProp` is a first-party product of the maintainer. Phase 1 wraps it behind the
-`psychro-core` API so the dependency stays swappable; how it is consumed by the build
-(crates.io / git / vendored) is still open and must be settled before Phase 1.
+## Calculation backend
+
+**PsyPro does not implement psychrometrics.** `frees` does, and it is vendored as a git
+submodule at `vendor/frees-wasm` (first-party, MIT).
+
+```
+PsyPro  →  frees-core  →  rustprop  →  CoolProp 8.0.0-grade properties
+```
+
+`frees_core::props::propfun::ha_props_si` is the humid-air entry point — the CoolProp
+`HAPropsSI` signature. `RustProp` is consumed *through* frees-core as a git dependency pinned
+to tag `v0.1.0`; there is no separate integration. frees-core is target-agnostic and free of
+`wasm-bindgen` by its own rule, matching this repo's own layering.
+
+Clone with `git clone --recurse-submodules`, or `git submodule update --init --recursive`.
+The root `Cargo.toml` **excludes** `vendor/frees-wasm` — it has its own Cargo workspace, and
+without the exclusion its `workspace = true` inheritance resolves against the wrong manifest.
+
+`crates/psychro-core`'s own formulations are the **independent grading reference**, not the
+production path. `tests/frees_backend_parity.rs` holds the two against each other; frees wins
+any disagreement.
+
+**Gaps in frees get fixed upstream, not worked around here.** Two are open: the oblique chart
+geometry (`props/psychro.rs` draws a rectangular chart with no Mollier layout) and eleven
+missing components against the `REQUIREMENTS.md` §4 catalogue. See `DEVELOPMENT_PLAN.md`
+Phase 2.5.
 
 ## Branch policy
 

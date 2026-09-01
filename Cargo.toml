@@ -1,6 +1,10 @@
 [workspace]
 members = ["crates/psychro-core", "crates/psychro-wasm"]
 resolver = "2"
+# frees-wasm is a submodule with its own Cargo workspace. Without this, our root
+# claims its crates and their `workspace = true` inheritance resolves against the
+# wrong manifest.
+exclude = ["vendor/frees-wasm"]
 
 [workspace.package]
 version = "0.1.0"

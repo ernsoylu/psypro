@@ -14,3 +14,8 @@ workspace = true
 
 [dev-dependencies]
 approx = "0.5"
+# Validation only for now: grade the frees/rustprop humid-air path against the
+# same ASHRAE reference values this crate's own implementation is held to.
+frees-core = { path = "../../vendor/frees-wasm/crates/frees-core", features = [
+    "rustprop-backend",
+] }

@@ -2,49 +2,125 @@
 
 Each phase is **atomic**: it lands as one pull request, leaves `main` in a working and
 demonstrable state, and has an exit criterion that can be checked without reading the diff.
-Phases are ordered so that nothing is built on top of an unverified layer. A phase is not
-"done" because the code exists — it is done when its exit criterion passes in CI.
+A phase is not "done" because the code exists — it is done when its exit criterion passes in CI.
 
-Dependencies are noted where a phase can be parallelised; everything else is strictly serial.
+---
+
+## The calculation backend: frees
+
+**PsyPro does not implement psychrometrics. `frees` does.**
+
+```
+PsyPro  →  frees-core  →  rustprop  →  CoolProp 8.0.0-grade properties
+(UI, chart,   (equation engine,   (pure-Rust CoolProp port,
+ documents)    component library)   `humid-air` feature)
+```
+
+`frees-wasm` is a first-party project of the maintainer, MIT-licensed, vendored here as a
+git submodule at `vendor/frees-wasm`. It is an equation-solving and simulation engine — a CAS,
+a DAE/ODE solver, a component library, parametric and uncertainty analysis — with a moist-air
+property path that is **graded in CI against 912 CoolProp 8.0.0 reference points**.
+
+This settles the question that blocked Phase 1 from the start. `RustProp` is consumed *through*
+frees-core, as a git dependency pinned to tag `v0.1.0` with the `humid-air`, `heos` and
+`incompressible` features. There is no separate integration to design.
+
+Two properties of frees-core make it fit PsyPro's architecture without adaptation:
+
+* It is **target-agnostic and free of `wasm-bindgen`** by its own hard rule, exactly as
+  `psychro-core` is. The WASM boundary stays in one place in each project.
+* Its humid-air entry point is `props::propfun::ha_props_si`, the CoolProp `HAPropsSI`
+  signature, so every state-point query is one call with explicit inputs — matching the
+  stateless-engine rule in `REQUIREMENTS.md` §3.
+
+**Measured agreement** between this repo's own reference implementation and the frees path,
+at sea level (`crates/psychro-core/tests/frees_backend_parity.rs`):
+
+| Quantity | Worst deviation | Over |
+|---|---|---|
+| Saturation humidity ratio | 6.9e-4 relative | 0–50 °C |
+| Specific enthalpy | 0.016 kJ/kg_da | −5 to 34 °C, 50–95% RH |
+| Thermodynamic wet-bulb | 0.008 K | 24–34 °C |
+
+The residual is this repo's linearised enhancement factor against rustprop's full treatment.
+**frees is the authority**; `psychro-core`'s formulations are retained as the independent
+grading reference, not as the production path.
+
+## What PsyPro adds, and what it contributes back
+
+PsyPro is the psychrometric *application*: the chart, the document model, the industry
+profiles, the teaching affordances. Where the engine is missing something PsyPro needs, the
+fix goes **upstream into frees** rather than being reimplemented here.
+
+Two gaps are already identified:
+
+1. **Chart geometry.** `frees-core/src/props/psychro.rs` generates a *rectangular* chart —
+   dry-bulb on x, humidity ratio on y — with no oblique construction and no Mollier i-x
+   layout. `psychro-core/src/chart.rs` has the derived oblique transform for both layouts.
+   That is a contribution, not a local workaround.
+2. **Component coverage.** `moistair.frees` and `ac.frees` ship 26 components. The catalogue
+   in `REQUIREMENTS.md` §4 has 37, and the gaps are listed in Phase 2.5 below.
+
+---
 
 ## Status
 
 | Phase | State |
 |---|---|
 | 0 — Repository foundation | **Done**, CI green |
-| 1 — Rust thermodynamic core | **Substantially done** — engine + 14-case conformance suite landed; `RustProp` wrapping and fog region remain |
+| 1 — Psychrometric core | **Superseded by frees.** The reference implementation and its 14-case ASHRAE conformance suite stay as the grading gate |
 | 2 — WASM bridge | **Done** — typed handshake, IP/SI at the boundary, debug panel |
-| 3 — Coordinate transformation | Next |
+| 3 — Coordinate transformation | **Done** — oblique construction, both layouts, 22 tests |
+| 2.5 — frees integration and upstream contribution | **Next** |
 | 4–13 | Not started |
 
-## Findings that reshaped this plan
+---
 
-A research pass over the ASHRAE source library (Gatley, *Understanding Psychrometrics* 3rd
-ed.; RP-1485; Spitler's *Load Calculation Applications Manual*; TC 9.9; automotive A/C
-sources) changed the scope in ways later phases depend on. They are recorded here so nobody
-re-litigates them mid-build.
+## Phase 2.5 — frees integration and upstream contribution
 
-1. **The formulations are non-negotiable and now pinned by tests.** IAPWS-IF97 over water,
-   IAPWS-06/08 over ice, RP-1485 constants (`2499.86`/`1.84`, not `2501`/`1.86`), real-gas
-   enhancement factor on by default. See `REQUIREMENTS.md` §3.1.
-2. **Data centres run at SHR ≈ 0.95–1.0**, so their process lines are essentially
-   **horizontal**. Any default, heuristic, or auto-scaling tuned to the comfort-range SHR of
-   0.65–0.85 will mislead that audience. Phase 8's process model and Phase 9's overlays must
-   both handle the near-unity case as a first-class path, not an edge case.
-3. **Automotive's binding constraint is fogging**, `t_dp,cabin ≥ t_glass,inner`. That check is
-   the reason the automotive profile needs the sub-freezing branch of the engine, and it makes
-   the ice-side formulations load-bearing rather than completeness for its own sake.
-4. **The component palette is far wider than one AHU arrangement.** `REQUIREMENTS.md` §4 now
-   catalogues 37 components across seven families. Two consequences for the model: desiccant
-   dehumidification runs **down and to the right** (the mirror of evaporative cooling — latent
-   heat released on sorption reappears as sensible heat), so a process vocabulary that only
-   goes down-and-left cannot represent it; and filters, dampers and attenuators have **no**
-   psychrometric process at all, so the component model must allow a component that draws no
-   vector. Phase 7 builds the vector vocabulary in §4.1; Phase 8 builds components on top.
-5. **Three distinctions must survive into the UI**, not just the engine: RH vs. degree of
-   saturation, thermodynamic vs. psychrometer wet-bulb, and dry-air-basis mass flow. These are
-   the field's most common errors; they drive Phase 6's property panel and Phase 11's teaching
-   affordances.
+**Goal:** Make frees the production calculation path, and close the gaps it has for
+psychrometric work by contributing to it.
+
+### 2.5a — Adopt frees as the backend
+- `psychro-core` becomes a thin adapter over `frees_core::props::propfun`, not a second
+  implementation. Its formulations move behind a `reference-impl` feature used only by the
+  grading tests.
+- The ASHRAE conformance suite is repointed to grade **frees**, so the acceptance criterion
+  transfers intact rather than being retired.
+- CI checks out submodules recursively.
+
+**Exit:** every `StatePoint` in the app is resolved by frees; the conformance suite passes
+against it; the parity test keeps both implementations honest.
+
+### 2.5b — Contribute the oblique chart geometry upstream
+Offer `chart.rs` to frees as the chart-space transform behind `props/psychro.rs`, giving it
+the ASHRAE oblique construction and the Mollier i-x layout it currently lacks.
+
+**Exit:** a PR against `ernsoylu/frees-wasm` with the round-trip and straightness tests.
+
+### 2.5c — Contribute the missing components
+`moistair.frees` and `ac.frees` cover 26 of the catalogue's 37. What frees already has —
+including several PsyPro had not catalogued — is: MoistAirSource/Sink, HeatingCoil,
+Humidifier, MixingBox, CoolingCoil, MoistAirWallHX, MoistAirFan, MoistAirDamper,
+EvaporativeCooler, CabinZone, MembraneHumidifier, MoistAirDuct, AirFilter, Diffuser, VAVBox,
+EnthalpyWheel, Infiltration, AHU, Chiller, EXV/EXVCmd, AirCoil, TXV, Radiator, HeaterCore.
+
+`CabinZone`, `HeaterCore` and `Radiator` mean the **automotive profile is already well
+served** — a significant finding, since that was expected to be the thinnest of the three.
+
+Gaps, in the order they earn their place:
+
+| Family | Missing |
+|---|---|
+| Energy recovery | Fixed plate, membrane plate, sensible heat wheel, heat pipe, run-around coil loop, thermosiphon, twin towers |
+| Dehumidification | Solid desiccant wheel, liquid desiccant, heat-pipe wrap-around |
+| Coils | Face-and-bypass, run-around recuperative loop |
+| Evaporative | Indirect (IEC), indirect/direct two-stage |
+| Airside | Economizer changeover |
+| Terminal units | Fan-powered box, induction unit, active and passive chilled beam, fan coil unit, radiant panel, DOAS |
+
+**Exit:** each contributed component has a fixture in the frees corpus that solves, and the
+governing equation in `REQUIREMENTS.md` §4 is the one implemented.
 
 ---
 
