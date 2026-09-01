@@ -391,3 +391,67 @@ DXF opens cleanly in a CAD viewer.
   Phase 1; needed before the automotive profile's pull-down cases in Phase 9.
 - **`jetli/wasm-pack-action` targets the deprecated node20 runtime.** Cosmetic today. If
   GitHub drops node20, replace it with a pinned `cargo install wasm-pack --version 0.15.0`.
+
+## Beyond the current plan
+
+Three modules the maintainer has flagged. They are recorded here with the same shape as the
+phases above so they can be scheduled rather than remembered, and they share a theme: the
+current plan starts at a *state point*, but real design work starts one step earlier, at a
+**load**, and ends one step later, at **equipment sized against a distribution network**.
+
+### Load calculation
+**The starting point of any HVAC design** — building, house, automotive cabin or data centre —
+is the load. Without it, a psychrometric chart is a calculator waiting for numbers the user
+has had to find elsewhere.
+
+- Fundamental first, for **all four applications**, with a small set of required inputs.
+- Advanced options let the user refine the estimate as more data becomes available, rather
+  than demanding a full building model up front.
+- Sources: the ASHRAE and Carrier references in the `Frees` NotebookLM notebook — Spitler's
+  *Load Calculation Applications Manual* (RTSM and heat-balance methods) is already there,
+  alongside the automotive cabin-load and TC 9.9 material.
+- Feeds §4.3 directly: room sensible and latent load → RSHF → supply airflow → coil selection.
+  That chain already exists in the plan and currently begins with numbers typed in by hand.
+
+**Exit:** a worked load from each of the four application types reproduces its published
+result, and hands off to the existing supply-airflow derivation without re-entry.
+
+### Hydronic loops — brine, coolant, pumps and fans
+Most HVAC systems move heat with a liquid before they move it with air. Chilled water, glycol
+brines and automotive coolant loops carry the duty from the coil to the plant.
+
+- Loop heat transfer plus the **electrical consumption** of the machines that drive it.
+- Driven by **pump and fan curves**, which `frees-wasm` already supports — `liquid.frees`,
+  `hydraulic.frees` and the `pumpmap` / `fanmap` components are in the library today, so this
+  is largely an integration and UI problem rather than new physics.
+
+**Exit:** a chilled-water loop closes its energy balance against the air-side coil duty, and
+reports pump power from a real curve rather than an assumed efficiency.
+
+### Duct and pipe sizing
+The distribution network is what actually sets the pump and fan duty, so sizing it is the
+step between a load and equipment selection.
+
+- Size ducts and pipes, then size the pumps and fans **against that network** rather than
+  against a guessed pressure drop.
+- `MoistAirDuct` (Darcy friction on the moist-air stream) and the hydraulic resistance
+  library already give the pressure-drop physics; what is missing is the sizing method and
+  the network editor.
+
+**Exit:** a sized network produces a system curve that intersects a real pump or fan curve at
+the design flow.
+
+---
+
+*Original notes, kept verbatim:*
+
+## Future Ideas
+-   The starting point of an HVAC System Design either building or house or Automotive or Datacenter
+    is calculating the load. We need to add load calculator for various application. We can rely on 
+    the ASHRAE and Carier books in the notebooklm-Frees notebook and create a comprehensive calculator
+    it should be simple and fundamental first for all applications with advanced options user can improve
+    and precise the calculation with more data.
+
+-   In the HVAC applications brine and coolant is mostly used for transferring the heat from one place to other  place so we can also add this heat transfer and electrical consumption of these via adding some additional data like pump curve, fan curve which is already compatible with frees-wasm.
+-   Another open point duct and piping design which we can size pumps and fans based on this design like load calculation this is another module we can add in the future.
+-

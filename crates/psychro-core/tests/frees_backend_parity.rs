@@ -24,8 +24,8 @@ fn saturation_humidity_ratio_agrees_with_frees() {
     let atm = Atmosphere::sea_level();
     for t_c in [0.0_f64, 10.0, 24.0, 35.0, 50.0] {
         let ours = StatePoint::from_db_rh(t_c, 1.0, &atm).w;
-        let theirs =
-            propfun::ha_props_si("W", "T", t_c + 273.15, "R", 1.0, "P", P_STD).expect("HAPropsSI W");
+        let theirs = propfun::ha_props_si("W", "T", t_c + 273.15, "R", 1.0, "P", P_STD)
+            .expect("HAPropsSI W");
         let rel = (ours - theirs).abs() / theirs;
         println!("t={t_c:>5} Ws ours={ours:.8} frees={theirs:.8} rel={rel:.3e}");
         assert!(rel < 5e-3, "saturation W diverges at {t_c} C: {rel:.3e}");
