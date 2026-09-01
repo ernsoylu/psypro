@@ -10,6 +10,7 @@
 
 #![deny(unsafe_code)]
 
+pub mod backend;
 pub mod chart;
 pub mod constants;
 pub mod saturation;

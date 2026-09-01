@@ -15,11 +15,8 @@
 use psychro_core::chart::{
     self, ChartDomain, ChartLayout as CoreLayout, ChartPoint, CurveFamily, GridSpec,
 };
-use psychro_core::state::{
-    humidity_ratio_from_p_wv, humidity_ratio_from_wet_bulb, pressure_from_altitude, Atmosphere,
-    StatePoint,
-};
-use psychro_core::{saturation::p_ws, units};
+use psychro_core::state::{pressure_from_altitude, Atmosphere, StatePoint};
+use psychro_core::units;
 use wasm_bindgen::prelude::*;
 
 /// Which pair of properties the caller is supplying.
@@ -187,6 +184,12 @@ fn present(s: &StatePoint, is_si: bool) -> StatePointOutput {
 }
 
 /// Resolves the SI state point for a set of inputs, or an error message.
+///
+/// The checks here exist to give a *better* message than the layer below, not a
+/// different verdict. `psychro_core::StatePoint` refuses supersaturated states
+/// itself, so this function no longer duplicates that check — it only catches
+/// the input combinations where naming the offending field is more useful than
+/// reporting the saturation violation it would cause.
 fn resolve(input: &StatePointInput) -> Result<StatePoint, String> {
     let atm = atmosphere_for(input);
     let to_c = |t: f64| if input.is_si { t } else { units::f_to_c(t) };
@@ -208,13 +211,7 @@ fn resolve(input: &StatePointInput) -> Result<StatePoint, String> {
             if t_wb > t_db + 1e-9 {
                 return Err("wet-bulb temperature cannot exceed dry-bulb temperature".to_string());
             }
-            let w = humidity_ratio_from_wet_bulb(t_db, t_wb, &atm);
-            if w < 0.0 {
-                return Err(
-                    "that dry-bulb and wet-bulb pair implies a negative humidity ratio".to_string(),
-                );
-            }
-            StatePoint::from_db_w(t_db, w, &atm)
+            StatePoint::from_db_wb(t_db, t_wb, &atm)
         }
         InputState::DbtDewPoint => {
             let t_dp = to_c(input.val2);
@@ -223,39 +220,26 @@ fn resolve(input: &StatePointInput) -> Result<StatePoint, String> {
             }
             StatePoint::from_db_dp(t_db, t_dp, &atm)
         }
-        InputState::DbtHumidityRatio => {
-            if input.val2 < 0.0 {
-                return Err("humidity ratio cannot be negative".to_string());
-            }
-            StatePoint::from_db_w(t_db, input.val2, &atm)
-        }
+        InputState::DbtHumidityRatio => StatePoint::from_db_w(t_db, input.val2, &atm),
         InputState::DbtEnthalpy => {
             let h = if input.is_si {
                 input.val2
             } else {
                 units::btu_per_lb_to_kj_per_kg(input.val2)
             };
-            // Invert h = cp_da·t + W·(h_g + cp_wv·t) for W at the known t.
-            let w = (h - 1.006 * t_db) / (2499.86 + 1.84 * t_db);
-            if w < 0.0 {
-                return Err(
-                    "that enthalpy is below the dry-air value at this temperature".to_string(),
-                );
-            }
-            StatePoint::from_db_w(t_db, w, &atm)
+            StatePoint::from_h_w(h, backend_w_from_enthalpy(t_db, h, &atm)?, &atm)
         }
     };
+    point.map_err(|e| e.message().to_string())
+}
 
-    // Supersaturation is not a valid moist-air state; the fog region is modelled
-    // separately and is not yet implemented.
-    let w_sat = humidity_ratio_from_p_wv(p_ws(t_db), &atm);
-    if point.w > w_sat * (1.0 + 1e-9) {
-        return Err(format!(
-            "state lies above saturation (W = {:.6} vs W_s = {:.6}); the fog region is not yet modelled",
-            point.w, w_sat
-        ));
-    }
-    Ok(point)
+/// Humidity ratio implied by a dry-bulb temperature and an enthalpy.
+///
+/// Asked of the backend rather than inverted here, so the enthalpy relation is
+/// the backend's everywhere and this crate holds no second copy of it.
+fn backend_w_from_enthalpy(t_db: f64, h: f64, atm: &Atmosphere) -> Result<f64, String> {
+    psychro_core::backend::humidity_ratio_from_enthalpy(t_db, h, atm.p_bar)
+        .map_err(|e| e.message().to_string())
 }
 
 /// Resolves every psychrometric property of one moist-air state point.
@@ -294,7 +278,7 @@ pub fn mix_air(
     let w = f * sa.w + (1.0 - f) * sb.w;
     let h = f * sa.h + (1.0 - f) * sb.h;
     let atm = atmosphere_for(&a);
-    let mixed = StatePoint::from_h_w(h, w, &atm);
+    let mixed = StatePoint::from_h_w(h, w, &atm).map_err(|e| JsValue::from_str(e.message()))?;
     Ok(present(&mixed, a.is_si))
 }
 
@@ -395,16 +379,9 @@ fn resolve_from_chart(
     atm: &Atmosphere,
 ) -> Result<StatePoint, String> {
     let (t_db, w) = chart::from_chart(ChartPoint { x, y }, layout.into());
-    if w < 0.0 {
-        return Err("humidity ratio cannot be negative".to_string());
-    }
-    let w_sat = humidity_ratio_from_p_wv(p_ws(t_db), atm);
-    if w > w_sat * (1.0 + 1e-9) {
-        return Err(
-            "that point lies above saturation; the fog region is not yet modelled".to_string(),
-        );
-    }
-    Ok(StatePoint::from_db_w(t_db, w, atm))
+    // Negative humidity and supersaturation are both refused by `StatePoint`,
+    // so this only forwards the message.
+    StatePoint::from_db_w(t_db, w, atm).map_err(|e| e.message().to_string())
 }
 
 /// The chart-space extent of a physical domain, in the given layout.

@@ -11,11 +11,18 @@ authors.workspace = true
 workspace = true
 
 [dependencies]
+# The calculation backend. frees-core is target-agnostic and free of
+# wasm-bindgen by its own rule, so it can sit under this crate without
+# compromising the WASM-free boundary here.
+frees-core = { path = "../../vendor/frees-wasm/crates/frees-core", default-features = false, features = [
+    "rustprop-backend",
+] }
+
+[features]
+default = ["reference-impl"]
+# This crate's own IAPWS/RP-1485 formulations, kept as the independent grading
+# reference for the frees backend. Not the production path — see `backend`.
+reference-impl = []
 
 [dev-dependencies]
 approx = "0.5"
-# Validation only for now: grade the frees/rustprop humid-air path against the
-# same ASHRAE reference values this crate's own implementation is held to.
-frees-core = { path = "../../vendor/frees-wasm/crates/frees-core", features = [
-    "rustprop-backend",
-] }

@@ -6,6 +6,7 @@
 //! balances. Moist-air density is reported for reference but must not be used to
 //! derive mass flow.
 
+use crate::backend::{self, PropertyError};
 use crate::constants::{
     CP_DA, CP_ICE, CP_LIQUID, CP_WV, H_G_REF, H_G_REF_ICE, MASS_RATIO, MASS_RATIO_INV, P_STD, R_DA,
 };
@@ -225,6 +226,11 @@ pub fn pressure_from_altitude(altitude_m: f64) -> f64 {
 }
 
 /// A fully resolved moist-air state point.
+///
+/// Every property is answered by the frees backend — see [`crate::backend`].
+/// The formulations in this module are the independent grading reference and no
+/// longer the production path; `tests/frees_backend_parity.rs` holds the two
+/// against each other.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StatePoint {
     /// Dry-bulb temperature, °C.
@@ -253,44 +259,138 @@ pub struct StatePoint {
 
 impl StatePoint {
     /// Resolves every property from dry-bulb temperature and humidity ratio.
-    #[must_use]
-    pub fn from_db_w(t_db: f64, w: f64, atm: &Atmosphere) -> Self {
-        Self {
+    ///
+    /// # Errors
+    /// Returns the backend's message when the pair does not describe moist air.
+    pub fn from_db_w(t_db: f64, w: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        if !atm.real_gas {
+            return Self::from_db_w_ideal(t_db, w, atm);
+        }
+        let p = atm.p_bar;
+        if w < 0.0 {
+            return Err(PropertyError::supersaturated(
+                "humidity ratio cannot be negative".to_string(),
+            ));
+        }
+        let w_s = backend::saturation_humidity_ratio(t_db, p)?;
+        // Supersaturation is not moist air, and the backend will not refuse it:
+        // `HAPropsSI` answers W from a dew point without reference to the
+        // dry-bulb temperature, quite correctly, because W does not depend on
+        // it. Deciding that a (t, W) pair is not a state is this layer's job.
+        if w > w_s * (1.0 + 1e-9) {
+            return Err(PropertyError::supersaturated(format!(
+                "state lies above saturation at {t_db:.2} °C: W = {w:.6} against W_s = {w_s:.6}; \
+                 the fog region is not yet modelled"
+            )));
+        }
+        let v = backend::specific_volume(t_db, w, p)?;
+        Ok(Self {
+            t_db,
+            t_wb: backend::wet_bulb(t_db, w, p)?,
+            t_dp: backend::dew_point(t_db, w, p)?,
+            w,
+            rh: backend::relative_humidity(t_db, w, p)?,
+            // Degree of saturation is W/W_s. Reported separately from relative
+            // humidity on purpose: the two agree only at 0% and 100%, and
+            // conflating them is one of the field's most common errors.
+            mu: w / w_s,
+            h: backend::enthalpy(t_db, w, p)?,
+            v,
+            // Reference only. Mass balances divide volumetric flow by `v`.
+            rho: (1.0 + w) / v,
+            p_wv: p_wv_from_humidity_ratio(w, atm),
+            atm: *atm,
+        })
+    }
+
+    /// Resolves a state from dry-bulb temperature and relative humidity fraction.
+    ///
+    /// # Errors
+    /// Returns the backend's message when the inputs are out of range.
+    pub fn from_db_rh(t_db: f64, rh: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        let w = if atm.real_gas {
+            backend::humidity_ratio_from_rh(t_db, rh, atm.p_bar)?
+        } else {
+            humidity_ratio_from_p_wv(rh * p_ws(t_db), atm)
+        };
+        Self::from_db_w(t_db, w, atm)
+    }
+
+    /// Resolves a state from dry-bulb and thermodynamic wet-bulb temperatures.
+    ///
+    /// # Errors
+    /// Returns the backend's message when the pair is unphysical.
+    pub fn from_db_wb(t_db: f64, t_wb: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        let w = if atm.real_gas {
+            backend::humidity_ratio_from_wet_bulb(t_db, t_wb, atm.p_bar)?
+        } else {
+            humidity_ratio_from_wet_bulb(t_db, t_wb, atm)
+        };
+        Self::from_db_w(t_db, w, atm)
+    }
+
+    /// Resolves a state from dry-bulb temperature and dew point.
+    ///
+    /// # Errors
+    /// Returns the backend's message when the dew point exceeds the dry bulb.
+    pub fn from_db_dp(t_db: f64, t_dp: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        let w = if atm.real_gas {
+            backend::humidity_ratio_from_dew_point(t_db, t_dp, atm.p_bar)?
+        } else {
+            humidity_ratio_from_p_wv(p_ws(t_dp), atm)
+        };
+        Self::from_db_w(t_db, w, atm)
+    }
+
+    /// Resolves a state from specific enthalpy and humidity ratio.
+    ///
+    /// # Errors
+    /// Returns the backend's message when the pair does not describe moist air.
+    pub fn from_h_w(h: f64, w: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        if !atm.real_gas {
+            return Self::from_db_w(temperature_from_enthalpy(h, w), w, atm);
+        }
+        Self::from_db_w(backend::temperature_from_enthalpy(h, w, atm.p_bar)?, w, atm)
+    }
+
+    /// Resolves a state under the **ideal-gas** treatment, from this crate's own
+    /// formulations rather than from the backend.
+    ///
+    /// This is what `Atmosphere::real_gas == false` selects, and it is the one
+    /// place the reference implementation is a production path rather than a
+    /// grading reference. It exists for teaching: showing a student the size of
+    /// the real-gas correction requires being able to compute without it, and
+    /// the backend has no such mode — `HAPropsSI` is real-gas by construction.
+    ///
+    /// Results are roughly 0.5% low on humidity ratio against the real-gas
+    /// answer, which is the enhancement factor and is exactly the quantity the
+    /// comparison is meant to make visible.
+    fn from_db_w_ideal(t_db: f64, w: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        if w < 0.0 {
+            return Err(PropertyError::supersaturated(
+                "humidity ratio cannot be negative".to_string(),
+            ));
+        }
+        let w_s = saturation_humidity_ratio(t_db, atm);
+        if w > w_s * (1.0 + 1e-9) {
+            return Err(PropertyError::supersaturated(format!(
+                "state lies above saturation at {t_db:.2} °C: W = {w:.6} against W_s = {w_s:.6}; \
+                 the fog region is not yet modelled"
+            )));
+        }
+        let v = specific_volume(t_db, w, atm);
+        Ok(Self {
             t_db,
             t_wb: wet_bulb(t_db, w, atm),
             t_dp: dew_point(w, atm).unwrap_or(f64::NEG_INFINITY),
             w,
             rh: relative_humidity(t_db, w, atm),
-            mu: degree_of_saturation(t_db, w, atm),
+            mu: w / w_s,
             h: enthalpy(t_db, w),
-            v: specific_volume(t_db, w, atm),
-            rho: density(t_db, w, atm),
+            v,
+            rho: (1.0 + w) / v,
             p_wv: p_wv_from_humidity_ratio(w, atm),
             atm: *atm,
-        }
-    }
-
-    /// Resolves a state from dry-bulb temperature and relative humidity fraction.
-    #[must_use]
-    pub fn from_db_rh(t_db: f64, rh: f64, atm: &Atmosphere) -> Self {
-        Self::from_db_w(t_db, humidity_ratio_from_p_wv(rh * p_ws(t_db), atm), atm)
-    }
-
-    /// Resolves a state from dry-bulb and thermodynamic wet-bulb temperatures.
-    #[must_use]
-    pub fn from_db_wb(t_db: f64, t_wb: f64, atm: &Atmosphere) -> Self {
-        Self::from_db_w(t_db, humidity_ratio_from_wet_bulb(t_db, t_wb, atm), atm)
-    }
-
-    /// Resolves a state from dry-bulb temperature and dew point.
-    #[must_use]
-    pub fn from_db_dp(t_db: f64, t_dp: f64, atm: &Atmosphere) -> Self {
-        Self::from_db_w(t_db, humidity_ratio_from_p_wv(p_ws(t_dp), atm), atm)
-    }
-
-    /// Resolves a state from enthalpy and humidity ratio.
-    #[must_use]
-    pub fn from_h_w(h: f64, w: f64, atm: &Atmosphere) -> Self {
-        Self::from_db_w(temperature_from_enthalpy(h, w), w, atm)
+        })
     }
 }

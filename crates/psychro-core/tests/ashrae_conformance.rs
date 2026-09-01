@@ -1,10 +1,13 @@
 //! Conformance tests against published ASHRAE / IAPWS reference values.
 //!
-//! These exist independently of whichever library ends up computing the
-//! properties: they are the contract a psychrometric engine has to satisfy, and
-//! they pin the specific mistakes that are easy to make silently — a Magnus fit
-//! extended below freezing, the older `2501`/`1.86` enthalpy constants, or
-//! relative humidity conflated with degree of saturation.
+//! Written to be independent of whichever library computes the properties, and
+//! now cashing that in: every `StatePoint` here is resolved by **frees**, while
+//! the free functions grade this crate's own reference formulations. Both are
+//! held to the same published numbers.
+//!
+//! They pin the mistakes that are easy to make silently — a Magnus fit extended
+//! below freezing, the older `2501`/`1.86` enthalpy constants, or relative
+//! humidity conflated with degree of saturation.
 
 use approx::assert_relative_eq;
 use psychro_core::constants::P_STD;
@@ -63,7 +66,7 @@ fn t_sat_inverts_p_ws() {
 #[test]
 fn saturated_air_at_25c_sea_level() {
     let p = Atmosphere::sea_level();
-    let s = StatePoint::from_db_rh(25.0, 1.0, &p);
+    let s = StatePoint::from_db_rh(25.0, 1.0, &p).unwrap();
     assert_relative_eq!(s.w, 0.020_173, max_relative = 2e-3);
     assert_relative_eq!(s.h, 76.53, max_relative = 3e-3);
     assert_relative_eq!(s.v, 0.8721, max_relative = 2e-3);
@@ -101,24 +104,37 @@ fn enthalpy_inverts_to_temperature() {
 #[test]
 fn relative_humidity_is_not_degree_of_saturation() {
     let p = Atmosphere::sea_level();
-    let s = StatePoint::from_db_rh(24.0, 0.50, &p);
-    assert_relative_eq!(relative_humidity(24.0, s.w, &p), 0.50, max_relative = 1e-9);
-    let mu = degree_of_saturation(24.0, s.w, &p);
-    assert!(mu < 0.50, "degree of saturation should sit below RH here");
+    let s = StatePoint::from_db_rh(24.0, 0.50, &p).unwrap();
+
+    // As the backend resolves them: RH comes back as asked, and mu is a
+    // measurably different number.
+    assert_relative_eq!(s.rh, 0.50, max_relative = 1e-9);
+    assert!(s.mu < 0.50, "degree of saturation should sit below RH here");
     assert!(
-        (0.50 - mu) > 0.005,
+        (0.50 - s.mu) > 0.005,
         "expected a separation of over half a point, got {:.4}",
-        0.50 - mu
+        0.50 - s.mu
     );
+
+    // And the reference implementation agrees on the distinction, independently.
+    // Graded against itself, not against the backend: the two differ by ~1e-4
+    // relative, which `tests/frees_backend_parity.rs` measures deliberately.
+    let w_ref = humidity_ratio_from_p_wv(0.50 * psychro_core::saturation::p_ws(24.0), &p);
+    assert_relative_eq!(
+        relative_humidity(24.0, w_ref, &p),
+        0.50,
+        max_relative = 1e-9
+    );
+    assert!(degree_of_saturation(24.0, w_ref, &p) < 0.50);
 }
 
 /// Wet-bulb round-trips through the above-freezing branch.
 #[test]
 fn wet_bulb_round_trips_above_freezing() {
     let p = Atmosphere::sea_level();
-    let s = StatePoint::from_db_rh(24.0, 0.50, &p);
+    let s = StatePoint::from_db_rh(24.0, 0.50, &p).unwrap();
     assert_relative_eq!(s.t_wb, 17.07, epsilon = 0.02);
-    let back = StatePoint::from_db_wb(24.0, s.t_wb, &p);
+    let back = StatePoint::from_db_wb(24.0, s.t_wb, &p).unwrap();
     assert_relative_eq!(back.w, s.w, max_relative = 1e-6);
 }
 
@@ -126,9 +142,9 @@ fn wet_bulb_round_trips_above_freezing() {
 #[test]
 fn wet_bulb_round_trips_below_freezing() {
     let p = Atmosphere::sea_level();
-    let s = StatePoint::from_db_rh(-10.0, 0.60, &p);
+    let s = StatePoint::from_db_rh(-10.0, 0.60, &p).unwrap();
     assert!(s.t_wb < 0.0, "wet bulb should be sub-freezing here");
-    let back = StatePoint::from_db_wb(-10.0, s.t_wb, &p);
+    let back = StatePoint::from_db_wb(-10.0, s.t_wb, &p).unwrap();
     assert_relative_eq!(back.w, s.w, max_relative = 1e-6);
     // Below freezing the dew point is a frost point on the ice line.
     assert!(s.t_dp < 0.0);
@@ -139,8 +155,8 @@ fn wet_bulb_round_trips_below_freezing() {
 fn dew_point_round_trips() {
     let p = Atmosphere::sea_level();
     for (t, rh) in [(24.0, 0.50), (35.0, 0.80), (-5.0, 0.70)] {
-        let s = StatePoint::from_db_rh(t, rh, &p);
-        let back = StatePoint::from_db_dp(t, s.t_dp, &p);
+        let s = StatePoint::from_db_rh(t, rh, &p).unwrap();
+        let back = StatePoint::from_db_dp(t, s.t_dp, &p).unwrap();
         assert_relative_eq!(back.w, s.w, max_relative = 1e-6);
     }
 }
@@ -156,8 +172,8 @@ fn altitude_shifts_pressure_and_humidity_ratio() {
         max_relative = 2e-3
     );
 
-    let sea = StatePoint::from_db_rh(24.0, 0.50, &Atmosphere::sea_level());
-    let denver = StatePoint::from_db_rh(24.0, 0.50, &Atmosphere::at_altitude(1609.0));
+    let sea = StatePoint::from_db_rh(24.0, 0.50, &Atmosphere::sea_level()).unwrap();
+    let denver = StatePoint::from_db_rh(24.0, 0.50, &Atmosphere::at_altitude(1609.0)).unwrap();
     let ratio = denver.w / sea.w;
     assert!(
         ratio > 1.15,
@@ -170,25 +186,41 @@ fn altitude_shifts_pressure_and_humidity_ratio() {
 #[test]
 fn specific_volume_is_on_a_dry_air_basis() {
     let p = Atmosphere::sea_level();
-    let s = StatePoint::from_db_rh(24.0, 0.50, &p);
-    assert_relative_eq!(specific_volume(24.0, s.w, &p), s.v, max_relative = 1e-12);
+    let s = StatePoint::from_db_rh(24.0, 0.50, &p).unwrap();
+
+    // Density is derived from the backend's own specific volume, so this is an
+    // identity and holds to the last bit.
     assert_relative_eq!(s.rho, (1.0 + s.w) / s.v, max_relative = 1e-12);
-    // Dry-air mass flow from 1 m3/s, versus the wrong moist-air-density route.
-    let m_da = dry_air_mass_flow(1.0, 24.0, s.w, &p);
+
+    // The reference implementation lands on the same volume to within the
+    // measured cross-implementation agreement, not to machine precision.
+    assert_relative_eq!(specific_volume(24.0, s.w, &p), s.v, max_relative = 1e-3);
+
+    // Dry-air mass flow from 1 m3/s, versus the wrong moist-air-density route:
+    // ~1% apart, which is why the basis has to be stated rather than assumed.
+    let m_da = 1.0 / s.v;
     let wrong = 1.0 * s.rho;
     assert!((wrong - m_da) / m_da > 0.009);
+    assert_relative_eq!(
+        dry_air_mass_flow(1.0, 24.0, s.w, &p),
+        m_da,
+        max_relative = 1e-3
+    );
 }
 
 /// Humidity ratio and vapour pressure are mutual inverses.
 #[test]
 fn humidity_ratio_and_vapour_pressure_round_trip() {
     let p = Atmosphere::sea_level();
-    for w in [0.001, 0.0093, 0.020] {
-        let s = StatePoint::from_db_w(24.0, w, &p);
-        assert_relative_eq!(
-            humidity_ratio_from_p_wv(s.p_wv, &p),
-            w,
-            max_relative = 1e-12
-        );
+    // 0.020 would be above saturation at 24 C (W_s = 0.018965) — not a state.
+    for w in [0.001, 0.0093, 0.015] {
+        // The reference pair inverts exactly...
+        let pv = psychro_core::state::p_wv_from_humidity_ratio(w, &p);
+        assert_relative_eq!(humidity_ratio_from_p_wv(pv, &p), w, max_relative = 1e-12);
+
+        // ...and a backend-resolved state carries a vapour pressure consistent
+        // with its own humidity ratio, to the cross-implementation tolerance.
+        let s = StatePoint::from_db_w(24.0, w, &p).unwrap();
+        assert_relative_eq!(humidity_ratio_from_p_wv(s.p_wv, &p), w, max_relative = 1e-3);
     }
 }

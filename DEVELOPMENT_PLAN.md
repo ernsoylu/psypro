@@ -71,7 +71,7 @@ Two gaps are already identified:
 | 1 — Psychrometric core | **Superseded by frees.** The reference implementation and its 14-case ASHRAE conformance suite stay as the grading gate |
 | 2 — WASM bridge | **Done** — typed handshake, IP/SI at the boundary, debug panel |
 | 3 — Coordinate transformation | **Done** — oblique construction, both layouts, 22 tests |
-| 2.5 — frees integration and upstream contribution | **Next** |
+| 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 7 components contributed upstream |
 | 4–13 | Not started |
 
 ---
@@ -81,7 +81,7 @@ Two gaps are already identified:
 **Goal:** Make frees the production calculation path, and close the gaps it has for
 psychrometric work by contributing to it.
 
-### 2.5a — Adopt frees as the backend
+### 2.5a — Adopt frees as the backend — **done**
 - `psychro-core` becomes a thin adapter over `frees_core::props::propfun`, not a second
   implementation. Its formulations move behind a `reference-impl` feature used only by the
   grading tests.
@@ -92,13 +92,13 @@ psychrometric work by contributing to it.
 **Exit:** every `StatePoint` in the app is resolved by frees; the conformance suite passes
 against it; the parity test keeps both implementations honest.
 
-### 2.5b — Contribute the oblique chart geometry upstream
+### 2.5b — Contribute the oblique chart geometry upstream — **done**
 Offer `chart.rs` to frees as the chart-space transform behind `props/psychro.rs`, giving it
 the ASHRAE oblique construction and the Mollier i-x layout it currently lacks.
 
 **Exit:** a PR against `ernsoylu/frees-wasm` with the round-trip and straightness tests.
 
-### 2.5c — Contribute the missing components
+### 2.5c — Contribute the missing components — **done**, 7 of the gaps closed
 `moistair.frees` and `ac.frees` cover 26 of the catalogue's 37. What frees already has —
 including several PsyPro had not catalogued — is: MoistAirSource/Sink, HeatingCoil,
 Humidifier, MixingBox, CoolingCoil, MoistAirWallHX, MoistAirFan, MoistAirDamper,
