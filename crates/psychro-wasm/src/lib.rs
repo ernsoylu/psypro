@@ -12,6 +12,9 @@
 
 #![deny(unsafe_code)]
 
+use psychro_core::chart::{
+    self, ChartDomain, ChartLayout as CoreLayout, ChartPoint, CurveFamily, GridSpec,
+};
 use psychro_core::state::{
     humidity_ratio_from_p_wv, humidity_ratio_from_wet_bulb, pressure_from_altitude, Atmosphere,
     StatePoint,
@@ -295,6 +298,240 @@ pub fn mix_air(
     Ok(present(&mixed, a.is_si))
 }
 
+/// Which chart layout coordinates are expressed in.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChartLayout {
+    /// ASHRAE format — dry-bulb horizontal, humidity ratio vertical.
+    Ashrae,
+    /// Mollier i-x diagram — humidity ratio horizontal, enthalpy vertical.
+    MollierIx,
+}
+
+impl From<ChartLayout> for CoreLayout {
+    fn from(l: ChartLayout) -> Self {
+        match l {
+            ChartLayout::Ashrae => Self::Ashrae,
+            ChartLayout::MollierIx => Self::MollierIx,
+        }
+    }
+}
+
+/// A point in chart space.
+///
+/// Chart space carries no pixels: the view layer owns zoom, pan and the canvas
+/// box, and scales these coordinates itself. Keeping the two stages apart is
+/// what lets a layout change without touching the renderer.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct Point2D {
+    /// Horizontal chart coordinate.
+    pub x: f64,
+    /// Vertical chart coordinate.
+    pub y: f64,
+}
+
+/// The chart-space extent of the drawn domain, for the view layer to scale to.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct ChartExtent {
+    /// Minimum horizontal coordinate.
+    pub x_min: f64,
+    /// Maximum horizontal coordinate.
+    pub x_max: f64,
+    /// Minimum vertical coordinate.
+    pub y_min: f64,
+    /// Maximum vertical coordinate.
+    pub y_max: f64,
+}
+
+/// Maps a state point into chart space for the given layout.
+#[wasm_bindgen]
+pub fn get_coordinate_mapping(
+    input: StatePointInput,
+    layout: ChartLayout,
+) -> Result<Point2D, JsValue> {
+    let s = resolve(&input).map_err(|e| JsValue::from_str(&e))?;
+    let p = chart::to_chart(s.t_db, s.w, layout.into());
+    Ok(Point2D { x: p.x, y: p.y })
+}
+
+/// Recovers a full state point from a chart-space coordinate.
+///
+/// This is the inverse leg of a pointer drag: the view converts screen pixels to
+/// chart space, and this turns chart space back into thermodynamics.
+#[wasm_bindgen]
+pub fn state_from_chart_coordinates(
+    x: f64,
+    y: f64,
+    layout: ChartLayout,
+    altitude: f64,
+    is_si: bool,
+    real_gas: bool,
+) -> Result<StatePointOutput, JsValue> {
+    let altitude_m = if is_si {
+        altitude
+    } else {
+        units::ft_to_m(altitude)
+    };
+    let atm = Atmosphere {
+        p_bar: pressure_from_altitude(altitude_m),
+        real_gas,
+    };
+    resolve_from_chart(x, y, layout, &atm)
+        .map(|s| present(&s, is_si))
+        .map_err(|e| JsValue::from_str(&e))
+}
+
+/// Chart-space point to state, as a natively testable `Result<_, String>`.
+///
+/// Split out from [`state_from_chart_coordinates`] because `JsValue` cannot be
+/// constructed outside a wasm context, so the error paths would be untestable
+/// under `cargo test` if they were inlined there.
+fn resolve_from_chart(
+    x: f64,
+    y: f64,
+    layout: ChartLayout,
+    atm: &Atmosphere,
+) -> Result<StatePoint, String> {
+    let (t_db, w) = chart::from_chart(ChartPoint { x, y }, layout.into());
+    if w < 0.0 {
+        return Err("humidity ratio cannot be negative".to_string());
+    }
+    let w_sat = humidity_ratio_from_p_wv(p_ws(t_db), atm);
+    if w > w_sat * (1.0 + 1e-9) {
+        return Err(
+            "that point lies above saturation; the fog region is not yet modelled".to_string(),
+        );
+    }
+    Ok(StatePoint::from_db_w(t_db, w, atm))
+}
+
+/// The chart-space extent of a physical domain, in the given layout.
+#[wasm_bindgen]
+pub fn get_chart_extent(
+    t_min: f64,
+    t_max: f64,
+    w_min: f64,
+    w_max: f64,
+    layout: ChartLayout,
+) -> ChartExtent {
+    let b = chart::bounds(
+        &ChartDomain {
+            t_min,
+            t_max,
+            w_min,
+            w_max,
+        },
+        layout.into(),
+    );
+    ChartExtent {
+        x_min: b.x_min,
+        x_max: b.x_max,
+        y_min: b.y_min,
+        y_max: b.y_max,
+    }
+}
+
+/// One constant-property curve, flattened for the renderer.
+#[wasm_bindgen]
+pub struct ChartCurve {
+    family: u8,
+    value: f64,
+    coords: Vec<f64>,
+}
+
+#[wasm_bindgen]
+impl ChartCurve {
+    /// The curve family, as a [`CurveFamilyId`] discriminant.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn family(&self) -> u8 {
+        self.family
+    }
+
+    /// The constant value defining the curve, in that family's natural units.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn value(&self) -> f64 {
+        self.value
+    }
+
+    /// Chart-space coordinates as a flat `[x0, y0, x1, y1, …]` array.
+    ///
+    /// Flat rather than an array of objects: the base grid is regenerated only
+    /// when units, altitude or layout change, but it is large, and one typed
+    /// array crosses the boundary far more cheaply than thousands of objects.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn coords(&self) -> Vec<f64> {
+        self.coords.clone()
+    }
+}
+
+/// Stable numeric ids for the curve families, matching [`ChartCurve::family`].
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CurveFamilyId {
+    /// Constant dry-bulb temperature.
+    DryBulb = 0,
+    /// Constant humidity ratio.
+    HumidityRatio = 1,
+    /// Constant relative humidity, including saturation at 100%.
+    RelativeHumidity = 2,
+    /// Constant thermodynamic wet-bulb temperature.
+    WetBulb = 3,
+    /// Constant enthalpy.
+    Enthalpy = 4,
+    /// Constant specific volume.
+    SpecificVolume = 5,
+}
+
+const fn family_id(f: CurveFamily) -> u8 {
+    match f {
+        CurveFamily::DryBulb => 0,
+        CurveFamily::HumidityRatio => 1,
+        CurveFamily::RelativeHumidity => 2,
+        CurveFamily::WetBulb => 3,
+        CurveFamily::Enthalpy => 4,
+        CurveFamily::SpecificVolume => 5,
+    }
+}
+
+/// Generates the full base grid for a domain, in chart space.
+///
+/// This is Layer 0. It depends only on unit system, altitude and layout, so the
+/// renderer caches the result and must not call this per frame.
+#[wasm_bindgen]
+pub fn generate_base_grid(
+    t_min: f64,
+    t_max: f64,
+    w_min: f64,
+    w_max: f64,
+    layout: ChartLayout,
+    altitude_m: f64,
+    real_gas: bool,
+) -> Vec<ChartCurve> {
+    let atm = Atmosphere {
+        p_bar: pressure_from_altitude(altitude_m),
+        real_gas,
+    };
+    let domain = ChartDomain {
+        t_min,
+        t_max,
+        w_min,
+        w_max,
+    };
+    chart::generate_grid(&domain, layout.into(), &atm, &GridSpec::default())
+        .into_iter()
+        .map(|c| ChartCurve {
+            family: family_id(c.family),
+            value: c.value,
+            coords: c.points.iter().flat_map(|p| [p.x, p.y]).collect(),
+        })
+        .collect()
+}
+
 /// Returns the version of the underlying calculation engine.
 ///
 /// Used by the frontend to confirm that the loaded WASM module matches the build
@@ -433,5 +670,97 @@ mod tests {
         assert!(out.is_sub_freezing);
         assert!(out.dew_point < 0.0);
         assert!(out.wbt < 0.0);
+    }
+}
+
+#[cfg(test)]
+mod chart_bridge_tests {
+    use super::*;
+
+    fn si(dbt: f64, val2: f64, st: InputState) -> StatePointInput {
+        StatePointInput::new(dbt, val2, st, 0.0, true, true)
+    }
+
+    /// A state maps to chart space and back to the same state, in both layouts.
+    /// This is the drag loop, and any asymmetry here makes points slide.
+    #[test]
+    fn chart_round_trip_through_the_bridge() {
+        for layout in [ChartLayout::Ashrae, ChartLayout::MollierIx] {
+            let input = si(24.0, 50.0, InputState::DbtRh);
+            let p = get_coordinate_mapping(input, layout).unwrap();
+            let back = state_from_chart_coordinates(p.x, p.y, layout, 0.0, true, true).unwrap();
+            let original = resolve(&input).unwrap();
+            assert!((back.dbt - original.t_db).abs() < 1e-9);
+            assert!((back.humidity_ratio - original.w).abs() < 1e-12);
+        }
+    }
+
+    /// Altitude reaches the inverse map too; the same chart point at elevation is
+    /// a different state.
+    #[test]
+    fn inverse_mapping_respects_altitude() {
+        let sea = state_from_chart_coordinates(24.5, 0.009, ChartLayout::Ashrae, 0.0, true, true)
+            .unwrap();
+        let high =
+            state_from_chart_coordinates(24.5, 0.009, ChartLayout::Ashrae, 1609.0, true, true)
+                .unwrap();
+        assert!(
+            (sea.dbt - high.dbt).abs() < 1e-9,
+            "t comes from geometry alone"
+        );
+        assert!(
+            high.rh < sea.rh,
+            "the same W is further from saturation aloft"
+        );
+    }
+
+    /// Points above saturation are refused rather than silently returned.
+    #[test]
+    fn inverse_mapping_rejects_supersaturated_points() {
+        let atm = Atmosphere::sea_level();
+        assert!(resolve_from_chart(5.0, 0.02, ChartLayout::Ashrae, &atm).is_err());
+        assert!(resolve_from_chart(20.0, -0.001, ChartLayout::Ashrae, &atm).is_err());
+        // ...and a physical point still resolves.
+        assert!(resolve_from_chart(24.5, 0.009, ChartLayout::Ashrae, &atm).is_ok());
+    }
+
+    /// The grid arrives flattened, tagged by family, with straight families
+    /// carrying exactly two points (four coordinates).
+    #[test]
+    fn base_grid_is_flat_and_tagged() {
+        let curves = generate_base_grid(-10.0, 50.0, 0.0, 0.030, ChartLayout::Ashrae, 0.0, true);
+        assert!(!curves.is_empty());
+        for c in &curves {
+            assert_eq!(c.coords.len() % 2, 0, "coords must be x,y pairs");
+            assert!(c.coords.len() >= 4);
+            if matches!(c.family, 0 | 1 | 4) {
+                assert_eq!(
+                    c.coords.len(),
+                    4,
+                    "straight family {} needs endpoints only",
+                    c.family
+                );
+            }
+        }
+        for id in 0..=5u8 {
+            assert!(curves.iter().any(|c| c.family == id), "missing family {id}");
+        }
+    }
+
+    /// The extent encloses the mapped domain corners.
+    ///
+    /// Geometric, so it uses the core mapping directly: a domain corner such as
+    /// −10 °C at W = 0.030 is far above saturation and is not a state, but the
+    /// chart still has to reserve space for it.
+    #[test]
+    fn extent_encloses_the_domain() {
+        for layout in [ChartLayout::Ashrae, ChartLayout::MollierIx] {
+            let e = get_chart_extent(-10.0, 50.0, 0.0, 0.030, layout);
+            for (t, w) in [(-10.0, 0.0), (50.0, 0.0), (-10.0, 0.030), (50.0, 0.030)] {
+                let p = chart::to_chart(t, w, layout.into());
+                assert!(p.x >= e.x_min - 1e-9 && p.x <= e.x_max + 1e-9);
+                assert!(p.y >= e.y_min - 1e-9 && p.y <= e.y_max + 1e-9);
+            }
+        }
     }
 }
