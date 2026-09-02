@@ -1,0 +1,39 @@
+- generic [ref=f5e3]:
+  - banner [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - generic [ref=f5e6]: PsyPro
+      - generic [ref=f5e11]: Untitled Project
+      - generic [ref=f5e12]: engine 0.1.0
+    - generic [ref=f5e13]:
+      - button "Save" [ref=f5e14] [cursor=pointer]
+      - button "Open" [ref=f5e17] [cursor=pointer]
+      - button "Export" [ref=f5e20] [cursor=pointer]
+    - generic [ref=f5e23]:
+      - group "Unit system" [ref=f5e24]:
+        - button "IP" [ref=f5e25] [cursor=pointer]
+        - button "SI" [pressed] [ref=f5e26] [cursor=pointer]
+      - combobox "Chart layout" [ref=f5e27]:
+        - option "ASHRAE" [selected]
+        - option "Mollier i-x"
+      - generic [ref=f5e28]:
+        - generic [ref=f5e31]: Elev
+        - textbox "Site elevation" [ref=f5e32]: "0"
+        - generic [ref=f5e33]: m
+      - button "Switch to dark theme" [ref=f5e34] [cursor=pointer]
+  - generic [ref=f5e37]:
+    - navigation [ref=f5e38]:
+      - group "Tools" [ref=f5e39]:
+        - button "Select" [ref=f5e40] [cursor=pointer]
+        - button "Add state point" [active] [pressed] [ref=f5e43] [cursor=pointer]
+        - button "Draw process line" [ref=f5e46] [cursor=pointer]
+        - button "Draw shape" [ref=f5e49] [cursor=pointer]
+        - button "Crosshair mode" [ref=f5e52] [cursor=pointer]
+      - group "View" [ref=f5e56]:
+        - button "Zoom in" [ref=f5e57] [cursor=pointer]
+        - button "Zoom out" [ref=f5e60] [cursor=pointer]
+        - button "Fit to window" [ref=f5e63] [cursor=pointer]
+    - main "Psychrometric chart" [ref=f5e66]
+    - complementary "Properties" [ref=f5e67]:
+      - generic [ref=f5e68]: No point selected
+      - paragraph [ref=f5e70]: Pick the state-point tool and click the chart, or add one below.
+      - button "Add state point" [ref=f5e72] [cursor=pointer]

@@ -27,6 +27,8 @@ const TOKENS: ChartTokens = {
   axis: 'axis',
   text: 'text',
   background: 'bg',
+  point: 'point',
+  process: 'process',
 };
 
 describe('curve styling', () => {

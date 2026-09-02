@@ -75,7 +75,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 17 components contributed upstream, closing the §4 catalogue |
 | 4 — Application shell and theme | **Done** — shell, palette, i18n, and a test that fails the build on a literal |
 | 5 — Canvas Layer 0 (base grid) | **Done** — both layouts, pan/zoom, grid cached and the cache asserted |
-| 6–13 | Not started |
+| 6 — Stores and interactive points | **Done** — three stores tested headless, drag round-trip measured at 61 FPS |
+| 7–13 | Not started |
 
 ---
 
@@ -292,6 +293,21 @@ Two things worth recording:
 
 **Exit:** Dragging a point holds 60 FPS with the properties panel live-updating; store tests
 pass headless.
+
+**Done.** Measured in a real browser: **61 FPS across 89 drag moves over 1.5 s, worst frame gap
+25 ms**, with the panel re-resolving every property each move (24.08 → 27.04 → 29.98 °C).
+25 store and formatting tests run without a DOM.
+
+The decision that carries the phase: **a point stores the two inputs that define it, not the
+twelve properties they resolve to.** Changing elevation therefore re-resolves every point from
+its own inputs rather than leaving the document full of readings taken at a pressure it is no
+longer at; and a dragged point and a typed point are the same thing, so there is no "chart
+point" and "manual point" to keep in step.
+
+Dragging past saturation needed an engine change, made in `psychro-wasm` rather than worked
+around in the view: `state_from_chart_coordinates_clamped` slides the point *along* the
+saturation curve at the dry bulb the pointer is over. Deciding what "the saturated state here"
+is remains a thermodynamic question, and TypeScript must not answer one.
 
 ---
 

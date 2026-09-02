@@ -409,3 +409,41 @@
 .chart-canvas:active {
   cursor: grabbing;
 }
+
+/* ── Panel: empty state, point name, block button ───────────────────────── */
+
+.panel__empty {
+  margin: 0;
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.panel__name {
+  width: 12ch;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-numeric);
+  font-weight: 600;
+}
+
+.panel__name:hover,
+.panel__name:focus {
+  border-bottom-color: var(--color-border);
+  outline: none;
+}
+
+.btn--block {
+  justify-content: center;
+  width: 100%;
+  height: var(--control-height);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.chart-canvas--placing {
+  cursor: crosshair;
+}

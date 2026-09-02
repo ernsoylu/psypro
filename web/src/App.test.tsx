@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The generated WASM module cannot be instantiated under jsdom, so the binding
 // surface is stubbed here. These tests cover the shell's contract; the
@@ -43,6 +43,11 @@ vi.mock('./psychro', async () => {
     },
     initEngine: () => Promise.resolve(),
     engine_version: () => '0.1.0',
+    get_coordinate_mapping: () => ({ x: 24, y: 0.0093 }),
+    state_from_chart_coordinates_clamped: () => ({
+      clamped: false,
+      state: { dbt: 24, humidity_ratio: 0.0093 },
+    }),
     calculate_state: () => ({
       dbt: 24,
       wbt: 17.07,
@@ -62,6 +67,14 @@ vi.mock('./psychro', async () => {
       throw new Error('not used in this test');
     },
   };
+});
+
+// The stores are module-level singletons, so a point added by one test would
+// still be there for the next one — and "no point selected" is a state worth
+// testing rather than an accident of ordering.
+beforeEach(() => {
+  usePsychStore.setState({ points: [], selectedId: null });
+  useProjectStore.setState({ isSi: true, altitude: '0', realGas: true, name: '' });
 });
 
 describe('application shell', () => {
@@ -109,8 +122,22 @@ describe('application shell', () => {
     expect(pressed()[0]).toHaveAccessibleName('Add state point');
   });
 
-  it('reports relative humidity and degree of saturation as separate properties', async () => {
+  it('starts with nothing selected and offers a way to add a point', async () => {
+    const user = userEvent.setup();
     render(<App />);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    expect(panel.getByText('No point selected')).toBeInTheDocument();
+
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
+    // Adding selects, so the panel is already editing the point you just made.
+    expect(panel.getByLabelText('Point label')).toHaveValue('OA');
+  });
+
+  it('reports relative humidity and degree of saturation as separate properties', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
     // Scoped to the results table: "Relative humidity" also appears as a
     // <select> option, and the point of this test is that the two properties are
     // reported as distinct rows rather than conflated into one.
@@ -125,6 +152,8 @@ describe('application shell', () => {
     const user = userEvent.setup();
     render(<App />);
     const units = within(screen.getByRole('group', { name: 'Unit system' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
 
     expect(units.getByRole('button', { name: 'SI' })).toHaveAttribute(
       'aria-pressed',
@@ -154,5 +183,7 @@ describe('application shell', () => {
   });
 });
 
-// Imported after the mock so the component picks up the stubbed module.
+// Imported after the mock so the components pick up the stubbed module.
 const { App } = await import('./App');
+const { usePsychStore } = await import('./store/usePsychStore');
+const { useProjectStore } = await import('./store/useProjectStore');

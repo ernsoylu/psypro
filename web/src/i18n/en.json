@@ -34,10 +34,13 @@
   "layout.mollier": "Mollier i-x",
 
   "panel.label": "Properties",
-  "panel.title": "State point",
-  "panel.menu": "Panel menu",
   "panel.sectionInputs": "KNOWN INPUTS",
   "panel.sectionDerived": "DERIVED PROPERTIES",
+  "panel.noSelection": "No point selected",
+  "panel.emptyHint": "Pick the state-point tool and click the chart, or add one below.",
+  "panel.addPoint": "Add state point",
+  "panel.removePoint": "Delete this point",
+  "panel.pointLabel": "Point label",
 
   "input.dryBulb": "Dry-bulb temperature",
   "input.secondProperty": "Second known property",
@@ -58,6 +61,13 @@
   "prop.density": "Moist-air density (reference only)",
   "prop.vapourPressure": "Vapour pressure",
   "prop.barometricPressure": "Barometric pressure",
+
+  "hud.dryBulb": "Dry-bulb",
+  "hud.wetBulb": "Wet-bulb",
+  "hud.dewPoint": "Dew point",
+  "hud.humidityRatio": "Hum. ratio",
+  "hud.relativeHumidity": "Rel. humidity",
+  "hud.enthalpy": "Enthalpy",
 
   "unit.celsius": "°C",
   "unit.fahrenheit": "°F",
