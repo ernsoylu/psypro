@@ -15,7 +15,7 @@ RUN case "${TARGETARCH}" in \
       arm64) triple=aarch64-unknown-linux-musl ;; \
       *) echo "unsupported arch ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
-    && curl -fsSL "https://github.com/rustwasm/wasm-pack/releases/download/${WASM_PACK_VERSION}/wasm-pack-${WASM_PACK_VERSION}-${triple}.tar.gz" \
+    && curl --proto '=https' -fsSL "https://github.com/rustwasm/wasm-pack/releases/download/${WASM_PACK_VERSION}/wasm-pack-${WASM_PACK_VERSION}-${triple}.tar.gz" \
        | tar -xz --strip-components=1 -C /usr/local/bin "wasm-pack-${WASM_PACK_VERSION}-${triple}/wasm-pack"
 
 WORKDIR /src
@@ -33,16 +33,20 @@ FROM node:20 AS web
 
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+# --ignore-scripts, as in CI: no dependency needs a lifecycle script on Linux,
+# so skipping them removes an arbitrary-execution surface from the install.
+RUN npm ci --ignore-scripts
 
 COPY web .
 COPY --from=wasm /wasm ./src/wasm
-RUN npx tsc --noEmit && npx vite build
+RUN npm run typecheck && npm run bundle
 
 # --- Stage 3: serve the static bundle ----------------------------------------
-FROM nginx:alpine
+# The unprivileged image runs nginx as a non-root user on port 8080.
+FROM nginxinc/nginx-unprivileged:alpine
 
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web /app/web/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
+

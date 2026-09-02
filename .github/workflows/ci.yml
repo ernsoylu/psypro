@@ -25,7 +25,9 @@ jobs:
       - name: Install Rust toolchain
         run: rustup component add rustfmt clippy
 
-      - uses: Swatinem/rust-cache@v2
+      # Pinned to a full SHA (v2): supply-chain hygiene, and the quality gate
+      # rejects anything less.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -47,12 +49,14 @@ jobs:
       - name: Install Rust toolchain
         run: rustup target add wasm32-unknown-unknown
 
-      - uses: Swatinem/rust-cache@v2
+      # Pinned to a full SHA (v2), same as the rust job.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
 
       # Pin explicitly: the action's "latest" resolves to v0.9.1, which predates
       # Cargo workspace inheritance and cannot parse `license.workspace = true`.
+      # The action itself is pinned to a full SHA (v0.4.0).
       - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
+        uses: jetli/wasm-pack-action@0d096b08b4e5a7de8c28de67e11e945404e9eefa
         with:
           version: 'v0.15.0'
 
@@ -62,9 +66,12 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      # --ignore-scripts: no dependency needs a lifecycle script on Linux
+      # (fsevents is the only one, and it is macOS-only), so skipping them
+      # removes an arbitrary-execution surface from the install.
       - name: Install dependencies
         working-directory: web
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # The WASM package is gitignored and generated, so it must be built before
       # anything can typecheck against its generated .d.ts.
@@ -86,4 +93,4 @@ jobs:
 
       - name: Build
         working-directory: web
-        run: npx vite build
+        run: npm run bundle

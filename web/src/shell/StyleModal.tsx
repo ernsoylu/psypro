@@ -77,14 +77,16 @@ export function StyleModal({
   }, [onClose]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('styleModal.title')}
-        onClick={(event) => event.stopPropagation()}
-      >
+    <div className="modal-overlay">
+      {/* The backdrop is a real button so dismissing it by click has a matching
+          keyboard gesture — a div with only an onClick is invisible to one. */}
+      <button
+        type="button"
+        className="modal-overlay__backdrop"
+        aria-label={t('styleModal.closeBackdrop')}
+        onClick={onClose}
+      />
+      <div className="modal" role="dialog" aria-modal="true" aria-label={t('styleModal.title')}>
         <div className="panel__header">
           <span className="panel__title">{t('styleModal.title')}</span>
         </div>

@@ -8,6 +8,7 @@
     "wasm": "wasm-pack build ../crates/psychro-wasm --target web --out-dir ../../web/src/wasm --out-name psychro",
     "dev": "npm run wasm && vite",
     "build": "npm run wasm && tsc --noEmit && vite build",
+    "bundle": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
