@@ -1,0 +1,21 @@
+[package]
+name = "psychro-wasm"
+description = "wasm-bindgen bridge exposing psychro-core to TypeScript."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+psychro-core = { path = "../psychro-core" }
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

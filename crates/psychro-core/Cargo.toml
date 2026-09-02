@@ -1,0 +1,28 @@
+[package]
+name = "psychro-core"
+description = "Psychrometric state, process, and chart-geometry calculations."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The calculation backend. frees-core is target-agnostic and free of
+# wasm-bindgen by its own rule, so it can sit under this crate without
+# compromising the WASM-free boundary here.
+frees-core = { path = "../../vendor/frees-wasm/crates/frees-core", default-features = false, features = [
+    "rustprop-backend",
+] }
+
+[features]
+default = ["reference-impl"]
+# This crate's own IAPWS/RP-1485 formulations, kept as the independent grading
+# reference for the frees backend. Not the production path — see `backend`.
+reference-impl = []
+
+[dev-dependencies]
+approx = "0.5"

@@ -1,0 +1,140 @@
+/*
+ * Single source of truth for every colour, dimension, and font in the app.
+ *
+ * Forking this project to apply your own branding should require editing only
+ * this file. Components must read these variables — never hard-code a colour or
+ * a layout dimension in a component or in a Konva prop. `src/theme.test.ts`
+ * enforces that.
+ *
+ * The palette is mirrored in `design.pen`, which holds the same names as pen.dev
+ * variables. Changing a colour here without changing it there makes the design
+ * file lie about the product.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Layout — REQUIREMENTS.md §6 ─────────────────────────────────────── */
+  --layout-topnav-height: 48px;
+  --layout-toolbox-width: 64px;
+  --layout-properties-width: 320px;
+
+  /* ── Spacing scale ───────────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 16px;
+
+  /* ── Radii and control metrics ───────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --control-height: 28px;
+  --tool-size: 44px;
+
+  /* ── Typography — monospace for numerics, sans-serif for UI chrome ───── */
+  --font-ui: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
+  --font-numeric: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  --font-size-base: 14px;
+  --font-size-numeric: 13px;
+  --font-size-label: 11.5px;
+  --font-size-section: 10.5px;
+
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --color-bg: #ffffff;
+  --color-surface: #f6f7f9;
+  --color-surface-raised: #ffffff;
+  --color-border: #d8dce2;
+  --color-hover: #00000009;
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --color-text: #14181f;
+  --color-text-muted: #5b6472;
+
+  /* ── Accent ──────────────────────────────────────────────────────────── */
+  --color-accent: #1c6fd4;
+  --color-accent-contrast: #ffffff;
+  --color-danger: #d4441c;
+
+  /* ── Chart property families — one variable per constant-property curve
+        family. Phase 5 consumes these; the styling matrix in Phase 12 writes
+        to them. ────────────────────────────────────────────────────────── */
+  --chart-grid-drybulb: #c3cad4;
+  --chart-grid-humidity-ratio: #c3cad4;
+  --chart-grid-rh: #6ba368;
+  --chart-grid-wetbulb: #4a90c2;
+  --chart-grid-enthalpy: #c27b4a;
+  --chart-grid-volume: #9b7bc2;
+  --chart-saturation: #2f7a4f;
+
+  /* ── Chart overlays and active elements ──────────────────────────────── */
+  --chart-zone-comfort: #6ba36833;
+  --chart-zone-datacenter: #4a90c226;
+  --chart-point: #d4441c;
+  --chart-process: #1c6fd4;
+
+  /* ── Motion and focus ────────────────────────────────────────────────── */
+  --duration-fast: 120ms;
+  --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #12151a;
+  --color-surface: #1a1f27;
+  --color-surface-raised: #222833;
+  --color-border: #333b47;
+  --color-hover: #ffffff0f;
+
+  --color-text: #e6eaf0;
+  --color-text-muted: #98a2b3;
+
+  --color-accent: #4d9bf0;
+  --color-accent-contrast: #0b0e12;
+  --color-danger: #f0724d;
+
+  --chart-grid-drybulb: #3a434f;
+  --chart-grid-humidity-ratio: #3a434f;
+  --chart-grid-rh: #7fc27b;
+  --chart-grid-wetbulb: #62aede;
+  --chart-grid-enthalpy: #dc9a6a;
+  --chart-grid-volume: #b394dc;
+  --chart-saturation: #4fb37a;
+
+  --chart-zone-comfort: #7fc27b2e;
+  --chart-zone-datacenter: #62aede24;
+  --chart-point: #f0724d;
+  --chart-process: #4d9bf0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-base);
+  overflow: hidden;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0ms !important;
+  }
+}

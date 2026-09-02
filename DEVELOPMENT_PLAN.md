@@ -1,11 +1,158 @@
-# HDPsyChart — Phased Development Plan
+# PsyPro — Phased Development Plan
 
 Each phase is **atomic**: it lands as one pull request, leaves `main` in a working and
 demonstrable state, and has an exit criterion that can be checked without reading the diff.
-Phases are ordered so that nothing is built on top of an unverified layer. A phase is not
-"done" because the code exists — it is done when its exit criterion passes in CI.
+A phase is not "done" because the code exists — it is done when its exit criterion passes in CI.
 
-Dependencies are noted where a phase can be parallelised; everything else is strictly serial.
+---
+
+## The calculation backend: frees
+
+**PsyPro does not implement psychrometrics. `frees` does.**
+
+```
+PsyPro  →  frees-core  →  rustprop  →  CoolProp 8.0.0-grade properties
+(UI, chart,   (equation engine,   (pure-Rust CoolProp port,
+ documents)    component library)   `humid-air` feature)
+```
+
+`frees-wasm` is a first-party project of the maintainer, MIT-licensed, vendored here as a
+git submodule at `vendor/frees-wasm`. It is an equation-solving and simulation engine — a CAS,
+a DAE/ODE solver, a component library, parametric and uncertainty analysis — with a moist-air
+property path that is **graded in CI against 912 CoolProp 8.0.0 reference points**.
+
+This settles the question that blocked Phase 1 from the start. `RustProp` is consumed *through*
+frees-core, as a git dependency pinned to tag `v0.1.0` with the `humid-air`, `heos` and
+`incompressible` features. There is no separate integration to design.
+
+Two properties of frees-core make it fit PsyPro's architecture without adaptation:
+
+* It is **target-agnostic and free of `wasm-bindgen`** by its own hard rule, exactly as
+  `psychro-core` is. The WASM boundary stays in one place in each project.
+* Its humid-air entry point is `props::propfun::ha_props_si`, the CoolProp `HAPropsSI`
+  signature, so every state-point query is one call with explicit inputs — matching the
+  stateless-engine rule in `REQUIREMENTS.md` §3.
+
+**Measured agreement** between this repo's own reference implementation and the frees path,
+at sea level (`crates/psychro-core/tests/frees_backend_parity.rs`):
+
+| Quantity | Worst deviation | Over |
+|---|---|---|
+| Saturation humidity ratio | 6.9e-4 relative | 0–50 °C |
+| Specific enthalpy | 0.016 kJ/kg_da | −5 to 34 °C, 50–95% RH |
+| Thermodynamic wet-bulb | 0.008 K | 24–34 °C |
+
+The residual is this repo's linearised enhancement factor against rustprop's full treatment.
+**frees is the authority**; `psychro-core`'s formulations are retained as the independent
+grading reference, not as the production path.
+
+## What PsyPro adds, and what it contributes back
+
+PsyPro is the psychrometric *application*: the chart, the document model, the industry
+profiles, the teaching affordances. Where the engine is missing something PsyPro needs, the
+fix goes **upstream into frees** rather than being reimplemented here.
+
+Two gaps were identified on adoption, and both are now closed **upstream** — the rule being
+that an upgrade frees needs lands in frees, and PsyPro then depends on it:
+
+1. **Chart geometry.** `frees-core/src/props/psychro.rs` generated a *rectangular* chart —
+   dry-bulb on x, humidity ratio on y — with no oblique construction and no Mollier i-x
+   layout. Contributed as `frees_core::props::psychrochart`, both layouts, 7 tests.
+2. **Component coverage.** `moistair.frees` shipped 19 moist-air components against a
+   37-entry catalogue in `REQUIREMENTS.md` §4. Seventeen were contributed across two waves;
+   `moistair.frees` now carries 36, and the catalogue is covered. See Phase 2.5c.
+
+---
+
+## Status
+
+| Phase | State |
+|---|---|
+| 0 — Repository foundation | **Done**, CI green |
+| 1 — Psychrometric core | **Superseded by frees.** The reference implementation and its 14-case ASHRAE conformance suite stay as the grading gate |
+| 2 — WASM bridge | **Done** — typed handshake, IP/SI at the boundary, debug panel |
+| 3 — Coordinate transformation | **Done** — oblique construction, both layouts, 22 tests |
+| 2.5 — frees integration and upstream contribution | **Done** — frees is the production path; chart geometry and 17 components contributed upstream, closing the §4 catalogue |
+| 4 — Application shell and theme | **Done** — shell, palette, i18n, and a test that fails the build on a literal |
+| 5–13 | Not started |
+
+---
+
+## Phase 2.5 — frees integration and upstream contribution
+
+**Goal:** Make frees the production calculation path, and close the gaps it has for
+psychrometric work by contributing to it.
+
+### 2.5a — Adopt frees as the backend — **done**
+- `psychro-core` becomes a thin adapter over `frees_core::props::propfun`, not a second
+  implementation. Its formulations move behind a `reference-impl` feature used only by the
+  grading tests.
+- The ASHRAE conformance suite is repointed to grade **frees**, so the acceptance criterion
+  transfers intact rather than being retired.
+- CI checks out submodules recursively.
+
+**Exit:** every `StatePoint` in the app is resolved by frees; the conformance suite passes
+against it; the parity test keeps both implementations honest.
+
+### 2.5b — Contribute the oblique chart geometry upstream — **done**
+Offer `chart.rs` to frees as the chart-space transform behind `props/psychro.rs`, giving it
+the ASHRAE oblique construction and the Mollier i-x layout it currently lacks.
+
+**Exit:** a PR against `ernsoylu/frees-wasm` with the round-trip and straightness tests.
+
+### 2.5c — Contribute the missing components — **done**, the catalogue is closed
+`moistair.frees` now carries **36 components**, up from 19 when PsyPro adopted frees. What
+frees already had — including several PsyPro had not catalogued — is: MoistAirSource/Sink,
+HeatingCoil, Humidifier, MixingBox, CoolingCoil, MoistAirWallHX, MoistAirFan, MoistAirDamper,
+EvaporativeCooler, CabinZone, MembraneHumidifier, MoistAirDuct, AirFilter, Diffuser, VAVBox,
+EnthalpyWheel, Infiltration, AHU, Chiller, EXV/EXVCmd, AirCoil, TXV, Radiator, HeaterCore.
+
+`CabinZone`, `HeaterCore` and `Radiator` mean the **automotive profile was already well
+served** — a significant finding, since that was expected to be the thinnest of the three.
+
+Contributed upstream in two waves, seventeen components in total:
+
+| Wave | Contributed |
+|---|---|
+| 1 | SensibleAirToAirHX, DesiccantWheel, IndirectEvaporativeCooler, SteamHumidifier, ChilledBeam, FanPoweredBox |
+| 2 | ApparatusDewPointCoil, FaceAndBypassCoil, HeatPipeWrapAround, TotalEnergyExchanger, LiquidDesiccantContactor, IndirectDirectEvaporativeCooler, Economizer, InductionUnit, FanCoilUnit, RadiantPanel, DOAS |
+
+Three of the §4 entries are **configurations of one component, not components of their own**,
+following frees' own precedent of one model with documented rating bands:
+
+| §4 entry | Served by | Rating |
+|---|---|---|
+| Fixed plate, heat wheel, heat pipe, run-around loop, thermosiphon | `SensibleAirToAirHX` | eff 40–85%, eatr 0–10%, oacf 0.97–1.2 |
+| Membrane plate, twin towers | `TotalEnergyExchanger` | eps_s/eps_L 40–75%, eatr 0–5% |
+| Run-around recuperative loop | `HeatPipeWrapAround` | same topology, pumped rather than passive |
+
+The PsyPro palette maps the catalogue name to `(component, preset)`; that mapping is a UI
+concern and does not belong upstream.
+
+**Two gaps found in frees while closing PsyPro's**, both now fixed there:
+
+- **No apparatus-dew-point coil.** `CoolingCoil` drives the leaving air to *saturation* at a
+  given temperature — a perfect coil, BF = 0. Real coils leave air at 85–95% RH. Since the
+  ADP/bypass-factor construction is the centre of every psychrometric design, this was the
+  largest single gap in the library, not a refinement.
+- **EATR and OACF were missing from the sensible recovery family.** §4.5 names both as
+  things a credible tool must not omit. Both are now required parameters — defaulting them
+  to zero would answer a cross-contamination question wrongly and silently.
+
+Adding EATR and OACF made `SensibleHeatWheel` equation-for-equation identical to
+`SensibleAirToAirHX`, so the two were consolidated into one.
+
+**Exit:** each contributed component solves and is gated by a test asserting its *defining
+property*, and the governing equation in `REQUIREMENTS.md` §4 is the one implemented.
+
+Not the frees **corpus**, deliberately: corpus fixtures are graded against golden values from
+the Java reference, and none of these seventeen has a Java counterpart, so there is no golden
+to grade them by. `crates/frees-core/tests/moistair_recovery.rs` and `moistair_design.rs`
+(20 tests) assert what a regression would actually break instead — a sensible exchanger that
+starts moving moisture, a wrap-around loop that invents energy, a coil whose three
+bypass-factor forms stop agreeing, a chilled beam that condenses without saying so. All of
+those stay dimensionally consistent and would sail through a residual check; they just would
+not be the device any more.
 
 ---
 
@@ -27,27 +174,44 @@ Dependencies are noted where a phase can be parallelised; everything else is str
 ## Phase 1 — Rust thermodynamic core
 **Goal:** Correct psychrometrics, headless, with no WASM or UI involved.
 
-- `RustProp` wrapped behind our own `psychro-core` API so the dependency stays swappable.
-- `InputState` enum (DbtWbt, DbtRh, DbtEnthalpy, …), `StatePointInput`, `StatePointOutput`.
-- IP/SI handling and altitude → barometric pressure; high-pressure support to 100 PSI.
-- Sub-zero saturation: Goff-Gratch / ASHRAE ice-vs-water branch below 0 °C.
-- Fog region: saturation vs. mixture enthalpy.
-- Rustdoc on every public item.
+**Status: substantially landed.** `psychro-core` now implements the formulations below with a
+14-case conformance suite; `RustProp` integration and the fog region remain.
 
-**Exit:** `cargo test` passes a table of ASHRAE Handbook reference values (sea level, altitude,
-sub-zero, and high-pressure cases) within a documented tolerance. No UI exists yet.
+- IAPWS-IF97 saturation over liquid water, IAPWS-06/08 over ice — both branches, always.
+- ASHRAE RP-1485 constants; real-gas enhancement factor with an ideal-gas mode for teaching.
+- `Atmosphere` carries barometric pressure and the real-gas flag as explicit inputs.
+- Enthalpy, specific volume, dry-air mass flow, relative humidity **and** degree of saturation.
+- Thermodynamic wet-bulb with separate liquid and ice branches; dew/frost point by inversion.
+- Altitude → pressure via the ICAO standard atmosphere.
+- Remaining: `RustProp` wrapping, the `InputState` enum surface, fog region, high-pressure
+  validation to 100 PSI.
+
+**Exit:** `cargo test -p psychro-core` passes the ASHRAE/IAPWS reference table including
+sub-zero and altitude cases. Achieved for the items above.
 
 ---
 
 ## Phase 2 — WASM bridge and typed handshake
 **Goal:** Prove the Rust↔TypeScript contract before anything depends on it.
 
-- `wasm-bindgen` wrappers, `Result<_, JsValue>` error surface, generated `.d.ts` consumed by `web/`.
-- Vite plugin/config for loading the WASM module.
-- A throwaway debug panel that calls `calculate_state` and prints the result.
+**Status: done.**
 
-**Exit:** Typing a dry-bulb and RH into the debug panel prints a full `StatePointOutput`,
-with `tsc --noEmit` passing against the *generated* types only (no hand-written mirrors).
+- `InputState` (DbtWbt / DbtRh / DbtDewPoint / DbtHumidityRatio / DbtEnthalpy),
+  `StatePointInput`, `StatePointOutput` exposed through `wasm-bindgen`, with a
+  `Result<_, JsValue>` error surface carrying readable messages.
+- **IP/SI conversion lives only at this boundary.** The engine computes exclusively in SI, so
+  an IP answer cannot disagree with its SI equivalent by more than float rounding.
+- `StatePointOutput` reports relative humidity and degree of saturation as separate fields,
+  and labels specific volume as the dry-air basis — the §3.2 distinctions carried across the
+  boundary rather than lost at it.
+- Supersaturated inputs are rejected with an explicit message pointing at the unmodelled fog
+  region, rather than returning a quietly wrong state.
+- `web/src/psychro.ts` re-exports the generated bindings; no hand-written type mirrors.
+- Debug panel drives every input mode, the unit toggle and the ideal-gas toggle.
+
+**Exit:** met. `tsc --noEmit` passes against the generated `.d.ts` only; 7 bridge tests cover
+IP/SI equivalence, altitude in both unit systems, cross-mode agreement, the ideal-gas
+difference, rejection of unphysical inputs, and the sub-freezing path.
 
 ---
 
@@ -76,6 +240,13 @@ layouts — plus curve generation benchmarked so a full grid regenerates in well
 **Exit:** No hard-coded color or user-facing string anywhere in `web/src`; swapping `theme.css`
 visibly retextures the whole shell.
 
+**Done.** `src/theme.test.ts` is the gate rather than the promise: it reads the source files and
+fails on a colour literal outside `theme.css`, a `var(--…)` nothing declares, a palette colour
+missing from either theme, a `t('key')` the bundle has no entry for, a bundle entry nothing
+renders, and a user-facing literal typed into a component — including `aria-label`, `title`,
+`placeholder` and `alt`, which are the ones a translator never sees. It caught three keys added
+ahead of the feature that needs them; they come back in Phase 6 with the click-to-place toggle.
+
 ---
 
 ## Phase 5 — Canvas Layer 0 (base grid)
@@ -95,7 +266,10 @@ regenerated on pan/zoom (assert via a render counter in a test).
 
 - `useProjectStore`, `usePsychStore`, `useStyleStore` — plain TS, unit-tested without React.
 - `PointLayer` with Konva `onDragMove` → screen → chart space → WASM → store.
-- Properties panel with two-way binding: click-to-place *and* manual numeric entry.
+- Properties panel with two-way binding: click-to-place *and* manual numeric entry. It shows
+  **relative humidity and degree of saturation side by side**, labels wet-bulb as
+  *thermodynamic*, and states the dry-air basis on every extensive quantity
+  (`REQUIREMENTS.md` §3.2) — the panel is where those distinctions either survive or get lost.
 - HUD crosshair with live property tooltip.
 
 **Exit:** Dragging a point holds 60 FPS with the properties panel live-updating; store tests
@@ -103,37 +277,74 @@ pass headless.
 
 ---
 
-## Phase 7 — Processes and mixing
+## Phase 7 — Processes and equipment models
 **Goal:** Connect points into meaningful thermodynamics.
 
-- Sensible heating/cooling, humidification, dehumidification, general linear processes.
-- Air mixing by mass/energy balance, including "Winter V" mixing with condensation.
-- SHR and ΔH/ΔW protractor drawing parallel reference lines.
+Elementary processes (`REQUIREMENTS.md` §4.1):
+- Sensible heating / cooling (`W` constant — horizontal).
+- Cooling with dehumidification.
+- Adiabatic mixing on a dry-air mass basis, including "Winter V" mixing where the mix line
+  crosses saturation and condensation occurs.
+- Steam (isothermal) humidification, `ṁ_steam = ṁ_da·(W_target − W_in)`.
+- Evaporative (adiabatic) humidification along constant wet-bulb, with saturation
+  effectiveness `ε_w = (t_in − t_out)/(t_in − t_wb,in)`.
+- General linear process between two arbitrary states.
 
-**Exit:** Mixing and process results validated in `cargo test` against worked textbook examples;
-process lines render with direction indicators.
+Equipment models (§4.2):
+- **Preheat / reheat coils** — sensible, `q = ṁ_da·c_p,ma·Δt`.
+- **Airside economizer** — dry-bulb or enthalpy changeover, reporting operating hours.
+- **Energy recovery (ERV/HRV)** — sensible and latent effectiveness
+  `ε_s = (t_oa,in − t_oa,out)/(t_oa,in − t_ex,in)`, `ε_L` likewise on `W`.
+- SHR and Δh/ΔW protractor; the scales relate by `Δh/ΔW = 2499.86/(1 − SHR)`.
+
+**Exit:** `cargo test` reproduces worked textbook examples for mixing, humidification and
+recovery. A horizontal (SHR = 1.0) process renders and reports correctly — the data-centre
+case, which must not be treated as degenerate.
 
 ---
 
-## Phase 8 — HVAC macros and coil tools
-**Goal:** One-click engineering output.
+## Phase 8 — Coil model, cycle macros, and the Process Design page
+**Goal:** One-click engineering output, and the page that drives it.
 
-- Primary and Secondary Return Air Cycle macros plotting full multi-point cycles.
-- Sensible/latent heat (kW) and moisture addition/removal rates.
-- Apparatus Dew Point, Air Bypass Factor, cooling-coil performance lines.
+- **Cooling coil** — apparatus dew point as the intersection of the extended process line
+  with saturation. Bypass factor exposed in all three equivalent forms so results can be
+  checked against any textbook:
+  `BF = (t_lvg − t_adp)/(t_ent − t_adp) = (W_lvg − W_adp)/(W_ent − W_adp) = (h_lvg − h_adp)/(h_ent − h_adp)`.
+  Coil SHR `= c_p,ma·(t_ent − t_lvg)/(h_ent − h_lvg)`. Total load
+  `q = ṁ_da·(h_ent − h_lvg) − ṁ_cond·h_f,cond` — the condensate term is small but must not be
+  silently dropped.
+- **Design derivation** (§4.3) — RSHF room condition line, supply airflow
+  `ṁ_da = q_s,room/(c_p,ma·(t_room − t_SA))`, `V̇ = ṁ_da·v_SA`.
+- **Cycle macros** — primary and secondary return-air cycles computed and plotted in one
+  action, reporting sensible/latent/total load and moisture rates.
+- **Process Design page** — the AHU schematic (OA → recovery → mixing → preheat → cooling →
+  reheat → fan → room → return), each block bound to its process object, with the results
+  strip and coil calculators alongside. This is the page the data table and chart both feed.
+  **Designed** in `design.pen`; components not in the active cycle render as inactive rather
+  than being hidden, so the available palette stays visible without implying they are running.
 
-**Exit:** A macro run on a known design case reproduces published cycle values.
+**Exit:** A macro run on a known design case reproduces published cycle values, and the coil's
+three bypass-factor forms agree to within tolerance on the same case.
 
 ---
 
-## Phase 9 — Standards overlays (Layer 1)
-**Goal:** Comfort and datacenter envelopes.
+## Phase 9 — Standards overlays and industry profiles (Layer 1)
+**Goal:** Comfort and equipment envelopes, and the profiles that select them.
 
-- ASHRAE Standard 55-2017/2020 comfort zones; ASHRAE TC 9.9 / NEBS datacenter zones.
-- Zone polygons as data files, not code, so contributors can add envelopes without TS changes.
+- ASHRAE Standard 55 comfort zones (2017/2020).
+- ASHRAE TC 9.9 recommended **and** allowable A1–A4 envelopes, with the published values in
+  `REQUIREMENTS.md` §5 — note the recommended dew-point floor is **−9 °C**, far below the
+  comfort band, so the envelope is much taller than a comfort zone.
+- **Industry profiles** (§10) — HVAC / automotive / data centre. A profile preselects
+  envelopes, default states, process palette and report template; it never changes the
+  thermodynamics.
+- Automotive profile carries the fogging check `t_dp,cabin ≥ t_glass,inner`.
+- Envelopes ship as **data files, not code**, so a contributor can add one without touching
+  TypeScript.
 
-**Exit:** Overlays toggle on/off, respect the active unit system and altitude, and sit correctly
-beneath points and above the grid.
+**Exit:** Overlays toggle, respect the active unit system and altitude, and sit correctly
+beneath points and above the grid. Switching profile changes only presentation and defaults —
+a state point's computed properties are byte-identical across profiles.
 
 ---
 
@@ -143,13 +354,34 @@ beneath points and above the grid.
 - `EpwParser` in a **Web Worker** for `.epw` and large CSV; drag-and-drop ingest.
 - `bin_weather_data` in WASM, 0.5–6 degree bin increments.
 - Density heatmap / scatter rendering.
+- **Bin analysis against envelopes** — hours inside/outside a selected envelope, and
+  economizer / evaporative / mechanical-cooling hour counts. This is what makes the data-centre
+  and economizer workflows real rather than decorative.
 
 **Exit:** An 8760-hour EPW file parses, bins, and renders with no main-thread jank
 (verified with a performance trace, not by eye).
 
 ---
 
-## Phase 11 — Export, import, and persistence
+## Phase 11 — Teaching mode
+**Goal:** The half of the product's purpose that is not load calculation.
+*Parallelisable with Phase 10.*
+
+- **Show the working** — any computed property expands to reveal the equation, the substituted
+  values, and the reference it comes from.
+- **Name the trap** — where a quantity is commonly confused with another (§3.2), show both
+  rather than silently picking one.
+- **Ideal-gas toggle** — switching off the enhancement factor shows students the size of the
+  real-gas correction instead of hiding it. The engine already supports this via `Atmosphere`.
+- **Process animation** — stepping along a process line updates every property live.
+- **Worked examples** as loadable project files, traceable to their textbook source.
+
+**Exit:** A worked example from a named textbook loads, and its reported values match the book
+within the documented tolerance, with each step's equation inspectable.
+
+---
+
+## Phase 12 — Export, import, and persistence
 **Goal:** Get work out of the browser.
 
 - SVG and DXF vector export; PDF report combining chart, flow diagram, and tables.
@@ -162,7 +394,7 @@ DXF opens cleanly in a CAD viewer.
 
 ---
 
-## Phase 12 — Customization, distribution, docs
+## Phase 13 — Customization, distribution, docs
 **Goal:** Ship it and make it forkable.
 
 - Line-styling matrix modal (color, style, width per property family).
@@ -174,11 +406,91 @@ DXF opens cleanly in a CAD viewer.
 
 ---
 
-## Open questions (decide before Phase 0 merges)
+## Resolved decisions
 
-1. **License:** MIT or Apache-2.0. Apache-2.0 adds an explicit patent grant, which matters more
-   for an engineering-calculation tool; MIT is shorter and more common in the JS ecosystem.
-2. **`RustProp` availability and license** — confirm the crate exists under a permissive license
-   and covers sub-zero/high-pressure formulations. If not, Phase 1 grows to include implementing
-   the ASHRAE formulations directly, and should be split into 1a (formulations) and 1b (API).
-3. **DXF export path:** an existing permissive Rust/JS DXF writer, or hand-rolled minimal R12 output.
+1. **License: MIT.** Applied in `LICENSE` and declared in the Cargo workspace and
+   `web/package.json`.
+2. **`RustProp` is a first-party product** owned by the maintainer, so it needs no
+   third-party license audit. Phase 1 keeps it behind the `psychro-core` API anyway, so
+   the dependency stays swappable and the calculation surface stays independently testable.
+3. **DXF export stays in scope** for Phase 11. The writer choice (existing permissive
+   crate vs. minimal hand-rolled R12) is a Phase 11 implementation detail, not a
+   blocker for earlier phases.
+
+## Still open
+
+- **How `RustProp` is consumed by the build** — crates.io, a git dependency, or vendored into
+  the workspace. **This blocks the rest of Phase 1.** `psychro-core` currently carries its own
+  reference implementation of the formulations, and the conformance suite is written to be
+  independent of who does the arithmetic, so the decision changes the `Cargo.toml` and whether
+  CI needs credentials — not the tests. Everything from Phase 2 onward proceeds without it.
+- **TypeScript 7 upgrade** — the scaffold pins TypeScript 6 because `typescript-eslint`
+  declares `typescript <6.1.0`. Revisit once that peer range widens.
+- **Fog region** — saturation vs. mixture enthalpy above the saturation line. Deferred from
+  Phase 1; needed before the automotive profile's pull-down cases in Phase 9.
+- **`jetli/wasm-pack-action` targets the deprecated node20 runtime.** Cosmetic today. If
+  GitHub drops node20, replace it with a pinned `cargo install wasm-pack --version 0.15.0`.
+
+## Beyond the current plan
+
+Three modules the maintainer has flagged. They are recorded here with the same shape as the
+phases above so they can be scheduled rather than remembered, and they share a theme: the
+current plan starts at a *state point*, but real design work starts one step earlier, at a
+**load**, and ends one step later, at **equipment sized against a distribution network**.
+
+### Load calculation
+**The starting point of any HVAC design** — building, house, automotive cabin or data centre —
+is the load. Without it, a psychrometric chart is a calculator waiting for numbers the user
+has had to find elsewhere.
+
+- Fundamental first, for **all four applications**, with a small set of required inputs.
+- Advanced options let the user refine the estimate as more data becomes available, rather
+  than demanding a full building model up front.
+- Sources: the ASHRAE and Carrier references in the `Frees` NotebookLM notebook — Spitler's
+  *Load Calculation Applications Manual* (RTSM and heat-balance methods) is already there,
+  alongside the automotive cabin-load and TC 9.9 material.
+- Feeds §4.3 directly: room sensible and latent load → RSHF → supply airflow → coil selection.
+  That chain already exists in the plan and currently begins with numbers typed in by hand.
+
+**Exit:** a worked load from each of the four application types reproduces its published
+result, and hands off to the existing supply-airflow derivation without re-entry.
+
+### Hydronic loops — brine, coolant, pumps and fans
+Most HVAC systems move heat with a liquid before they move it with air. Chilled water, glycol
+brines and automotive coolant loops carry the duty from the coil to the plant.
+
+- Loop heat transfer plus the **electrical consumption** of the machines that drive it.
+- Driven by **pump and fan curves**, which `frees-wasm` already supports — `liquid.frees`,
+  `hydraulic.frees` and the `pumpmap` / `fanmap` components are in the library today, so this
+  is largely an integration and UI problem rather than new physics.
+
+**Exit:** a chilled-water loop closes its energy balance against the air-side coil duty, and
+reports pump power from a real curve rather than an assumed efficiency.
+
+### Duct and pipe sizing
+The distribution network is what actually sets the pump and fan duty, so sizing it is the
+step between a load and equipment selection.
+
+- Size ducts and pipes, then size the pumps and fans **against that network** rather than
+  against a guessed pressure drop.
+- `MoistAirDuct` (Darcy friction on the moist-air stream) and the hydraulic resistance
+  library already give the pressure-drop physics; what is missing is the sizing method and
+  the network editor.
+
+**Exit:** a sized network produces a system curve that intersects a real pump or fan curve at
+the design flow.
+
+---
+
+*Original notes, kept verbatim:*
+
+## Future Ideas
+-   The starting point of an HVAC System Design either building or house or Automotive or Datacenter
+    is calculating the load. We need to add load calculator for various application. We can rely on 
+    the ASHRAE and Carier books in the notebooklm-Frees notebook and create a comprehensive calculator
+    it should be simple and fundamental first for all applications with advanced options user can improve
+    and precise the calculation with more data.
+
+-   In the HVAC applications brine and coolant is mostly used for transferring the heat from one place to other  place so we can also add this heat transfer and electrical consumption of these via adding some additional data like pump curve, fan curve which is already compatible with frees-wasm.
+-   Another open point duct and piping design which we can size pumps and fans based on this design like load calculation this is another module we can add in the future.
+-
