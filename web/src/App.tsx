@@ -25,12 +25,11 @@ import { WeatherPage } from './pages/WeatherPage';
 import { AppShell } from './shell/AppShell';
 import { LayerOptions } from './shell/LayerOptions';
 import { StyleModal } from './shell/StyleModal';
-import { ExamplePicker } from './shell/ExamplePicker';
 import { PageTabs, type PageId } from './shell/PageTabs';
-import { WorkingPanel } from './shell/WorkingPanel';
+import { TeachingPanel } from './shell/TeachingPanel';
 import { ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
-import { Toolbox, type ToolId, type ViewActionId } from './shell/Toolbox';
+import { Toolbox, type PanelId, type ToolId, type ViewActionId } from './shell/Toolbox';
 import { TopNav, type FileActionId } from './shell/TopNav';
 import { Viewport } from './shell/Viewport';
 import { useTheme } from './shell/useTheme';
@@ -43,6 +42,7 @@ import {
 } from './store/useProcessStore';
 import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
 import { useResolvedPoints } from './store/useResolvedPoints';
+import { convertForUnits, specificVolumeSi } from './units';
 import { useResolvedProcesses } from './store/useResolvedProcesses';
 import { envelopeById, exampleById } from './data';
 import { chartToDxf } from './export/dxf';
@@ -94,6 +94,16 @@ const EXPORT_FORMATS = [
   { id: 'csv', label: 'CSV' },
 ];
 
+/**
+ * Site elevation across a unit switch. Kept as text, because the field is text
+ * and an empty box mid-edit must not become a zero-metre site.
+ */
+function convertAltitude(altitude: string, toSi: boolean): string {
+  const parsed = Number(altitude.trim());
+  if (altitude.trim() === '' || !Number.isFinite(parsed)) return altitude;
+  return String(Number(convertForUnits('length', parsed, toSi).toFixed(4)));
+}
+
 export function App() {
   const t = useT();
   const { theme, toggleTheme } = useTheme();
@@ -102,7 +112,7 @@ export function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolId>('select');
   const [page, setPage] = useState<PageId>('chart');
-  const [showLayers, setShowLayers] = useState(false);
+  const [rightPanel, setRightPanel] = useState<PanelId>('properties');
   const [showStyles, setShowStyles] = useState(false);
   const [exampleId, setExampleId] = useState<string | null>(null);
   const [fileHandle, setFileHandle] = useState<FileHandle>(null);
@@ -210,6 +220,13 @@ export function App() {
   const selectedProcess = proc.processes.find((p) => p.id === proc.selectedId) ?? null;
   const selectedProcessResolved =
     resolvedProcesses.find((r) => r.process.id === proc.selectedId) ?? null;
+  // The inlet's specific volume, so a flow may be entered volumetrically:
+  // ṁ = V̇ / v_da, on the inlet's own state rather than on a nominal density.
+  const inletSpecificVolume = specificVolumeSi(
+    resolved.find((r) => r.point.id === selectedProcess?.fromId)?.state?.specific_volume ??
+      null,
+    project.isSi,
+  );
 
   /**
    * The SHR reference line, drawn through the selected process's inlet.
@@ -517,10 +534,16 @@ export function App() {
           projectName={project.name || t('app.untitledProject')}
           isSi={project.isSi}
           onUnitChange={(next: boolean) => {
-            // The design case holds quantities, not labels: switching the
-            // document to IP has to convert them, or a 24 °C room silently
-            // becomes a 24 °F one.
-            if (next !== project.isSi) design.setForUnits(next);
+            // The whole document holds quantities, not labels: switching to IP
+            // has to convert them, or a 24 °C room silently becomes a 24 °F one
+            // and every point on the chart moves. Points, processes, the design
+            // case and the site elevation all go across together.
+            if (next !== project.isSi) {
+              design.setForUnits(next);
+              psych.setForUnits(next);
+              proc.setForUnits(next);
+              project.setAltitude(convertAltitude(project.altitude, next));
+            }
             project.setIsSi(next);
           }}
           altitude={project.altitude}
@@ -552,8 +575,8 @@ export function App() {
           activeTool={tool}
           onToolChange={setTool}
           onViewAction={onViewAction}
-          showLayers={showLayers}
-          onToggleLayers={() => setShowLayers((s) => !s)}
+          panel={rightPanel}
+          onPanelChange={setRightPanel}
         />
       }
     >
@@ -581,7 +604,7 @@ export function App() {
         <DataTablePage points={resolved} isSi={project.isSi} />
       ) : (
         <ChartPage
-          showLayers={showLayers}
+          activePanel={rightPanel}
           layers={
             <LayerOptions
               visible={style.visible}
@@ -627,6 +650,15 @@ export function App() {
               ) : null}
             </Viewport>
           }
+          teaching={
+            <TeachingPanel
+              onLoadExample={loadExample}
+              exampleId={exampleId}
+              hasSelection={selected !== null}
+              steps={working.steps}
+              correction={working.correction}
+            />
+          }
           panel={
             <PropertiesPanel
               point={selected}
@@ -644,23 +676,13 @@ export function App() {
                 })
               }
               onRemove={onRemovePoint}
-              teachingSection={
-                <>
-                  <ExamplePicker onLoad={loadExample} activeId={exampleId} />
-                  {selected ? (
-                    <WorkingPanel
-                      steps={working.steps}
-                      correction={working.correction}
-                    />
-                  ) : null}
-                </>
-              }
               processSection={
                 <ProcessSection
                   process={selectedProcess}
                   resolved={selectedProcessResolved}
                   points={psych.points}
                   isSi={project.isSi}
+                  inletSpecificVolume={inletSpecificVolume}
                   canAdd={psych.points.length > 0}
                   onChange={(patch) =>
                     selectedProcess && proc.updateProcess(selectedProcess.id, patch)

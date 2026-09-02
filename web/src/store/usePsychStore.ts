@@ -19,6 +19,22 @@
 import { create } from 'zustand';
 
 import { InputState } from '../psychro';
+import { convertForUnits } from '../units';
+import type { DimensionId } from '../units';
+
+/**
+ * What kind of quantity each mode's second value is.
+ *
+ * The panel needs it to label and convert the input; the unit switch needs it
+ * to rewrite a stored document. One table, so the two cannot disagree.
+ */
+export const SECOND_PROPERTY_DIMENSION: Record<InputState, DimensionId> = {
+  [InputState.DbtWbt]: 'temperature',
+  [InputState.DbtRh]: 'percent',
+  [InputState.DbtDewPoint]: 'temperature',
+  [InputState.DbtHumidityRatio]: 'humidityRatio',
+  [InputState.DbtEnthalpy]: 'enthalpy',
+};
 
 /** A named state point, stored as its defining inputs. */
 export interface StatePoint {
@@ -50,6 +66,14 @@ export interface PsychState {
   selectPoint: (id: string | null) => void;
   /** Replaces the whole document, for file open and for tests. */
   replaceAll: (points: StatePoint[]) => void;
+  /**
+   * Rewrites every point for a new unit system.
+   *
+   * A point is stored as two numbers in the document's units, so the switch has
+   * to convert them: 24 °C is 75.2 °F, and leaving the 24 alone would move the
+   * point rather than relabel it.
+   */
+  setForUnits: (toSi: boolean) => void;
 }
 
 /**
@@ -105,6 +129,19 @@ export const usePsychStore = create<PsychState>((set) => ({
   selectPoint: (selectedId) => set({ selectedId }),
 
   replaceAll: (points) => set({ points, selectedId: null }),
+
+  setForUnits: (toSi) =>
+    set((s) => ({
+      points: s.points.map((p) => ({
+        ...p,
+        dryBulb: convertForUnits('temperature', p.dryBulb, toSi),
+        secondValue: convertForUnits(
+          SECOND_PROPERTY_DIMENSION[p.mode],
+          p.secondValue,
+          toSi,
+        ),
+      })),
+    })),
 }));
 
 /** The selected point, or null. */

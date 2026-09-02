@@ -8,8 +8,12 @@
  * that changed it.
  */
 
+import { useState } from 'react';
+
 import { Icon, type IconName } from './Icon';
+import { NumberField } from './NumberField';
 import { useT } from '../i18n/useT';
+import { DIMENSIONS, convert, documentUnit, unitById } from '../units';
 import { ChartLayout } from '../psychro';
 import type { TranslationKey } from '../i18n';
 import type { Theme } from './useTheme';
@@ -47,6 +51,9 @@ export interface TopNavProps {
 /** What a file action does, keyed so the handler can switch on it. */
 export type FileActionId = 'save' | 'open' | 'export';
 
+/** Elevation converts without an air state — it is a length. */
+const NO_STATE = { vDaSi: null };
+
 const FILE_ACTIONS: { id: FileActionId; key: TranslationKey; icon: IconName }[] = [
   { id: 'save', key: 'nav.save', icon: 'save' },
   { id: 'open', key: 'nav.open', icon: 'open' },
@@ -69,6 +76,10 @@ export function TopNav({
   onExport,
 }: TopNavProps) {
   const t = useT();
+  const [chosenElevation, setElevationUnit] = useState<string | null>(null);
+  const documentElevation = documentUnit('length', isSi);
+  const elevationUnit =
+    chosenElevation === null ? documentElevation : unitById('length', chosenElevation);
 
   return (
     <header className="topnav">
@@ -146,20 +157,46 @@ export function TopNav({
           <option value={ChartLayout.MollierIx}>{t('layout.mollier')}</option>
         </select>
 
-        <label className="field-inline">
+        <span className="field-inline">
           <Icon name="elevation" size={14} />
           <span className="field-inline__label">{t('nav.elevation')}</span>
-          <input
+          {/* Typed in whichever unit is chosen and stored in the document's:
+              a site is 1609 m or 5280 ft and both are the same site. Through
+              NumberField, so a keystroke is not converted and re-rounded back
+              into the box before the next one arrives. */}
+          <NumberField
             className="field-inline__input"
-            value={altitude}
-            inputMode="decimal"
             aria-label={t('nav.elevationLabel')}
-            onChange={(e) => onAltitudeChange(e.target.value)}
+            value={convert(Number(altitude) || 0, documentElevation, elevationUnit, NO_STATE)}
+            format={(v) => String(Math.round(v))}
+            onCommit={(entered) =>
+              // Stored at full precision even though it is shown to the metre:
+              // 5280 ft is 1609.344 m, and rounding that on the way in comes
+              // back as 5279 ft the moment the reader looks again.
+              onAltitudeChange(
+                String(
+                  Number(
+                    convert(entered, elevationUnit, documentElevation, NO_STATE).toFixed(
+                      4,
+                    ),
+                  ),
+                ),
+              )
+            }
           />
-          <span className="field-inline__unit">
-            {t(isSi ? 'unit.metre' : 'unit.foot')}
-          </span>
-        </label>
+          <select
+            className="field-inline__unit field-inline__unit--select"
+            value={elevationUnit.id}
+            aria-label={t('unit.selectFor', { field: t('nav.elevationLabel') })}
+            onChange={(e) => setElevationUnit(e.target.value)}
+          >
+            {DIMENSIONS.length.units.map((u) => (
+              <option key={u.id} value={u.id}>
+                {t(u.key)}
+              </option>
+            ))}
+          </select>
+        </span>
 
         <button
           type="button"
