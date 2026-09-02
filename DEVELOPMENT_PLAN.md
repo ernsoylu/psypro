@@ -79,7 +79,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 7 — Processes and equipment models | **Done** — 15 worked textbook cases, protractor exact by construction |
 | 8 — Coil model, cycle macros, Process Design page | **Done** — 14 coil cases, three BF forms agree, page verified against the real engine |
 | 9 — Standards overlays and industry profiles | **Done** — envelopes are data, polygons computed at altitude, profiles proven inert |
-| 10–13 | Not started |
+| 10 — BYOD weather data | **Done** — 8760 hours, worst frame gap 17 ms, traced not eyeballed |
+| 11–13 | Not started |
 
 ---
 
@@ -463,6 +464,33 @@ comfort, and a reader who knows which is which can judge exceeding it.
 
 **Exit:** An 8760-hour EPW file parses, bins, and renders with no main-thread jank
 (verified with a performance trace, not by eye).
+
+**Done, and the trace was the point.** The first version passed by eye and failed by
+measurement:
+
+```
+before   39.0 s wall ·   7 frames · worst frame gap 38 908 ms
+after     2.3 s wall · 139 frames · worst frame gap      17 ms
+```
+
+Two defects, neither visible without the trace:
+
+- **The year was resolved once per question.** Binning, free-cooling hours and each visible
+  envelope each called `StatePoint::from_db_dp` per row — ten properties including an iterative
+  wet-bulb solve, four times over. Resolving once into the four quantities the analyses
+  actually need, and computing the wet bulb only for hours that reach the test needing it, took
+  the Rust suite from 20 s to 3.6 s on its own.
+- **The engine was on the main thread.** Even resolved once, 2.3 s is a 2.3-second frozen page.
+  The worker now owns the WASM instance, the parsed arrays and every analysis; the main thread
+  receives plain numbers. Re-binning at a new increment is a message, not a re-read.
+
+A third came out of the render trace: the heatmap asked the engine for a chart position per
+lattice corner, resolving a full state each time — a few thousand round trips and a 467 ms
+frame gap. `chart_lattice` returns the whole lattice in one call, because the transform is pure
+geometry and never needed the thermodynamics.
+
+The parser rejects EPW's `99.9` missing-value sentinel rather than binning it: a spike of
+phantom hours at the right-hand edge of the chart looks exactly like a hot climate.
 
 ---
 

@@ -37,9 +37,9 @@ describe('page tabs', () => {
     render(<App />);
     // Hiding them would teach that the tool cannot do it; disabling them says
     // this build does not yet, which is the true statement.
-    expect(screen.getByRole('tab', { name: 'Weather data' })).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'Report' })).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'Chart' })).toBeEnabled();
+    expect(screen.getByRole('tab', { name: 'Weather data' })).toBeEnabled();
   });
 });
 

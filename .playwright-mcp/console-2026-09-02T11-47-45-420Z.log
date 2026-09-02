@@ -1,0 +1,2 @@
+[  436398ms] [WARNING] Konva warning: The stage has 6 layers. Recommended maximum number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group. @ http://localhost:4330/assets/index-DB76bUmC.js:21
+[  720721ms] [WARNING] Konva warning: The stage has 6 layers. Recommended maximum number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group. @ http://localhost:4331/assets/index-C8RE3SZa.js:21
