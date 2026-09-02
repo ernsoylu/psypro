@@ -35,7 +35,7 @@ import { useChartTokens, type ChartTokens } from './useChartTokens';
 import { useChartTransform, type ChartTransform } from './useChartTransform';
 import { useT } from '../i18n/useT';
 import { state_from_chart_coordinates_clamped, type StatePointOutput } from '../psychro';
-import { isCurveVisible } from '../store/useStyleStore';
+import { isCurveVisible, type FamilyStyle } from '../store/useStyleStore';
 import type { CurveFamilyId } from '../psychro';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
@@ -71,6 +71,8 @@ export interface ChartCanvasProps extends BaseGridParams {
   weatherBins: BinGrid | null;
   /** Which curve families are drawn. */
   visible: Record<CurveFamilyId, boolean>;
+  /** The line-styling matrix: colour, dash, and width per family. */
+  styles: Record<CurveFamilyId, FamilyStyle>;
   /** Whether the numerals are drawn. */
   showLabels: boolean;
   /** Whether the crosshair follows the pointer. */
@@ -96,6 +98,7 @@ export interface ChartCanvasProps extends BaseGridParams {
     curves: GridCurve[];
     viewport: Viewport;
     tokens: ChartTokens;
+    styles: Record<CurveFamilyId, FamilyStyle>;
     width: number;
     height: number;
   }) => void;
@@ -113,6 +116,7 @@ export function ChartCanvas({
   envelopes,
   weatherBins,
   visible,
+  styles,
   showLabels,
   showCrosshair,
   onMovePoint,
@@ -141,7 +145,7 @@ export function ChartCanvas({
   const curves = grid.curves.filter((c) => isCurveVisible(visible, c.family, c.value));
 
   if (tokens && size.width > 0) {
-    onDrawn?.({ curves, viewport, tokens, width: size.width, height: size.height });
+    onDrawn?.({ curves, viewport, tokens, styles, width: size.width, height: size.height });
   }
 
   /** Chart-space position and resolved state under a screen point. */
@@ -236,6 +240,7 @@ export function ChartCanvas({
             curves={curves}
             viewport={viewport}
             tokens={tokens}
+            styles={styles}
             width={size.width}
             height={size.height}
           />

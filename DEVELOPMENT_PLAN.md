@@ -82,7 +82,7 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 10 — BYOD weather data | **Done** — 8760 hours, worst frame gap 17 ms, traced not eyeballed |
 | 11 — Teaching mode | **Done** — four worked examples graded against their books, every step cited |
 | 12 — Export, import, and persistence | **Done** — round trip byte-identical; DXF audits clean under ezdxf |
-| 13 — Customization, distribution, docs | Not started |
+| 13 — Customization, distribution, docs | **Done** — self-hosts via `docker run`, exit-checked for real; license audit clean |
 
 ---
 
@@ -598,6 +598,35 @@ does.
 - Dependency license audit across npm and crates.
 
 **Exit:** A fresh clone builds and self-hosts via `docker run`; the license audit is clean.
+
+**Done.** The exit check ran for real, not by inspection: `docker build` from a clean
+context, `docker run`, and HTTP 200 for the index, an SPA deep link, and a hashed bundle
+asset. It caught a real bug on the way — the image's nginx 500'd on every request because
+the official image compiles nginx with `--prefix=/etc/nginx`, so a server block without an
+explicit `root` silently serves from `/etc/nginx/html`; the stock `default.conf` always sets
+it, ours did not. The fix is in `docker/nginx.conf` with the reason written next to it.
+
+- **Line-styling matrix.** Color, dash, and width per property family in a modal over
+  `useStyleStore`, rendered on canvas and honoured by SVG export — where every colour is
+  resolved to a literal before the XML is written, because a `var(--…)` is a dead string in a
+  file opened elsewhere. 28 tests across the matrix, the modal, the store, and the export.
+- **Distribution.** Three ways to run it, all wired to CI: GitHub Pages deploys on every
+  merge to `main` (`deploy.yml`, and only then); a three-stage Dockerfile mirrors CI's
+  toolchain pins stage for stage; and pushing a `v*` tag builds the image and publishes it
+  to `ghcr.io` alongside a GitHub Release (`release.yml`). The first tag is `v0.1.0`.
+- **README.** Screenshots from the running app, the three-layer architecture in a diagram
+  worth its size, quick start, all three hosting options, and the translation guide:
+  `en.json` is the schema, `TranslationKey` is derived from it, and `BUNDLES` is typed
+  against it — so a translation that misses a key or invents one is a compile error, and
+  adding a language touches one JSON file and one registry, never a component.
+- **License audit** (`docs/license-audit.md`). The runtime tree that ships — 12 packages —
+  is all MIT. The full dev tree's only copyleft is `lightningcss` (MPL-2.0), Vite's
+  build-time CSS transformer: it never ships, and its output is not a derivative work; the
+  rationale is recorded in the audit rather than assumed. All 69 crates are permissive, and
+  every disjunctive expression among them offers a MIT path. Verdict: clean.
+
+The repository was tidied for the occasion: browser-automation scratch space is gitignored
+and untracked, and the screenshots live curated under `docs/screenshots/`.
 
 ---
 

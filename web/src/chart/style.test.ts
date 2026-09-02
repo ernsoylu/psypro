@@ -11,7 +11,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { CurveFamilyId } from '../psychro';
-import { curveStyle, isMajor, isSaturation } from './style';
+import {
+  DEFAULT_STYLES,
+  TOGGLEABLE_FAMILIES,
+  type FamilyStyle,
+} from '../store/useStyleStore';
+import { curveStyle, DASH_PATTERN, isMajor, isSaturation } from './style';
 import type { ChartTokens } from './useChartTokens';
 
 const TOKENS: ChartTokens = {
@@ -98,5 +103,75 @@ describe('curve styling', () => {
     // ...and every family is actually distinguishable, rather than six curves
     // sharing one colour because a lookup silently fell through.
     expect(strokes.size).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('the styling matrix', () => {
+  /** The defaults with one family patched, leaving the rest of the chart alone. */
+  const withStyle = (
+    family: CurveFamilyId,
+    patch: Partial<FamilyStyle>,
+  ): Record<CurveFamilyId, FamilyStyle> => ({
+    ...DEFAULT_STYLES,
+    [family]: { ...DEFAULT_STYLES[family], ...patch },
+  });
+
+  it('defines the three dash patterns of REQUIREMENTS §8', () => {
+    expect(DASH_PATTERN.solid).toBeUndefined();
+    expect(DASH_PATTERN.dotted).toEqual([1, 3]);
+    expect(DASH_PATTERN.dashed).toEqual([5, 4]);
+  });
+
+  it('overrides the theme colour for one family only', () => {
+    const styles = withStyle(CurveFamilyId.WetBulb, { color: '#123456' });
+    expect(curveStyle(CurveFamilyId.WetBulb, 20, TOKENS, styles).stroke).toBe('#123456');
+    // The rest of the chart keeps its theme colours.
+    expect(curveStyle(CurveFamilyId.DryBulb, 25, TOKENS, styles).stroke).toBe('db');
+    expect(curveStyle(CurveFamilyId.Enthalpy, 40, TOKENS, styles).stroke).toBe('h');
+  });
+
+  it('dots a family when the reader asks for dots', () => {
+    const styles = withStyle(CurveFamilyId.DryBulb, { lineStyle: 'dotted' });
+    expect(curveStyle(CurveFamilyId.DryBulb, 25, TOKENS, styles).dash).toEqual([1, 3]);
+  });
+
+  it('lets solid remove the dash from a historically dashed family', () => {
+    const styles = withStyle(CurveFamilyId.SpecificVolume, { lineStyle: 'solid' });
+    expect(
+      curveStyle(CurveFamilyId.SpecificVolume, 0.86, TOKENS, styles).dash,
+    ).toBeUndefined();
+  });
+
+  it('scales the minor width from the family width at the fixed ratio', () => {
+    const styles = withStyle(CurveFamilyId.DryBulb, { width: 2 });
+    expect(curveStyle(CurveFamilyId.DryBulb, 25, TOKENS, styles).strokeWidth).toBe(2);
+    // 2 × 0.7, rounded the way the drawing pipeline rounds.
+    expect(curveStyle(CurveFamilyId.DryBulb, 24, TOKENS, styles).strokeWidth).toBe(1.4);
+  });
+
+  it('gives saturation the RH colour override but keeps its own solid weight', () => {
+    const styles = withStyle(CurveFamilyId.RelativeHumidity, {
+      color: '#aa0000',
+      lineStyle: 'dotted',
+      width: 4,
+    });
+    const sat = curveStyle(CurveFamilyId.RelativeHumidity, 1, TOKENS, styles);
+    expect(sat.stroke).toBe('#aa0000');
+    expect(sat.strokeWidth).toBe(2);
+    expect(sat.opacity).toBe(1);
+    expect(sat.dash).toBeUndefined();
+    // A plain RH curve takes the whole override, dash and width included.
+    const rh = curveStyle(CurveFamilyId.RelativeHumidity, 0.5, TOKENS, styles);
+    expect(rh.stroke).toBe('#aa0000');
+    expect(rh.strokeWidth).toBe(4);
+    expect(rh.dash).toEqual([1, 3]);
+  });
+
+  it('draws exactly as the defaults say when no matrix is passed', () => {
+    for (const family of TOGGLEABLE_FAMILIES) {
+      expect(curveStyle(family, 0.5, TOKENS)).toEqual(
+        curveStyle(family, 0.5, TOKENS, DEFAULT_STYLES),
+      );
+    }
   });
 });

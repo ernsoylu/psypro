@@ -20,3 +20,6 @@ node_modules/
 # Local env
 .env
 .env.local
+
+# Browser-automation scratch space (screenshots, console logs) — never tracked
+.playwright-mcp/

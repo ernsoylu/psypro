@@ -11,7 +11,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ChartLayout, CurveFamilyId, InputState } from '../psychro';
 import { altitudeInMetres, useProjectStore } from './useProjectStore';
 import { nextLabel, resetIdCounter, selectedPoint, usePsychStore } from './usePsychStore';
-import { isCurveVisible, useStyleStore } from './useStyleStore';
+import {
+  DEFAULT_STYLES,
+  MAX_STYLE_WIDTH,
+  MIN_STYLE_WIDTH,
+  TOGGLEABLE_FAMILIES,
+  isCurveVisible,
+  useStyleStore,
+} from './useStyleStore';
 
 const project = () => useProjectStore.getState();
 const psych = () => usePsychStore.getState();
@@ -27,7 +34,15 @@ beforeEach(() => {
     realGas: true,
     name: '',
   });
-  useStyleStore.setState({ showLabels: true, showCrosshair: true });
+  useStyleStore.setState({
+    visible: Object.fromEntries(TOGGLEABLE_FAMILIES.map((f) => [f, true])) as Record<
+      CurveFamilyId,
+      boolean
+    >,
+    styles: DEFAULT_STYLES,
+    showLabels: true,
+    showCrosshair: true,
+  });
 });
 
 describe('project store', () => {
@@ -181,5 +196,60 @@ describe('style store', () => {
     expect(style().visible[CurveFamilyId.DryBulb]).toBe(true);
     style().toggleFamily(CurveFamilyId.Enthalpy);
     expect(style().visible[CurveFamilyId.Enthalpy]).toBe(true);
+  });
+
+  it('patches one family without touching the others', () => {
+    style().setFamilyStyle(CurveFamilyId.Enthalpy, {
+      color: '#b05c2a',
+      lineStyle: 'dashed',
+      width: 1.5,
+    });
+    expect(style().styles[CurveFamilyId.Enthalpy]).toEqual({
+      color: '#b05c2a',
+      lineStyle: 'dashed',
+      width: 1.5,
+    });
+    expect(style().styles[CurveFamilyId.DryBulb]).toEqual(
+      DEFAULT_STYLES[CurveFamilyId.DryBulb],
+    );
+  });
+
+  it('clamps the width to what the drawing pipeline accepts', () => {
+    style().setFamilyStyle(CurveFamilyId.DryBulb, { width: 100 });
+    expect(style().styles[CurveFamilyId.DryBulb].width).toBe(MAX_STYLE_WIDTH);
+    style().setFamilyStyle(CurveFamilyId.DryBulb, { width: 0.01 });
+    expect(style().styles[CurveFamilyId.DryBulb].width).toBe(MIN_STYLE_WIDTH);
+    // A NaN here would poison the stroke the way a mistyped elevation would.
+    style().setFamilyStyle(CurveFamilyId.DryBulb, { width: NaN });
+    expect(style().styles[CurveFamilyId.DryBulb].width).toBe(MIN_STYLE_WIDTH);
+  });
+
+  it('restores the theme colour when the override is cleared', () => {
+    style().setFamilyStyle(CurveFamilyId.WetBulb, { color: '#123456' });
+    expect(style().styles[CurveFamilyId.WetBulb].color).toBe('#123456');
+    style().setFamilyStyle(CurveFamilyId.WetBulb, { color: null });
+    expect(style().styles[CurveFamilyId.WetBulb].color).toBeNull();
+  });
+
+  it('restores one family to the defaults', () => {
+    style().setFamilyStyle(CurveFamilyId.Enthalpy, { color: '#000000', width: 3 });
+    style().resetFamilyStyle(CurveFamilyId.Enthalpy);
+    expect(style().styles[CurveFamilyId.Enthalpy]).toEqual(
+      DEFAULT_STYLES[CurveFamilyId.Enthalpy],
+    );
+  });
+
+  it('restores every family at once', () => {
+    style().setFamilyStyle(CurveFamilyId.DryBulb, { width: 3 });
+    style().setFamilyStyle(CurveFamilyId.WetBulb, { color: '#112233' });
+    style().resetAllStyles();
+    expect(style().styles).toEqual(DEFAULT_STYLES);
+  });
+
+  it('has a default for every toggleable family', () => {
+    expect(TOGGLEABLE_FAMILIES).toHaveLength(6);
+    for (const family of TOGGLEABLE_FAMILIES) {
+      expect(DEFAULT_STYLES[family]).toBeDefined();
+    }
   });
 });

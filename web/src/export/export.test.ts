@@ -13,6 +13,7 @@ import { chartToDxf } from './dxf';
 import { chartToSvg } from './svg';
 import { pointsToCsv } from './csv';
 import { CurveFamilyId, InputState } from '../psychro';
+import { DEFAULT_STYLES } from '../store/useStyleStore';
 import type { ChartTokens } from '../chart/useChartTokens';
 import type { GridCurve } from '../chart/useBaseGrid';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
@@ -123,6 +124,57 @@ describe('SVG export', () => {
     });
     expect(hostile).toContain('A &amp; B &lt;script&gt;');
     expect(hostile).not.toContain('<script>');
+  });
+
+  it('carries the styling matrix into the exported document', () => {
+    const styled = chartToSvg({
+      curves: CURVES,
+      points: [],
+      processes: [],
+      viewport: VIEWPORT,
+      tokens: TOKENS,
+      width: 900,
+      height: 700,
+      title: 'Untitled Project',
+      subtitle: '',
+      styles: {
+        ...DEFAULT_STYLES,
+        [CurveFamilyId.WetBulb]: { color: '#123456', lineStyle: 'dotted', width: 2 },
+      },
+    });
+    // Only the wet-bulb curve carries the override; the rest of the chart keeps
+    // the theme colours it was exported with.
+    const wetBulb = styled.match(/<polyline[^>]*stroke="#123456"[^>]*\/>/);
+    expect(wetBulb).not.toBeNull();
+    expect(wetBulb![0]).toContain('stroke-dasharray="1 3"');
+    expect(wetBulb![0]).toContain('stroke-width="2"');
+  });
+
+  it('keeps saturation solid and on the RH colour, in the export too', () => {
+    const styled = chartToSvg({
+      curves: CURVES,
+      points: [],
+      processes: [],
+      viewport: VIEWPORT,
+      tokens: TOKENS,
+      width: 900,
+      height: 700,
+      title: 'Untitled Project',
+      subtitle: '',
+      styles: {
+        ...DEFAULT_STYLES,
+        [CurveFamilyId.RelativeHumidity]: {
+          ...DEFAULT_STYLES[CurveFamilyId.RelativeHumidity],
+          color: '#aa0000',
+        },
+      },
+    });
+    // Saturation is the first curve, so the first polyline is the boundary.
+    const saturation = styled.match(/<polyline[^>]*\/>/);
+    expect(saturation).not.toBeNull();
+    expect(saturation![0]).toContain('stroke="#aa0000"');
+    expect(saturation![0]).toContain('stroke-width="2"');
+    expect(saturation![0]).not.toContain('stroke-dasharray');
   });
 });
 

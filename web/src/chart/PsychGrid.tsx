@@ -7,8 +7,9 @@
  * hundred curves on screen — repainting them per frame is affordable on a
  * desktop and is not on a laptop with the fans off.
  *
- * The cache is invalidated on exactly two things: new curve data, and a change
- * of viewport. Not a re-render.
+ * The cache is invalidated only when the painted result would differ: new
+ * curve data, a change of viewport, a theme switch, or an edit in the styling
+ * matrix. Not a re-render.
  */
 
 import { useEffect, useRef } from 'react';
@@ -19,6 +20,8 @@ import { curveStyle } from './style';
 import { projectFlat, type Viewport } from './geometry';
 import type { GridCurve } from './useBaseGrid';
 import type { ChartTokens } from './useChartTokens';
+import type { CurveFamilyId } from '../psychro';
+import type { FamilyStyle } from '../store/useStyleStore';
 
 /** What Layer 0 needs to paint itself. */
 export interface PsychGridProps {
@@ -28,12 +31,14 @@ export interface PsychGridProps {
   viewport: Viewport;
   /** The resolved palette. */
   tokens: ChartTokens;
+  /** The line-styling matrix: colour, dash, and width per family. */
+  styles: Record<CurveFamilyId, FamilyStyle>;
   /** The canvas box, so the cache covers the whole layer. */
   width: number;
   height: number;
 }
 
-export function PsychGrid({ curves, viewport, tokens, width, height }: PsychGridProps) {
+export function PsychGrid({ curves, viewport, tokens, styles, width, height }: PsychGridProps) {
   const layer = useRef<Konva.Layer>(null);
 
   useEffect(() => {
@@ -45,12 +50,12 @@ export function PsychGrid({ curves, viewport, tokens, width, height }: PsychGrid
     node.clearCache();
     node.cache({ pixelRatio: window.devicePixelRatio || 1 });
     node.batchDraw();
-  }, [curves, viewport, tokens, width, height]);
+  }, [curves, viewport, tokens, styles, width, height]);
 
   return (
     <Layer ref={layer} listening={false}>
       {curves.map((curve) => {
-        const style = curveStyle(curve.family, curve.value, tokens);
+        const style = curveStyle(curve.family, curve.value, tokens, styles);
         return (
           <Line
             key={`${curve.family}:${curve.value}`}

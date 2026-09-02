@@ -1,3 +1,0 @@
-Point,Dry-bulb temperature (°C),Wet-bulb temperature (thermodynamic) (°C),Dew point (°C),Humidity ratio (kg/kg),Humidity ratio (gr/lb),Relative humidity (%),Degree of saturation (%),Enthalpy (kJ/kg),Specific volume (dry-air basis) (m³/kg),Moist-air density (reference only) (kg/m³),Vapour pressure (kPa),Barometric pressure (kPa)
-OA,34.57,25.34,21.93,0.016667,116.7,47.89,46.49,77.518,0.89482,1.13617,2.6319,101.3250
-RA,17.51,13.94,11.52,0.008492,59.4,67.92,67.48,39.113,0.83427,1.20883,1.3584,101.3250

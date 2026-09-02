@@ -47,6 +47,9 @@
   --color-surface-raised: #ffffff;
   --color-border: #d8dce2;
   --color-hover: #00000009;
+  /* The modal backdrop: dark enough to set the dialog apart, translucent
+     enough that the chart is still visible behind the styling matrix. */
+  --color-scrim: #14181f66;
 
   /* ── Text ────────────────────────────────────────────────────────────── */
   --color-text: #14181f;
@@ -58,8 +61,9 @@
   --color-danger: #d4441c;
 
   /* ── Chart property families — one variable per constant-property curve
-        family. Phase 5 consumes these; the styling matrix in Phase 12 writes
-        to them. ────────────────────────────────────────────────────────── */
+        family. These are the defaults the chart draws; the line-styling
+        matrix overrides them per reader session without editing them, so a
+        fork's palette stays intact in this file. ───────────────────────── */
   --chart-grid-drybulb: #c3cad4;
   --chart-grid-humidity-ratio: #c3cad4;
   --chart-grid-rh: #6ba368;
@@ -87,6 +91,7 @@
   --color-surface-raised: #222833;
   --color-border: #333b47;
   --color-hover: #ffffff0f;
+  --color-scrim: #00000099;
 
   --color-text: #e6eaf0;
   --color-text-muted: #98a2b3;
