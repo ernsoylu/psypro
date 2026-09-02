@@ -215,6 +215,7 @@
   "styleModal.resetFamily": "Reset this family to the theme default",
   "styleModal.resetAll": "Reset all to theme defaults",
   "styleModal.close": "Close",
+  "styleModal.closeBackdrop": "Dismiss the dialog",
   "styleModal.saturationNote": "The saturation curve follows the relative-humidity colour, but keeps its own solid line and weight — it is the boundary of the physical region.",
   "styleModal.sessionNote": "Styles apply to the chart on screen and to its exports. They are not saved in the project file.",
 

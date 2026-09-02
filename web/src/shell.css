@@ -894,7 +894,19 @@
   background: var(--color-scrim);
 }
 
+/* The scrim itself, as a real button: dismissing by click keeps a matching
+   keyboard gesture, and the dialog — later in the DOM — stacks above it. */
+.modal-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .modal {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);

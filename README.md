@@ -97,7 +97,7 @@ PsyPro is a static site — any web server works. Three ready-made options:
 
 ```sh
 docker build -t psypro .
-docker run -p 8080:80 psypro
+docker run -p 8080:8080 psypro
 # → http://localhost:8080
 ```
 
@@ -111,7 +111,7 @@ Version tags publish the image automatically (see
 
 ```sh
 docker pull ghcr.io/ernsoylu/psypro:latest      # or a specific tag, e.g. :v0.1.0
-docker run -p 8080:80 ghcr.io/ernsoylu/psypro:latest
+docker run -p 8080:8080 ghcr.io/ernsoylu/psypro:latest
 ```
 
 ### 3. GitHub Pages

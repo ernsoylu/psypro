@@ -111,10 +111,10 @@ describe('line styles modal', () => {
   });
 
   it('closes when the backdrop is clicked, not when the dialog is clicked', () => {
-    const { props, container } = renderModal();
+    const { props } = renderModal();
     fireEvent.click(screen.getByRole('dialog'));
     expect(props.onClose).not.toHaveBeenCalled();
-    fireEvent.click(container.querySelector('.modal-overlay')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss the dialog' }));
     expect(props.onClose).toHaveBeenCalled();
   });
 });
