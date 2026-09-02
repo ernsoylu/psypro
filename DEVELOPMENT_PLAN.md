@@ -76,7 +76,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 4 — Application shell and theme | **Done** — shell, palette, i18n, and a test that fails the build on a literal |
 | 5 — Canvas Layer 0 (base grid) | **Done** — both layouts, pan/zoom, grid cached and the cache asserted |
 | 6 — Stores and interactive points | **Done** — three stores tested headless, drag round-trip measured at 61 FPS |
-| 7–13 | Not started |
+| 7 — Processes and equipment models | **Done** — 15 worked textbook cases, protractor exact by construction |
+| 8–13 | Not started |
 
 ---
 
@@ -334,6 +335,24 @@ Equipment models (§4.2):
 **Exit:** `cargo test` reproduces worked textbook examples for mixing, humidification and
 recovery. A horizontal (SHR = 1.0) process renders and reports correctly — the data-centre
 case, which must not be treated as degenerate.
+
+**Done.** `crates/psychro-core/tests/process_conformance.rs` holds 15 worked cases. The
+SHR = 1.0 case renders as a horizontal arrow with a horizontal protractor line and reports
+`sensible = total, latent = 0.000, SHR = 1.000`.
+
+The decision that carries the phase is **how a load is split**. The obvious way is
+`q_s = ṁ·c_p,ma·Δt` with latent as the remainder; `process.rs` does the opposite, taking latent
+as `ṁ·h_g,ref·ΔW` against the same `h_g,ref = 2499.86` the chart's reduced coordinate is
+defined by. That makes the protractor relation `Δh/ΔW = h_g,ref/(1 − SHR)` **exact** rather than
+approximate — the line drawn on the chart and the number in the panel are the same fact, and a
+test asserts they agree to 1e-6 relative. Split it the other way and they disagree by a
+fraction of a percent: small enough to survive review, large enough to make a reader distrust
+both.
+
+Winter V mixing is modelled rather than refused. The chord between two unsaturated states can
+pass above the saturation curve because that curve is convex; the mixture then fogs, settles on
+the curve at its own enthalpy, and drops the excess water out. It happens in every cold-climate
+mixing box, and returning an error there is refusing to model it.
 
 ---
 

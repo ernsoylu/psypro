@@ -10,12 +10,13 @@
  * whole reason they are not `useState` calls in this file.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ChartCanvas } from './chart/ChartCanvas';
 import { DEFAULT_DOMAIN } from './chart/useBaseGrid';
 import type { ChartTransform } from './chart/useChartTransform';
 import { AppShell } from './shell/AppShell';
+import { ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type ToolId, type ViewActionId } from './shell/Toolbox';
 import { TopNav } from './shell/TopNav';
@@ -23,10 +24,12 @@ import { Viewport } from './shell/Viewport';
 import { useTheme } from './shell/useTheme';
 import { useT } from './i18n/useT';
 import { altitudeInMetres, useProjectStore } from './store/useProjectStore';
+import { defaultProcess, useProcessStore, type ProcessKind } from './store/useProcessStore';
 import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
 import { useResolvedPoints } from './store/useResolvedPoints';
+import { useResolvedProcesses } from './store/useResolvedProcesses';
 import { useStyleStore } from './store/useStyleStore';
-import { engine_version, initEngine, InputState } from './psychro';
+import { engine_version, initEngine, protractor_slope, InputState } from './psychro';
 
 export function App() {
   const t = useT();
@@ -39,16 +42,52 @@ export function App() {
   const project = useProjectStore();
   const psych = usePsychStore();
   const style = useStyleStore();
+  const proc = useProcessStore();
 
   const altitudeM = altitudeInMetres(project);
-  const resolved = useResolvedPoints(psych.points, {
+  const altitude = Number(project.altitude) || 0;
+  const resolveContext = {
     isSi: project.isSi,
+    altitude,
     altitudeM,
     realGas: project.realGas,
     layout: project.layout,
-  });
+  };
+  const resolved = useResolvedPoints(psych.points, resolveContext);
   const selected = selectedPoint(psych);
   const selectedResolved = resolved.find((r) => r.point.id === psych.selectedId) ?? null;
+
+  // A Map keyed by id, memoised so the process resolution's dependency list is
+  // stable across renders that did not touch the points.
+  const pointsById = useMemo(
+    () => new Map(psych.points.map((p) => [p.id, p])),
+    [psych.points],
+  );
+  const missingPointMessage = t('process.missingPoint');
+  const resolvedProcesses = useResolvedProcesses(proc.processes, {
+    ...resolveContext,
+    points: pointsById,
+    missingPointMessage,
+  });
+  const selectedProcess =
+    proc.processes.find((p) => p.id === proc.selectedId) ?? null;
+  const selectedProcessResolved =
+    resolvedProcesses.find((r) => r.process.id === proc.selectedId) ?? null;
+
+  /**
+   * The SHR reference line, drawn through the selected process's inlet.
+   *
+   * `slope` is `NaN` at SHR = 1 — no moisture moves, so there is no finite
+   * enthalpy-per-moisture slope — and the renderer takes `null` to mean exactly
+   * that and draws the horizontal line it is. Drawing nothing there would hide
+   * the data-centre case, which is a real design.
+   */
+  const protractor = useMemo(() => {
+    const r = selectedProcessResolved;
+    if (!r?.load?.has_shr || !r.from) return null;
+    const slope = protractor_slope(r.load.shr);
+    return { slope: Number.isFinite(slope) ? slope : null, through: r.from };
+  }, [selectedProcessResolved]);
 
   // The canvas hands its transform up so the toolbox can drive zoom and fit.
   // A ref rather than state: the transform changes on every pan, and storing it
@@ -73,6 +112,14 @@ export function App() {
   }, []);
 
   const { addPoint, updatePoint, selectPoint, removePoint } = psych;
+  const { removeForPoint } = proc;
+
+  /** Deleting a point takes its processes with it. */
+  const onRemovePoint = useCallback(() => {
+    if (!selected) return;
+    removeForPoint(selected.id);
+    removePoint(selected.id);
+  }, [selected, removeForPoint, removePoint]);
 
   /** A drag or a click writes the position as the two inputs that define it. */
   const onMovePoint = useCallback(
@@ -135,11 +182,15 @@ export function App() {
               domain={DEFAULT_DOMAIN}
               layout={project.layout}
               altitudeM={altitudeM}
-              altitude={Number(project.altitude) || 0}
+              altitude={altitude}
               realGas={project.realGas}
               isSi={project.isSi}
               points={resolved}
               selectedId={psych.selectedId}
+              processes={resolvedProcesses}
+              selectedProcessId={proc.selectedId}
+              onSelectProcess={proc.selectProcess}
+              protractor={protractor}
               visible={style.visible}
               showLabels={style.showLabels}
               showCrosshair={style.showCrosshair && tool === 'crosshair'}
@@ -168,7 +219,24 @@ export function App() {
               secondValue: 50,
             })
           }
-          onRemove={() => selected && removePoint(selected.id)}
+          onRemove={onRemovePoint}
+          processSection={
+            <ProcessSection
+              process={selectedProcess}
+              resolved={selectedProcessResolved}
+              points={psych.points}
+              isSi={project.isSi}
+              canAdd={psych.points.length > 0}
+              onChange={(patch) =>
+                selectedProcess && proc.updateProcess(selectedProcess.id, patch)
+              }
+              onAdd={(kind: ProcessKind) => {
+                const from = selected ?? psych.points[0];
+                if (from) proc.addProcess(defaultProcess(kind, from.id));
+              }}
+              onRemove={() => selectedProcess && proc.removeProcess(selectedProcess.id)}
+            />
+          }
         />
       }
     />

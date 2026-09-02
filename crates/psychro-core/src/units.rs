@@ -92,6 +92,36 @@ pub fn ft_to_m(l: f64) -> f64 {
     l * FT_TO_M
 }
 
+/// Power in kilowatts to British thermal units per hour.
+///
+/// `1 W = 3.412142 Btu/h`. Loads are the quantity most often quoted in IP, and a
+/// coil sized in the wrong one is out by a factor of 3412.
+#[must_use]
+pub fn kw_to_btu_per_hour(q: f64) -> f64 {
+    q * 3_412.141_633
+}
+
+/// British thermal units per hour to kilowatts.
+#[must_use]
+pub fn btu_per_hour_to_kw(q: f64) -> f64 {
+    q / 3_412.141_633
+}
+
+/// Mass flow in kilograms per second to pounds per hour.
+///
+/// The dry-air basis carries through unchanged: this is a change of unit, not a
+/// change of what is being weighed.
+#[must_use]
+pub fn kg_per_second_to_lb_per_hour(m: f64) -> f64 {
+    m * 7_936.641_439
+}
+
+/// Mass flow in pounds per hour to kilograms per second.
+#[must_use]
+pub fn lb_per_hour_to_kg_per_second(m: f64) -> f64 {
+    m / 7_936.641_439
+}
+
 /// Humidity ratio in grains of moisture per pound of dry air.
 ///
 /// The customary IP presentation; 7000 grains make one pound.

@@ -19,6 +19,8 @@
  *   nothing in the number itself says so.
  */
 
+import type { ReactNode } from 'react';
+
 import { formatProperties } from '../chart/format';
 import { Icon } from './Icon';
 import { useT } from '../i18n/useT';
@@ -95,6 +97,8 @@ export interface PropertiesPanelProps {
   onAdd: () => void;
   /** Deletes the selected point. */
   onRemove: () => void;
+  /** The process editor, rendered below the derived properties. */
+  processSection?: ReactNode;
 }
 
 export function PropertiesPanel({
@@ -106,6 +110,7 @@ export function PropertiesPanel({
   onChange,
   onAdd,
   onRemove,
+  processSection,
 }: PropertiesPanelProps) {
   const t = useT();
 
@@ -121,6 +126,7 @@ export function PropertiesPanel({
             {t('panel.addPoint')}
           </button>
         </div>
+        {processSection}
       </aside>
     );
   }
@@ -236,6 +242,8 @@ export function PropertiesPanel({
           </table>
         </>
       ) : null}
+
+      {processSection}
     </aside>
   );
 }

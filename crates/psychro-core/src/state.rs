@@ -98,6 +98,30 @@ pub fn p_wv_from_humidity_ratio(w: f64, atm: &Atmosphere) -> f64 {
     w * atm.p_bar / (MASS_RATIO + w) / atm.f_s()
 }
 
+/// The temperature whose *saturated* enthalpy is `h`, by bisection.
+///
+/// Teaching mode only: the production path asks the backend directly. Saturated
+/// enthalpy rises monotonically with temperature over the chart's range, so a
+/// bisection is both correct and boring here.
+fn bisect_saturated_enthalpy(h: f64, atm: &Atmosphere) -> Result<f64, PropertyError> {
+    let saturated_h = |t: f64| enthalpy(t, saturation_humidity_ratio(t, atm));
+    let (mut lo, mut hi) = (-60.0_f64, 90.0_f64);
+    if h < saturated_h(lo) || h > saturated_h(hi) {
+        return Err(PropertyError::supersaturated(format!(
+            "no saturated state has an enthalpy of {h} kJ/kg_da"
+        )));
+    }
+    for _ in 0..100 {
+        let mid = 0.5 * (lo + hi);
+        if saturated_h(mid) < h {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    Ok(0.5 * (lo + hi))
+}
+
 /// Saturation humidity ratio at `t_c`, kg_wv/kg_da.
 #[must_use]
 pub fn saturation_humidity_ratio(t_c: f64, atm: &Atmosphere) -> f64 {
@@ -340,6 +364,26 @@ impl StatePoint {
             humidity_ratio_from_p_wv(p_ws(t_dp), atm)
         };
         Self::from_db_w(t_db, w, atm)
+    }
+
+    /// Resolves the **saturated** state at a given specific enthalpy.
+    ///
+    /// Where a fogging mixture settles. The chord between two unsaturated states
+    /// can pass above the saturation curve, because that curve is convex; the
+    /// mixture then drops its excess moisture and comes to rest on the curve at
+    /// the enthalpy it had. Enthalpy is what survives the phase change, so it is
+    /// what this is keyed on.
+    ///
+    /// # Errors
+    /// Returns the backend's message when no saturated state has that enthalpy.
+    pub fn from_h_rh(h: f64, rh: f64, atm: &Atmosphere) -> Result<Self, PropertyError> {
+        if !atm.real_gas {
+            let t = bisect_saturated_enthalpy(h, atm)?;
+            return Self::from_db_rh(t, rh, atm);
+        }
+        let w = backend::saturation_humidity_ratio_at_enthalpy(h, atm.p_bar)?;
+        let t = backend::temperature_from_enthalpy(h, w, atm.p_bar)?;
+        Self::from_db_rh(t, rh, atm)
     }
 
     /// Resolves a state from specific enthalpy and humidity ratio.

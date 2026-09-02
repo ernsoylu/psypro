@@ -64,6 +64,7 @@ const POINT = {
 
 const SEA_LEVEL = {
   isSi: true,
+  altitude: 0,
   altitudeM: 0,
   realGas: true,
   layout: ChartLayout.Ashrae,
@@ -79,7 +80,7 @@ describe('resolvePoint', () => {
 
   it('re-resolves from the stored inputs when elevation changes', () => {
     const sea = resolvePoint(POINT, SEA_LEVEL);
-    const denver = resolvePoint(POINT, { ...SEA_LEVEL, altitudeM: 1609 });
+    const denver = resolvePoint(POINT, { ...SEA_LEVEL, altitude: 1609, altitudeM: 1609 });
     // Same two stored numbers, different answer. If the point had stored its
     // resolved properties instead, this would be unchanged and wrong.
     expect(denver.state?.humidity_ratio).not.toBe(sea.state?.humidity_ratio);
@@ -89,7 +90,8 @@ describe('resolvePoint', () => {
     calls = [];
     resolvePoint(POINT, {
       isSi: false,
-      altitudeM: 1609,
+      altitude: 1609,
+      altitudeM: 490.5,
       realGas: false,
       layout: ChartLayout.Ashrae,
     });

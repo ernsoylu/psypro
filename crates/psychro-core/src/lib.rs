@@ -13,6 +13,7 @@
 pub mod backend;
 pub mod chart;
 pub mod constants;
+pub mod process;
 pub mod saturation;
 pub mod state;
 pub mod units;

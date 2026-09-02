@@ -135,6 +135,15 @@ pub fn specific_volume(t_c: f64, w: f64, p_bar: f64) -> Result<f64, PropertyErro
     ha("V", "T", t_c + KELVIN, "W", w, "P", p_bar)
 }
 
+/// Humidity ratio at saturation for a given specific enthalpy, kg_wv/kg_da.
+///
+/// The saturated state a fogging mixture settles at: `Winter V` mixing crosses
+/// the saturation curve, and the mixture's enthalpy is what survives the phase
+/// change while its humidity ratio is not.
+pub fn saturation_humidity_ratio_at_enthalpy(h: f64, p_bar: f64) -> Result<f64, PropertyError> {
+    ha("W", "H", h * 1000.0, "R", 1.0, "P", p_bar)
+}
+
 /// Dry-bulb temperature from specific enthalpy and humidity ratio, °C.
 pub fn temperature_from_enthalpy(h: f64, w: f64, p_bar: f64) -> Result<f64, PropertyError> {
     ha("T", "H", h * 1000.0, "W", w, "P", p_bar).map(|k| k - KELVIN)
