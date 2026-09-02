@@ -1364,6 +1364,126 @@ pub fn chart_lattice(
     out
 }
 
+// ── Teaching mode ───────────────────────────────────────────────────────────
+
+/// One step of the working behind a computed property.
+#[wasm_bindgen]
+pub struct WorkingStep {
+    property: String,
+    equation: String,
+    substitution: String,
+    result: String,
+    reference: String,
+    caution: Option<String>,
+}
+
+#[wasm_bindgen]
+impl WorkingStep {
+    /// Which property this derives, matching the panel's own key.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn property(&self) -> String {
+        self.property.clone()
+    }
+    /// The relation, in symbols.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn equation(&self) -> String {
+        self.equation.clone()
+    }
+    /// The same relation with this state's numbers in it.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn substitution(&self) -> String {
+        self.substitution.clone()
+    }
+    /// The result.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn result(&self) -> String {
+        self.result.clone()
+    }
+    /// Where the relation and its constants come from.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn reference(&self) -> String {
+        self.reference.clone()
+    }
+    /// What a reader most often gets wrong here, or an empty string.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn caution(&self) -> String {
+        self.caution.clone().unwrap_or_default()
+    }
+}
+
+/// The working behind a state, step by step.
+///
+/// Produced by the engine rather than the view because **only the engine knows
+/// what was substituted**. A "show the working" panel written in TypeScript
+/// would have to re-derive the intermediate quantities to display them, which is
+/// a second implementation of the same physics — in the one place where a
+/// divergence would be actively teaching the wrong thing.
+#[wasm_bindgen]
+pub fn explain_state(input: StatePointInput) -> Result<Vec<WorkingStep>, JsValue> {
+    let s = resolve(&input).map_err(|e| JsValue::from_str(&e))?;
+    Ok(psychro_core::explain::explain(&s)
+        .into_iter()
+        .map(|step| WorkingStep {
+            property: step.property.to_string(),
+            equation: step.equation.to_string(),
+            substitution: step.substitution,
+            result: step.result,
+            reference: step.reference.to_string(),
+            caution: step.caution.map(str::to_string),
+        })
+        .collect())
+}
+
+/// The size of the real-gas correction at a state.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct RealGasCorrection {
+    /// Humidity ratio with the enhancement factor applied.
+    pub w_real: f64,
+    /// Humidity ratio under the ideal-gas treatment.
+    pub w_ideal: f64,
+    /// The difference as a percentage of the real-gas value.
+    pub percent: f64,
+}
+
+/// Measures the enhancement factor's effect at a state.
+///
+/// Telling a student the correction is "about half a percent" is a fact they
+/// have to take on trust. Letting them switch it off and watch the number move
+/// is a fact they can see, which is why `Atmosphere::real_gas` is a toggle
+/// rather than a constant.
+#[wasm_bindgen]
+pub fn measure_real_gas_correction(
+    t_db: f64,
+    rh_percent: f64,
+    altitude: f64,
+    is_si: bool,
+) -> Result<RealGasCorrection, JsValue> {
+    let t = if is_si { t_db } else { units::f_to_c(t_db) };
+    let altitude_m = if is_si {
+        altitude
+    } else {
+        units::ft_to_m(altitude)
+    };
+    let c = psychro_core::explain::real_gas_correction(
+        t,
+        rh_percent / 100.0,
+        pressure_from_altitude(altitude_m),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(RealGasCorrection {
+        w_real: c.w_real,
+        w_ideal: c.w_ideal,
+        percent: c.percent,
+    })
+}
+
 /// Which chart layout coordinates are expressed in.
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

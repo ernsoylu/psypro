@@ -178,6 +178,15 @@
   "weather.binStepW": "Humidity-ratio increment",
   "weather.binNote": "0.5 to 6 degrees, per REQUIREMENTS §5. A finer increment shows more structure and puts fewer hours in each cell.",
 
+  "working.section": "SHOW THE WORKING",
+  "working.realGas": "Real-gas correction",
+  "working.realGasValues": "W = {real} real-gas · {ideal} ideal-gas · {percent}% apart",
+  "working.realGasNote": "The enhancement factor corrects for water vapour not behaving as an ideal gas in the presence of air. Switching it off in the panel above shows the size of the correction rather than describing it.",
+
+  "examples.section": "WORKED EXAMPLES",
+  "examples.pick": "Load an example",
+  "examples.choose": "Choose an example…",
+
   "layers.label": "Layers",
   "layers.profile": "INDUSTRY PROFILE",
   "layers.profileLabel": "Design context",

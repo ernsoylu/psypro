@@ -1,0 +1,55 @@
+{
+  "$comment": "Worked examples are DATA, traceable to a named source (REQUIREMENTS.md §11). Each carries the values its book reports and the tolerance it reports them to, so `src/data/examples.test.ts` can grade the engine against the book rather than against itself. A tolerance is part of the citation: a book that prints 47.9 kJ/kg is not claiming 47.9087.",
+  "examples": [
+    {
+      "id": "ashrae-table2-25c-saturated",
+      "title": "Saturated air at 25 °C, sea level",
+      "source": "ASHRAE Handbook—Fundamentals, Ch. 1, Table 2",
+      "teaches": "At saturation, relative humidity and degree of saturation coincide — and only there. Away from the curve they part company, which is why the panel shows both.",
+      "state": { "dryBulb": 25, "mode": "rh", "value": 100, "altitudeM": 0 },
+      "expected": [
+        { "property": "humidity_ratio", "value": 0.020173, "tolerance": 0.00005 },
+        { "property": "enthalpy", "value": 76.53, "tolerance": 0.25 },
+        { "property": "specific_volume", "value": 0.8721, "tolerance": 0.002 },
+        { "property": "wbt", "value": 25.0, "tolerance": 0.02 },
+        { "property": "dew_point", "value": 25.0, "tolerance": 0.02 }
+      ]
+    },
+    {
+      "id": "comfort-24c-50rh",
+      "title": "Room air at 24 °C, 50% RH",
+      "source": "ASHRAE Handbook—Fundamentals, Ch. 1, worked example",
+      "teaches": "The standard comfort state. Relative humidity reads 50% and degree of saturation 49.2% — three quarters of a point apart, at the state a designer uses most.",
+      "state": { "dryBulb": 24, "mode": "rh", "value": 50, "altitudeM": 0 },
+      "expected": [
+        { "property": "humidity_ratio", "value": 0.00934, "tolerance": 0.00005 },
+        { "property": "wbt", "value": 17.07, "tolerance": 0.05 },
+        { "property": "dew_point", "value": 12.95, "tolerance": 0.06 },
+        { "property": "enthalpy", "value": 47.91, "tolerance": 0.15 },
+        { "property": "specific_volume", "value": 0.8541, "tolerance": 0.002 }
+      ]
+    },
+    {
+      "id": "denver-altitude",
+      "title": "24 °C, 50% RH at 1609 m",
+      "source": "ASHRAE Handbook—Fundamentals, Ch. 1, altitude correction",
+      "teaches": "The same temperature and relative humidity at Denver's elevation carries over 20% more moisture, because humidity ratio depends on barometric pressure. This is why elevation is an input to every calculation and not a refinement.",
+      "state": { "dryBulb": 24, "mode": "rh", "value": 50, "altitudeM": 1609 },
+      "expected": [
+        { "property": "humidity_ratio", "value": 0.01138, "tolerance": 0.0002 },
+        { "property": "barometric_pressure", "value": 83.43, "tolerance": 0.3 }
+      ]
+    },
+    {
+      "id": "sub-freezing-frost-point",
+      "title": "−10 °C at 60% RH",
+      "source": "IAPWS-06 sublimation line; ASHRAE Handbook—Fundamentals, Ch. 1",
+      "teaches": "Below freezing the saturation line runs over ice, so the dew point is a FROST point and the wet bulb is sub-freezing too. A Magnus fit carried below zero overstates the saturation pressure by more than 20% here.",
+      "state": { "dryBulb": -10, "mode": "rh", "value": 60, "altitudeM": 0 },
+      "expected": [
+        { "property": "humidity_ratio", "value": 0.000965, "tolerance": 0.00004 },
+        { "property": "dew_point", "value": -16.1, "tolerance": 0.5 }
+      ]
+    }
+  ]
+}

@@ -99,6 +99,8 @@ export interface PropertiesPanelProps {
   onRemove: () => void;
   /** The process editor, rendered below the derived properties. */
   processSection?: ReactNode;
+  /** The worked examples and the working, rendered below the processes. */
+  teachingSection?: ReactNode;
 }
 
 export function PropertiesPanel({
@@ -111,6 +113,7 @@ export function PropertiesPanel({
   onAdd,
   onRemove,
   processSection,
+  teachingSection,
 }: PropertiesPanelProps) {
   const t = useT();
 
@@ -127,6 +130,7 @@ export function PropertiesPanel({
           </button>
         </div>
         {processSection}
+        {teachingSection}
       </aside>
     );
   }
@@ -243,6 +247,7 @@ export function PropertiesPanel({
       ) : null}
 
       {processSection}
+      {teachingSection}
     </aside>
   );
 }
