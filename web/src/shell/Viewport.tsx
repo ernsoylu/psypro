@@ -1,10 +1,10 @@
 /**
  * The central chart viewport.
  *
- * An empty, correctly-sized box until Phase 5 puts the base grid in it. It
- * exists now because the shell's job is to establish the layout the canvas will
- * measure itself against — `useChartTransform` needs a stable bounding box far
- * more than it needs something drawn inside one.
+ * Structural only: it establishes the box the canvas measures itself against.
+ * `useChartTransform` needs a stable bounding box more than it needs to know
+ * what is drawn inside one, which is why the canvas is passed in rather than
+ * mounted here.
  */
 
 import type { ReactNode } from 'react';
@@ -16,7 +16,7 @@ export function Viewport({ children }: { children?: ReactNode }) {
 
   return (
     <main className="viewport" aria-label={t('viewport.label')}>
-      {children ?? <p className="viewport__pending">{t('viewport.pending')}</p>}
+      {children}
     </main>
   );
 }

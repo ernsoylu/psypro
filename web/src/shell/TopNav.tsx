@@ -10,6 +10,7 @@
 
 import { Icon, type IconName } from './Icon';
 import { useT } from '../i18n/useT';
+import { ChartLayout } from '../psychro';
 import type { TranslationKey } from '../i18n';
 import type { Theme } from './useTheme';
 
@@ -29,6 +30,10 @@ export interface TopNavProps {
   theme: Theme;
   /** Flips the theme. */
   onThemeToggle: () => void;
+  /** Which chart construction is drawn. */
+  layout: ChartLayout;
+  /** Switches the chart construction. */
+  onLayoutChange: (layout: ChartLayout) => void;
   /** Engine version, or null while the module is still loading. */
   engineVersion: string | null;
 }
@@ -47,6 +52,8 @@ export function TopNav({
   onAltitudeChange,
   theme,
   onThemeToggle,
+  layout,
+  onLayoutChange,
   engineVersion,
 }: TopNavProps) {
   const t = useT();
@@ -95,6 +102,16 @@ export function TopNav({
             {t('nav.unitSi')}
           </button>
         </div>
+
+        <select
+          className="select"
+          value={layout}
+          aria-label={t('layout.label')}
+          onChange={(e) => onLayoutChange(Number(e.target.value) as ChartLayout)}
+        >
+          <option value={ChartLayout.Ashrae}>{t('layout.ashrae')}</option>
+          <option value={ChartLayout.MollierIx}>{t('layout.mollier')}</option>
+        </select>
 
         <label className="field-inline">
           <Icon name="elevation" size={14} />

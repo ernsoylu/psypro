@@ -1,0 +1,64 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - generic [ref=f3e6]: PsyPro
+      - generic [ref=f3e11]: Untitled Project
+      - generic [ref=f3e12]: …
+    - generic [ref=f3e13]:
+      - button "Save" [ref=f3e14] [cursor=pointer]
+      - button "Open" [ref=f3e17] [cursor=pointer]
+      - button "Export" [ref=f3e20] [cursor=pointer]
+    - generic [ref=f3e23]:
+      - group "Unit system" [ref=f3e24]:
+        - button "IP" [ref=f3e25] [cursor=pointer]
+        - button "SI" [pressed] [ref=f3e26] [cursor=pointer]
+      - combobox "Chart layout" [ref=f3e27]:
+        - option "ASHRAE" [selected]
+        - option "Mollier i-x"
+      - generic [ref=f3e28]:
+        - generic [ref=f3e31]: Elev
+        - textbox "Site elevation" [ref=f3e32]: "0"
+        - generic [ref=f3e33]: m
+      - button "Switch to dark theme" [ref=f3e34] [cursor=pointer]
+  - generic [ref=f3e37]:
+    - navigation [ref=f3e38]:
+      - group "Tools" [ref=f3e39]:
+        - button "Select" [pressed] [ref=f3e40] [cursor=pointer]
+        - button "Add state point" [ref=f3e43] [cursor=pointer]
+        - button "Draw process line" [ref=f3e46] [cursor=pointer]
+        - button "Draw shape" [ref=f3e49] [cursor=pointer]
+        - button "Crosshair mode" [ref=f3e52] [cursor=pointer]
+      - group "View" [ref=f3e56]:
+        - button "Zoom in" [ref=f3e57] [cursor=pointer]
+        - button "Zoom out" [ref=f3e60] [cursor=pointer]
+        - button "Fit to window" [ref=f3e63] [cursor=pointer]
+    - main "Psychrometric chart" [ref=f3e66]
+    - complementary "Properties" [ref=f3e67]:
+      - generic [ref=f3e68]:
+        - generic [ref=f3e69]: State point
+        - button "Panel menu" [ref=f3e71] [cursor=pointer]
+      - heading "KNOWN INPUTS" [level=2] [ref=f3e74]
+      - generic [ref=f3e75]:
+        - generic [ref=f3e76]:
+          - generic [ref=f3e77]:
+            - text: Dry-bulb temperature
+            - generic [ref=f3e78]: °C
+          - textbox "Dry-bulb temperature °C" [ref=f3e79]: "24"
+        - generic [ref=f3e80]:
+          - generic [ref=f3e81]: Second known property
+          - combobox "Second known property" [ref=f3e82]:
+            - option "Relative humidity" [selected]
+            - option "Wet-bulb temperature (thermodynamic)"
+            - option "Dew point"
+            - option "Humidity ratio"
+            - option "Enthalpy"
+        - generic [ref=f3e83]:
+          - generic [ref=f3e84]:
+            - text: Relative humidity
+            - generic [ref=f3e85]: "%"
+          - textbox "Relative humidity %" [ref=f3e86]: "50"
+        - generic [ref=f3e87]:
+          - checkbox "Real-gas enhancement factor Off = ideal gas, for teaching" [checked] [ref=f3e88]
+          - generic [ref=f3e89]:
+            - text: Real-gas enhancement factor
+            - generic [ref=f3e90]: Off = ideal gas, for teaching

@@ -231,13 +231,6 @@
   background: var(--color-bg);
 }
 
-.viewport__pending {
-  margin: 0;
-  padding: var(--space-6);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-label);
-}
-
 /* ── Properties panel ───────────────────────────────────────────────────── */
 
 .panel {
@@ -388,4 +381,31 @@
   font-family: var(--font-numeric);
   font-size: var(--font-size-section);
   white-space: nowrap;
+}
+
+/* ── Layout selector ────────────────────────────────────────────────────── */
+
+.select {
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-label);
+}
+
+/* ── Chart canvas ───────────────────────────────────────────────────────── */
+
+.chart-canvas {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.chart-canvas:active {
+  cursor: grabbing;
 }
