@@ -905,6 +905,176 @@ pub fn solve_return_air_cycle(
     })
 }
 
+// ── Envelopes ───────────────────────────────────────────────────────────────
+
+/// The eight bounds a published envelope states, in the caller's unit system.
+///
+/// Passed as scalars rather than as a struct, deliberately. A `#[wasm_bindgen]`
+/// struct is *moved* into Rust when it is passed, so a caller checking three
+/// states against one envelope would find their limits object dead after the
+/// first call — the same "null pointer passed to rust" the process layer hit.
+/// Thirteen arguments is a worse signature than one object and a much better
+/// API than one that breaks on its second use.
+///
+/// `f64::NAN` marks a bound the standard does not state, which is different
+/// from stating zero.
+/// Converts published bounds into core limits, in SI.
+#[allow(clippy::too_many_arguments)]
+fn core_limits(
+    t_min: f64,
+    t_max: f64,
+    dp_min: f64,
+    dp_max: f64,
+    rh_min: f64,
+    rh_max: f64,
+    w_min: f64,
+    w_max: f64,
+    is_si: bool,
+) -> psychro_core::envelope::Limits {
+    let temp = |t: f64| if is_si { t } else { units::f_to_c(t) };
+    let opt = |v: f64| if v.is_nan() { None } else { Some(v) };
+    psychro_core::envelope::Limits {
+        t_min: temp(t_min),
+        t_max: temp(t_max),
+        dp_min: opt(dp_min).map(temp),
+        dp_max: opt(dp_max).map(temp),
+        // Published as percentages; the engine works in fractions.
+        rh_min: opt(rh_min).map(|r| r / 100.0),
+        rh_max: opt(rh_max).map(|r| r / 100.0),
+        w_min: opt(w_min),
+        w_max: opt(w_max),
+    }
+}
+
+/// Resolves an envelope's limits into a closed chart-space polygon.
+///
+/// Returned flat as `[x0, y0, x1, y1, …]`, the shape a renderer fills. The
+/// polygon is **computed at the given altitude**, not stored: a
+/// relative-humidity bound is a curve whose shape depends on barometric
+/// pressure, and an outline traced once at sea level is silently wrong at
+/// altitude rather than visibly so.
+///
+/// An empty result means no state in the range satisfies every bound, which
+/// draws as nothing.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn envelope_polygon(
+    t_min: f64,
+    t_max: f64,
+    dp_min: f64,
+    dp_max: f64,
+    rh_min: f64,
+    rh_max: f64,
+    w_min: f64,
+    w_max: f64,
+    layout: ChartLayout,
+    altitude: f64,
+    is_si: bool,
+    real_gas: bool,
+) -> Vec<f64> {
+    let altitude_m = if is_si {
+        altitude
+    } else {
+        units::ft_to_m(altitude)
+    };
+    let atm = Atmosphere {
+        p_bar: pressure_from_altitude(altitude_m),
+        real_gas,
+    };
+    let limits = core_limits(
+        t_min, t_max, dp_min, dp_max, rh_min, rh_max, w_min, w_max, is_si,
+    );
+    psychro_core::envelope::polygon(&limits, &atm)
+        .into_iter()
+        .flat_map(|v| {
+            let p = chart::to_chart(v.t_db, v.w, layout.into());
+            [p.x, p.y]
+        })
+        .collect()
+}
+
+/// How a state sits against an envelope.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct EnvelopeCheck {
+    /// Whether the state satisfies every bound.
+    pub inside: bool,
+    /// Kelvin (or Rankine-degrees) outside the dry-bulb band; zero when inside.
+    pub dry_bulb_excursion: f64,
+    /// Degrees outside the dew-point band.
+    pub dew_point_excursion: f64,
+    /// Percentage points outside the relative-humidity band.
+    pub relative_humidity_excursion: f64,
+}
+
+/// Checks a state against an envelope's limits.
+///
+/// Evaluated against the **limits**, not the drawn polygon. Testing a point
+/// against an outline would inherit that outline's sampling error, and the
+/// answer to "is this room compliant?" must not depend on how finely the zone
+/// was drawn for the screen.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn check_envelope(
+    state: StatePointInput,
+    t_min: f64,
+    t_max: f64,
+    dp_min: f64,
+    dp_max: f64,
+    rh_min: f64,
+    rh_max: f64,
+    w_min: f64,
+    w_max: f64,
+) -> Result<EnvelopeCheck, JsValue> {
+    let s = resolve(&state).map_err(|e| JsValue::from_str(&e))?;
+    let l = core_limits(
+        t_min,
+        t_max,
+        dp_min,
+        dp_max,
+        rh_min,
+        rh_max,
+        w_min,
+        w_max,
+        state.is_si,
+    );
+    let e = psychro_core::envelope::excursion(&s, &l);
+    let delta = |k: f64| {
+        if state.is_si {
+            k
+        } else {
+            units::delta_k_to_f(k)
+        }
+    };
+    Ok(EnvelopeCheck {
+        inside: psychro_core::envelope::contains(&s, &l),
+        dry_bulb_excursion: delta(e.dry_bulb),
+        dew_point_excursion: delta(e.dew_point),
+        relative_humidity_excursion: e.relative_humidity,
+    })
+}
+
+/// The automotive fogging check: `t_dp,cabin ≥ t_glass,inner` means fog.
+///
+/// Returns the margin, positive for clear glass. A cabin needs a dew point
+/// rather than a relative humidity for this: the same 50% RH fogs at one cabin
+/// temperature and not at another.
+#[wasm_bindgen]
+pub fn fogging_margin(cabin: StatePointInput, t_glass_inner: f64) -> Result<f64, JsValue> {
+    let s = resolve(&cabin).map_err(|e| JsValue::from_str(&e))?;
+    let glass = if cabin.is_si {
+        t_glass_inner
+    } else {
+        units::f_to_c(t_glass_inner)
+    };
+    let margin = psychro_core::envelope::fogging_margin(&s, glass);
+    Ok(if cabin.is_si {
+        margin
+    } else {
+        units::delta_k_to_f(margin)
+    })
+}
+
 /// Which chart layout coordinates are expressed in.
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

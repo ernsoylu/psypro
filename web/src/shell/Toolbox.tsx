@@ -40,9 +40,19 @@ export interface ToolboxProps {
   onToolChange: (tool: ToolId) => void;
   /** Runs a view action. */
   onViewAction: (action: ViewActionId) => void;
+  /** Whether the layers panel is open. */
+  showLayers: boolean;
+  /** Opens or closes the layers panel. */
+  onToggleLayers: () => void;
 }
 
-export function Toolbox({ activeTool, onToolChange, onViewAction }: ToolboxProps) {
+export function Toolbox({
+  activeTool,
+  onToolChange,
+  onViewAction,
+  showLayers,
+  onToggleLayers,
+}: ToolboxProps) {
   const t = useT();
 
   return (
@@ -66,6 +76,16 @@ export function Toolbox({ activeTool, onToolChange, onViewAction }: ToolboxProps
       <span className="rule rule--horizontal" />
 
       <div className="toolbox__group" role="group" aria-label={t('tool.group.view')}>
+        <button
+          type="button"
+          className="tool"
+          aria-label={t('tool.layers')}
+          title={t('tool.layers')}
+          aria-pressed={showLayers}
+          onClick={onToggleLayers}
+        >
+          <Icon name="layers" size={17} />
+        </button>
         {VIEW_ACTIONS.map(({ id, icon, key }) => (
           <button
             key={id}

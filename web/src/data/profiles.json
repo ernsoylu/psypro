@@ -1,0 +1,29 @@
+{
+  "$comment": "An industry profile preselects envelopes, defaults and a process palette. It NEVER changes the thermodynamics (REQUIREMENTS.md §10) — `src/data/profiles.test.ts` asserts that a state point's computed properties are identical across all three.",
+  "profiles": [
+    {
+      "id": "hvac",
+      "name": "Building HVAC",
+      "envelopes": ["std55-summer", "std55-winter"],
+      "shrRange": [0.65, 0.85],
+      "note": "Room loads → RSHF line → supply airflow → mixing → coil selection. Coil face velocity 2.0–2.5 m/s and leaving RH 85–95% are the usual selection sanity checks.",
+      "defaults": { "roomT": 24, "roomRh": 50, "supplyT": 13, "outdoorFraction": 0.2 }
+    },
+    {
+      "id": "automotive",
+      "name": "Automotive cabin",
+      "envelopes": [],
+      "shrRange": [0.5, 0.75],
+      "note": "The design case is transient, not steady state: pull-down from a 50–60 °C soak to 22 °C in 10–15 minutes. Fog forms when the cabin dew point reaches the inner glass temperature, which is why a cabin needs a dew point rather than a relative humidity.",
+      "defaults": { "roomT": 22, "roomRh": 50, "supplyT": 5, "outdoorFraction": 0.15 }
+    },
+    {
+      "id": "datacenter",
+      "name": "Data centre",
+      "envelopes": ["tc99-recommended", "tc99-a2"],
+      "shrRange": [0.95, 1.0],
+      "note": "Essentially all sensible, so process lines are horizontal and W is constant. A tool that assumes a comfort-range SHR will mislead here.",
+      "defaults": { "roomT": 24, "roomRh": 40, "supplyT": 16, "outdoorFraction": 0.1 }
+    }
+  ]
+}

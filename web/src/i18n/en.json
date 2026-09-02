@@ -21,6 +21,7 @@
   "tool.zoomIn": "Zoom in",
   "tool.zoomOut": "Zoom out",
   "tool.fitToWindow": "Fit to window",
+  "tool.layers": "Layers and overlays",
   "tool.group.tools": "Tools",
   "tool.group.view": "View",
 
@@ -154,6 +155,22 @@
   "table.label": "State point data",
   "table.empty": "No state points yet. Add one on the chart.",
   "table.point": "Point",
+
+  "layers.label": "Layers",
+  "layers.profile": "INDUSTRY PROFILE",
+  "layers.profileLabel": "Design context",
+  "layers.shrRange": "Typical sensible heat ratio in this context: {min} to {max}.",
+  "layers.envelopes": "STANDARDS OVERLAYS",
+  "layers.grid": "GRID FAMILIES",
+  "layers.showLabels": "Axis numerals and titles",
+  "layers.saturationNote": "The saturation curve is always drawn. It is 100% relative humidity, so hiding that family would take it with it — and it is the boundary of the physical region, not one more gridline.",
+
+  "family.dryBulb": "Dry-bulb temperature",
+  "family.humidityRatio": "Humidity ratio",
+  "family.relativeHumidity": "Relative humidity",
+  "family.wetBulb": "Wet-bulb temperature",
+  "family.enthalpy": "Enthalpy",
+  "family.specificVolume": "Specific volume",
 
   "unit.celsius": "°C",
   "unit.fahrenheit": "°F",

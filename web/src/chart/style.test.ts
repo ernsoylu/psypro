@@ -29,6 +29,8 @@ const TOKENS: ChartTokens = {
   background: 'bg',
   point: 'point',
   process: 'process',
+  zoneComfort: 'zone-comfort',
+  zoneDatacenter: 'zone-datacenter',
 };
 
 describe('curve styling', () => {
