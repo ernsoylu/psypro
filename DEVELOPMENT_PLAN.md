@@ -80,7 +80,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 8 — Coil model, cycle macros, Process Design page | **Done** — 14 coil cases, three BF forms agree, page verified against the real engine |
 | 9 — Standards overlays and industry profiles | **Done** — envelopes are data, polygons computed at altitude, profiles proven inert |
 | 10 — BYOD weather data | **Done** — 8760 hours, worst frame gap 17 ms, traced not eyeballed |
-| 11–13 | Not started |
+| 11 — Teaching mode | **Done** — four worked examples graded against their books, every step cited |
+| 12–13 | Not started |
 
 ---
 
@@ -509,6 +510,35 @@ phantom hours at the right-hand edge of the chart looks exactly like a hot clima
 
 **Exit:** A worked example from a named textbook loads, and its reported values match the book
 within the documented tolerance, with each step's equation inspectable.
+
+**Done.** Four examples ship as data, each carrying its source, what it teaches, and the values
+its book reports — *with the tolerance those values were printed to*. The tolerance is part of
+the citation rather than a global fudge: a book printing 47.9 kJ/kg is not claiming 47.9087, and
+grading against more digits than were published tests the typesetting rather than the physics.
+
+`explain` lives in the engine, not the view, and that placement is the phase's real decision:
+**only the engine knows what was substituted.** A "show the working" panel written in TypeScript
+would have to re-derive the intermediate quantities to display them — a second implementation
+of the same physics, in the one place where a divergence would be actively teaching the wrong
+thing.
+
+Expanding the enthalpy step on the 24 °C / 50% RH example shows:
+
+```
+h = 1.006·t + W·(2499.86 + 1.84·t)
+47.909 = 1.006 × 24.00 + 0.009340 × (2499.86 + 1.84 × 24.00)
+ASHRAE RP-1485
+⚠ The widely copied 2501 and 1.86 are the older values. Using them shifts every enthalpy,
+  and therefore every coil load, by a small consistent amount.
+```
+
+Every step carries a reference, because "trust me" is the one thing a teaching tool must not
+say. The §3.2 traps are named beside the numbers they apply to — the frost-point caution
+appears only below freezing — and a test asserts all three are present.
+
+The ideal-gas toggle now *measures* the correction rather than asserting it. Telling a student
+the enhancement factor is about half a percent is a fact they must take on trust; a number that
+moves when they flip a switch is not.
 
 ---
 

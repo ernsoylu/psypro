@@ -13,6 +13,7 @@
  */
 
 import envelopeData from './envelopes.json';
+import exampleData from './examples.json';
 import profileData from './profiles.json';
 
 /**
@@ -97,4 +98,47 @@ export function envelopeById(id: string): Envelope | undefined {
 /** Looks a profile up by id. */
 export function profileById(id: string): Profile | undefined {
   return PROFILES.find((p) => p.id === id);
+}
+
+/** One value a worked example's source reports, and how closely. */
+export interface ExpectedValue {
+  /** The `StatePointOutput` field this grades. */
+  property: string;
+  /** What the book prints. */
+  value: number;
+  /**
+   * How far the engine may sit from it.
+   *
+   * Part of the citation, not a fudge factor. A book printing 47.9 kJ/kg is not
+   * claiming 47.9087, and grading against more digits than were published tests
+   * the typesetting rather than the physics.
+   */
+  tolerance: number;
+}
+
+/** A worked example, traceable to a named source. */
+export interface WorkedExample {
+  id: string;
+  title: string;
+  /** The book, chapter and table the numbers come from. */
+  source: string;
+  /** What a reader is meant to take from it. */
+  teaches: string;
+  /** The inputs, as the source states them. */
+  state: {
+    dryBulb: number;
+    mode: 'rh' | 'wb' | 'dp' | 'w' | 'h';
+    value: number;
+    altitudeM: number;
+  };
+  /** What the source reports. */
+  expected: ExpectedValue[];
+}
+
+/** Every worked example the build ships with. */
+export const EXAMPLES: WorkedExample[] = exampleData.examples as WorkedExample[];
+
+/** Looks a worked example up by id. */
+export function exampleById(id: string): WorkedExample | undefined {
+  return EXAMPLES.find((e) => e.id === id);
 }

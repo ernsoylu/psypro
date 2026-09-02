@@ -21,7 +21,9 @@ import init, {
   check_envelope,
   engine_version,
   envelope_polygon,
+  explain_state,
   fogging_margin,
+  measure_real_gas_correction,
   generate_base_grid,
   get_chart_extent,
   get_coordinate_mapping,
@@ -55,6 +57,7 @@ import init, {
   type StatePointOutput,
   type ResolvedWeather,
   type WeatherBins,
+  type WorkingStep,
 } from './wasm/psychro';
 
 export {
@@ -77,7 +80,9 @@ export {
   check_envelope,
   engine_version,
   envelope_polygon,
+  explain_state,
   fogging_margin,
+  measure_real_gas_correction,
   generate_base_grid,
   get_chart_extent,
   get_coordinate_mapping,
@@ -109,6 +114,7 @@ export type {
   StatePointOutput,
   SteamOutput,
   WeatherBins,
+  WorkingStep,
 };
 
 let ready: Promise<void> | null = null;

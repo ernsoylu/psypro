@@ -21,7 +21,9 @@ import { ProcessDesignPage } from './pages/ProcessDesignPage';
 import { WeatherPage } from './pages/WeatherPage';
 import { AppShell } from './shell/AppShell';
 import { LayerOptions } from './shell/LayerOptions';
+import { ExamplePicker } from './shell/ExamplePicker';
 import { PageTabs, type PageId } from './shell/PageTabs';
+import { WorkingPanel } from './shell/WorkingPanel';
 import { ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type ToolId, type ViewActionId } from './shell/Toolbox';
@@ -38,7 +40,7 @@ import {
 import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
 import { useResolvedPoints } from './store/useResolvedPoints';
 import { useResolvedProcesses } from './store/useResolvedProcesses';
-import { envelopeById } from './data';
+import { envelopeById, exampleById } from './data';
 import { useCycleStore } from './store/useCycleStore';
 import { useProfileStore } from './store/useProfileStore';
 import { useWeatherStore } from './store/useWeatherStore';
@@ -46,8 +48,11 @@ import { useWeatherLoader } from './weather/useWeatherLoader';
 import type { EnvelopeBounds } from './weather/epw.worker';
 import { useStyleStore } from './store/useStyleStore';
 import {
+  calculate_state,
   engine_version,
+  explain_state,
   initEngine,
+  measure_real_gas_correction,
   protractor_slope,
   solve_return_air_cycle,
   InputState,
@@ -79,6 +84,7 @@ export function App() {
   const [tool, setTool] = useState<ToolId>('select');
   const [page, setPage] = useState<PageId>('chart');
   const [showLayers, setShowLayers] = useState(false);
+  const [exampleId, setExampleId] = useState<string | null>(null);
 
   const project = useProjectStore();
   const psych = usePsychStore();
@@ -253,7 +259,77 @@ export function App() {
     );
   }, []);
 
+  /**
+   * The working behind the selected state, and the size of the real-gas
+   * correction at it.
+   *
+   * Both come from the engine: it is the only thing that knows what was
+   * substituted, and re-deriving the intermediates here to display them would be
+   * a second implementation of the physics in the one place where a divergence
+   * would actively teach the wrong thing.
+   */
+  const working = useMemo(() => {
+    if (!engineReady || !selected) return { steps: [], correction: null };
+    try {
+      const input = () =>
+        new StatePointInput(
+          selected.dryBulb,
+          selected.secondValue,
+          selected.mode,
+          altitude,
+          project.isSi,
+          project.realGas,
+        );
+      const state = calculate_state(input());
+      return {
+        steps: explain_state(input()),
+        correction: (() => {
+          try {
+            const c = measure_real_gas_correction(
+              state.dbt,
+              state.rh,
+              altitude,
+              project.isSi,
+            );
+            return { wReal: c.w_real, wIdeal: c.w_ideal, percent: c.percent };
+          } catch {
+            return null;
+          }
+        })(),
+      };
+    } catch {
+      return { steps: [], correction: null };
+    }
+  }, [engineReady, selected, altitude, project.isSi, project.realGas]);
+
   const { addPoint, updatePoint, selectPoint, removePoint } = psych;
+
+  /** Loads a worked example as the selected point. */
+  const loadExample = useCallback(
+    (id: string) => {
+      const example = exampleById(id);
+      if (!example) return;
+      const modes = {
+        rh: InputState.DbtRh,
+        wb: InputState.DbtWbt,
+        dp: InputState.DbtDewPoint,
+        w: InputState.DbtHumidityRatio,
+        h: InputState.DbtEnthalpy,
+      } as const;
+      // The example states its elevation in metres; the document may be in feet,
+      // and the example's numbers were published at that elevation.
+      project.setIsSi(true);
+      project.setAltitude(String(example.state.altitudeM));
+      psych.addPoint({
+        label: nextLabel(usePsychStore.getState().points),
+        dryBulb: example.state.dryBulb,
+        mode: modes[example.state.mode],
+        secondValue: example.state.value,
+      });
+      setExampleId(id);
+    },
+    [project, psych],
+  );
   const { removeForPoint } = proc;
 
   /** Deleting a point takes its processes with it. */
@@ -417,6 +493,17 @@ export function App() {
                 })
               }
               onRemove={onRemovePoint}
+              teachingSection={
+                <>
+                  <ExamplePicker onLoad={loadExample} activeId={exampleId} />
+                  {selected ? (
+                    <WorkingPanel
+                      steps={working.steps}
+                      correction={working.correction}
+                    />
+                  ) : null}
+                </>
+              }
               processSection={
                 <ProcessSection
                   process={selectedProcess}
