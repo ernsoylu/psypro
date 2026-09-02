@@ -19,6 +19,7 @@ pub mod process;
 pub mod saturation;
 pub mod state;
 pub mod units;
+pub mod weather;
 
 pub use state::StatePoint;
 

@@ -18,6 +18,7 @@ import type { ChartTransform } from './chart/useChartTransform';
 import { ChartPage } from './pages/ChartPage';
 import { DataTablePage } from './pages/DataTablePage';
 import { ProcessDesignPage } from './pages/ProcessDesignPage';
+import { WeatherPage } from './pages/WeatherPage';
 import { AppShell } from './shell/AppShell';
 import { LayerOptions } from './shell/LayerOptions';
 import { PageTabs, type PageId } from './shell/PageTabs';
@@ -40,6 +41,9 @@ import { useResolvedProcesses } from './store/useResolvedProcesses';
 import { envelopeById } from './data';
 import { useCycleStore } from './store/useCycleStore';
 import { useProfileStore } from './store/useProfileStore';
+import { useWeatherStore } from './store/useWeatherStore';
+import { useWeatherLoader } from './weather/useWeatherLoader';
+import type { EnvelopeBounds } from './weather/epw.worker';
 import { useStyleStore } from './store/useStyleStore';
 import {
   engine_version,
@@ -50,6 +54,21 @@ import {
   StatePointInput,
   type CycleOutput,
 } from './psychro';
+
+/**
+ * The free-cooling design the weather hour counts are taken against.
+ *
+ * Phase 12 makes these editable alongside the rest of the design case; for now
+ * they are the comfort-cooling defaults §4.9 and §4.3 quote — 13 °C supply,
+ * a 24 °C / 50% RH return, a 21 °C economiser high limit, and 300 mm rigid
+ * media at 0.85 wet-bulb depression effectiveness.
+ */
+const WEATHER_DESIGN = {
+  tSupply: 13,
+  hReturn: 47.9,
+  tHighLimit: 21,
+  evaporative: 0.85,
+};
 
 export function App() {
   const t = useT();
@@ -67,6 +86,7 @@ export function App() {
   const proc = useProcessStore();
   const design = useCycleStore();
   const profile = useProfileStore();
+  const weather = useWeatherStore();
 
   /** The envelopes the active profile and the layer toggles between them show. */
   const envelopes = profile.visibleEnvelopes.flatMap((id) => {
@@ -76,6 +96,50 @@ export function App() {
 
   const altitudeM = altitudeInMetres(project);
   const altitude = Number(project.altitude) || 0;
+
+  /**
+   * The weather worker, and the context it analyses against.
+   *
+   * Everything the year is asked — resolve, bin, count — happens in the worker.
+   * A trace of the first version, which did it here, measured 39 seconds of
+   * blocked main thread on one 8760-hour file.
+   */
+  const weatherContext = {
+    altitude,
+    isSi: project.isSi,
+    binStepT: weather.binStepT,
+    binStepW: weather.binStepW,
+    design: WEATHER_DESIGN,
+    envelopes: envelopes.map((e) => ({
+      id: e.id,
+      bounds: [
+        e.limits.tMin,
+        e.limits.tMax,
+        e.limits.dpMin ?? Number.NaN,
+        e.limits.dpMax ?? Number.NaN,
+        e.limits.rhMin ?? Number.NaN,
+        e.limits.rhMax ?? Number.NaN,
+        e.limits.wMin ?? Number.NaN,
+        e.limits.wMax ?? Number.NaN,
+      ] as EnvelopeBounds,
+    })),
+  };
+  const { load: loadWeather, reanalyse } = useWeatherLoader(weatherContext);
+
+  // Re-run the analysis when what it depends on moves. Not on every render:
+  // the dependency list is the physics and the bin increments, and nothing else.
+  const envelopeKey = envelopes.map((e) => e.id).join(',');
+  useEffect(() => {
+    reanalyse();
+  }, [
+    reanalyse,
+    altitude,
+    project.isSi,
+    weather.binStepT,
+    weather.binStepW,
+    envelopeKey,
+  ]);
+
   const resolveContext = {
     isSi: project.isSi,
     altitude,
@@ -257,7 +321,7 @@ export function App() {
         />
       }
       tabs={
-        <PageTabs active={page} onChange={setPage} unavailable={['weather', 'report']} />
+        <PageTabs active={page} onChange={setPage} unavailable={['report']} />
       }
       toolbox={
         <Toolbox
@@ -275,6 +339,18 @@ export function App() {
           onChange={design.set}
           cycle={cycle}
           error={cycleError}
+          isSi={project.isSi}
+        />
+      ) : page === 'weather' ? (
+        <WeatherPage
+          result={weather.result}
+          loading={weather.loading}
+          error={weather.error}
+          onFile={loadWeather}
+          binStepT={weather.binStepT}
+          binStepW={weather.binStepW}
+          onBinStepT={weather.setBinStepT}
+          onBinStepW={weather.setBinStepW}
           isSi={project.isSi}
         />
       ) : page === 'table' ? (
@@ -311,6 +387,7 @@ export function App() {
                   onSelectProcess={proc.selectProcess}
                   protractor={protractor}
                   envelopes={envelopes}
+                  weatherBins={weather.result?.bins ?? null}
                   visible={style.visible}
                   showLabels={style.showLabels}
                   showCrosshair={style.showCrosshair && tool === 'crosshair'}

@@ -711,3 +711,45 @@
   line-height: 1.5;
   opacity: 0.85;
 }
+
+/* ── Weather drop zone ──────────────────────────────────────────────────── */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: 620px;
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.dropzone--over {
+  border-color: var(--color-accent);
+  border-style: solid;
+}
+
+.dropzone__title {
+  margin: 0;
+  font-size: var(--font-size-numeric);
+  font-weight: 600;
+}
+
+.dropzone__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  line-height: 1.55;
+}
+
+.dropzone__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -26,6 +26,7 @@ import { CrosshairLayer } from './CrosshairLayer';
 import { PointLayer } from './PointLayer';
 import { ProcessLayer, ProtractorLine } from './ProcessLayer';
 import { PsychGrid } from './PsychGrid';
+import { WeatherLayer } from './WeatherLayer';
 import { ZoneLayer } from './ZoneLayer';
 import { formatHud } from './format';
 import { toChart, ZOOM_STEP } from './geometry';
@@ -39,6 +40,7 @@ import type { CurveFamilyId } from '../psychro';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
 import type { Envelope } from '../data';
+import type { BinGrid } from '../weather/epw.worker';
 
 /** What the canvas needs, and what it hands back to the shell. */
 export interface ChartCanvasProps extends BaseGridParams {
@@ -65,6 +67,8 @@ export interface ChartCanvasProps extends BaseGridParams {
   protractor: { slope: number | null; through: { x: number; y: number } } | null;
   /** The standards envelopes to draw beneath the points. */
   envelopes: Envelope[];
+  /** Binned weather hours, or null when no file is loaded. */
+  weatherBins: BinGrid | null;
   /** Which curve families are drawn. */
   visible: Record<CurveFamilyId, boolean>;
   /** Whether the numerals are drawn. */
@@ -93,6 +97,7 @@ export function ChartCanvas({
   onSelectProcess,
   protractor,
   envelopes,
+  weatherBins,
   visible,
   showLabels,
   showCrosshair,
@@ -223,6 +228,12 @@ export function ChartCanvas({
             altitude={altitude}
             isSi={isSi}
             realGas={params.realGas}
+          />
+          <WeatherLayer
+            bins={weatherBins}
+            viewport={viewport}
+            tokens={tokens}
+            layout={params.layout}
           />
           {showLabels ? (
             <ChartAxes

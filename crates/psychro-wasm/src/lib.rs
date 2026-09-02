@@ -1075,6 +1075,295 @@ pub fn fogging_margin(cabin: StatePointInput, t_glass_inner: f64) -> Result<f64,
     })
 }
 
+// ── Weather data ────────────────────────────────────────────────────────────
+
+/// A two-dimensional histogram of hours, ready to draw.
+#[wasm_bindgen]
+pub struct WeatherBins {
+    t_min: f64,
+    w_min: f64,
+    t_step: f64,
+    w_step: f64,
+    t_count: usize,
+    w_count: usize,
+    counts: Vec<u32>,
+    peak: u32,
+    binned: usize,
+    skipped: usize,
+}
+
+#[wasm_bindgen]
+impl WeatherBins {
+    /// Dry-bulb temperature at the left edge of column 0.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn t_min(&self) -> f64 {
+        self.t_min
+    }
+    /// Humidity ratio at the bottom edge of row 0.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn w_min(&self) -> f64 {
+        self.w_min
+    }
+    /// Column width, in the caller's temperature unit.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn t_step(&self) -> f64 {
+        self.t_step
+    }
+    /// Row height, kg/kg_da.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn w_step(&self) -> f64 {
+        self.w_step
+    }
+    /// Number of columns.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn t_count(&self) -> usize {
+        self.t_count
+    }
+    /// Number of rows.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn w_count(&self) -> usize {
+        self.w_count
+    }
+    /// Hours per cell, row-major.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn counts(&self) -> Vec<u32> {
+        self.counts.clone()
+    }
+    /// The busiest cell's count, so a renderer can scale in one pass.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn peak(&self) -> u32 {
+        self.peak
+    }
+    /// Hours that landed in a cell.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn binned(&self) -> usize {
+        self.binned
+    }
+    /// Rows the engine could not resolve — a transcription error in the file,
+    /// reported rather than silently dropped.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn skipped(&self) -> usize {
+        self.skipped
+    }
+}
+
+/// A year of weather, resolved once and reused.
+///
+/// Held in wasm memory rather than returned as arrays because every question a
+/// caller asks — bin it, count free-cooling hours, count hours inside an
+/// envelope — needs the same resolved properties. Resolving per question is what
+/// a browser trace measured at **39 seconds of blocked main thread** on one
+/// 8760-hour file.
+#[wasm_bindgen]
+pub struct ResolvedWeather {
+    inner: psychro_core::weather::ResolvedYear,
+    is_si: bool,
+}
+
+#[wasm_bindgen]
+impl ResolvedWeather {
+    /// Hours that resolved.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn hours(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Rows the engine could not resolve — a transcription error in the file,
+    /// reported rather than silently dropped.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn skipped(&self) -> usize {
+        self.inner.skipped
+    }
+}
+
+/// Resolves a year of hourly `(dry bulb, dew point)` observations.
+///
+/// Do this once per file and keep the handle. The bin a row belongs to depends
+/// on its humidity ratio, and an EPW carries a dew point — turning one into the
+/// other is a property evaluation at the station's pressure, so binning on the
+/// dew point directly would put rows in the wrong cells.
+#[wasm_bindgen]
+pub fn resolve_weather(
+    dry_bulb: &[f64],
+    dew_point: &[f64],
+    altitude: f64,
+    is_si: bool,
+) -> ResolvedWeather {
+    let (db, dp) = if is_si {
+        (dry_bulb.to_vec(), dew_point.to_vec())
+    } else {
+        (
+            dry_bulb.iter().map(|t| units::f_to_c(*t)).collect(),
+            dew_point.iter().map(|t| units::f_to_c(*t)).collect(),
+        )
+    };
+    let altitude_m = if is_si {
+        altitude
+    } else {
+        units::ft_to_m(altitude)
+    };
+    let atm = Atmosphere {
+        p_bar: pressure_from_altitude(altitude_m),
+        real_gas: true,
+    };
+    ResolvedWeather {
+        inner: psychro_core::weather::resolve_year(&db, &dp, &atm),
+        is_si,
+    }
+}
+
+/// Bins a resolved year into a grid over the chart's own coordinates.
+#[wasm_bindgen]
+pub fn bin_weather_data(year: &ResolvedWeather, t_step: f64, w_step: f64) -> WeatherBins {
+    let step = if year.is_si {
+        t_step
+    } else {
+        units::delta_f_to_k(t_step)
+    };
+    let b = psychro_core::weather::bin(&year.inner, step, w_step);
+    WeatherBins {
+        t_min: if year.is_si {
+            b.t_min
+        } else {
+            units::c_to_f(b.t_min)
+        },
+        w_min: b.w_min,
+        t_step: if year.is_si {
+            b.t_step
+        } else {
+            units::delta_k_to_f(b.t_step)
+        },
+        w_step: b.w_step,
+        t_count: b.t_count,
+        w_count: b.w_count,
+        counts: b.counts,
+        peak: b.peak,
+        binned: b.binned,
+        skipped: b.skipped,
+    }
+}
+
+/// What a year of weather means for a given design.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct HourCounts {
+    /// Hours cool enough to cool on outdoor air alone.
+    pub economizer: u32,
+    /// Hours evaporative cooling alone would serve.
+    pub evaporative: u32,
+    /// Hours needing mechanical cooling.
+    pub mechanical: u32,
+    /// Hours needing heating rather than cooling.
+    pub heating: u32,
+    /// Hours the engine could not resolve.
+    pub skipped: u32,
+}
+
+/// Counts the free-cooling hours in a resolved year.
+///
+/// The tests run in the order a control sequence would try them, and that
+/// ordering *is* the result: an hour an economiser can serve is not also counted
+/// as an evaporative hour. Counting each strategy independently gives three
+/// numbers that sum to more than a year, which is a common way to overstate a
+/// free-cooling case.
+#[wasm_bindgen]
+pub fn count_free_cooling_hours(
+    year: &ResolvedWeather,
+    t_supply: f64,
+    h_return: f64,
+    t_high_limit: f64,
+    evaporative_effectiveness: f64,
+) -> HourCounts {
+    let to_c = |t: f64| if year.is_si { t } else { units::f_to_c(t) };
+    let design = psychro_core::weather::FreeCooling {
+        t_supply: to_c(t_supply),
+        h_return: if year.is_si {
+            h_return
+        } else {
+            units::btu_per_lb_to_kj_per_kg(h_return)
+        },
+        t_high_limit: to_c(t_high_limit),
+        evaporative_effectiveness,
+    };
+    let a = psychro_core::weather::free_cooling_hours(&year.inner, &design);
+    HourCounts {
+        economizer: a.economizer,
+        evaporative: a.evaporative,
+        mechanical: a.mechanical,
+        heating: a.heating,
+        skipped: a.skipped,
+    }
+}
+
+/// Counts the hours a resolved year spends inside an envelope.
+///
+/// A different question from free cooling: not "what can cool this?" but "how
+/// often is the outdoor air itself already acceptable?", which is what §10.3
+/// asks of a data centre.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn count_hours_inside(
+    year: &ResolvedWeather,
+    t_min: f64,
+    t_max: f64,
+    dp_min: f64,
+    dp_max: f64,
+    rh_min: f64,
+    rh_max: f64,
+    w_min: f64,
+    w_max: f64,
+) -> u32 {
+    let limits = core_limits(
+        t_min, t_max, dp_min, dp_max, rh_min, rh_max, w_min, w_max, year.is_si,
+    );
+    psychro_core::weather::hours_inside(&year.inner, &limits)
+}
+
+/// Chart-space positions for a rectangular `(t, W)` lattice, in one call.
+///
+/// Returned flat and row-major: `[x00, y00, x10, y10, …]`, `t_count` pairs per
+/// row, `w_count` rows.
+///
+/// This exists because the weather heatmap needs a corner position per bin
+/// boundary, and asking for them one at a time through `get_coordinate_mapping`
+/// resolved a full thermodynamic state for each — a few thousand round trips,
+/// and a 467 ms frame gap in a browser trace. The transform is pure geometry, so
+/// none of that work was needed: this is arithmetic and nothing else.
+#[wasm_bindgen]
+pub fn chart_lattice(
+    t_min: f64,
+    t_step: f64,
+    t_count: usize,
+    w_min: f64,
+    w_step: f64,
+    w_count: usize,
+    layout: ChartLayout,
+) -> Vec<f64> {
+    let mut out = Vec::with_capacity(t_count * w_count * 2);
+    for row in 0..w_count {
+        let w = w_min + w_step * row as f64;
+        for col in 0..t_count {
+            let t = t_min + t_step * col as f64;
+            let p = chart::to_chart(t, w, layout.into());
+            out.push(p.x);
+            out.push(p.y);
+        }
+    }
+    out
+}
+
 /// Which chart layout coordinates are expressed in.
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
