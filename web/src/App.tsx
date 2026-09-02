@@ -24,6 +24,7 @@ import { ProcessDesignPage } from './pages/ProcessDesignPage';
 import { WeatherPage } from './pages/WeatherPage';
 import { AppShell } from './shell/AppShell';
 import { LayerOptions } from './shell/LayerOptions';
+import { StyleModal } from './shell/StyleModal';
 import { ExamplePicker } from './shell/ExamplePicker';
 import { PageTabs, type PageId } from './shell/PageTabs';
 import { WorkingPanel } from './shell/WorkingPanel';
@@ -55,7 +56,7 @@ import { useProfileStore } from './store/useProfileStore';
 import { useWeatherStore } from './store/useWeatherStore';
 import { useWeatherLoader } from './weather/useWeatherLoader';
 import type { EnvelopeBounds } from './weather/epw.worker';
-import { useStyleStore } from './store/useStyleStore';
+import { useStyleStore, type FamilyStyle } from './store/useStyleStore';
 import {
   calculate_state,
   ChartLayout,
@@ -67,6 +68,7 @@ import {
   solve_return_air_cycle,
   InputState,
   StatePointInput,
+  type CurveFamilyId,
   type CycleOutput,
 } from './psychro';
 
@@ -101,6 +103,7 @@ export function App() {
   const [tool, setTool] = useState<ToolId>('select');
   const [page, setPage] = useState<PageId>('chart');
   const [showLayers, setShowLayers] = useState(false);
+  const [showStyles, setShowStyles] = useState(false);
   const [exampleId, setExampleId] = useState<string | null>(null);
   const [fileHandle, setFileHandle] = useState<FileHandle>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -116,6 +119,7 @@ export function App() {
     curves: GridCurve[];
     viewport: ChartViewport;
     tokens: ChartTokens;
+    styles: Record<CurveFamilyId, FamilyStyle>;
     width: number;
     height: number;
   } | null>(null);
@@ -582,6 +586,7 @@ export function App() {
             <LayerOptions
               visible={style.visible}
               onToggleFamily={style.toggleFamily}
+              onOpenStyles={() => setShowStyles(true)}
               showLabels={style.showLabels}
               onShowLabels={style.setShowLabels}
               profileId={profile.profileId}
@@ -609,6 +614,7 @@ export function App() {
                   envelopes={envelopes}
                   weatherBins={weather.result?.bins ?? null}
                   visible={style.visible}
+                  styles={style.styles}
                   showLabels={style.showLabels}
                   showCrosshair={style.showCrosshair && tool === 'crosshair'}
                   placing={tool === 'addPoint'}
@@ -672,6 +678,15 @@ export function App() {
           }
         />
       )}
+      {showStyles ? (
+        <StyleModal
+          styles={style.styles}
+          onSetStyle={style.setFamilyStyle}
+          onResetFamily={style.resetFamilyStyle}
+          onResetAll={style.resetAllStyles}
+          onClose={() => setShowStyles(false)}
+        />
+      ) : null}
     </AppShell>
   );
 }

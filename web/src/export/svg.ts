@@ -15,6 +15,8 @@ import { curveStyle } from '../chart/style';
 import { toScreen, type Viewport } from '../chart/geometry';
 import type { GridCurve } from '../chart/useBaseGrid';
 import type { ChartTokens } from '../chart/useChartTokens';
+import type { CurveFamilyId } from '../psychro';
+import type { FamilyStyle } from '../store/useStyleStore';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
 
@@ -25,6 +27,8 @@ export interface SvgExportInput {
   processes: ResolvedProcess[];
   viewport: Viewport;
   tokens: ChartTokens;
+  /** The line-styling matrix, so an export carries the reader's restyling. */
+  styles?: Record<CurveFamilyId, FamilyStyle>;
   width: number;
   height: number;
   /** Shown in the corner, so a printed chart says what it is. */
@@ -72,7 +76,7 @@ export function chartToSvg(input: SvgExportInput): string {
   );
 
   for (const curve of input.curves) {
-    const s = curveStyle(curve.family, curve.value, tokens);
+    const s = curveStyle(curve.family, curve.value, tokens, input.styles);
     const dash = s.dash ? ` stroke-dasharray="${s.dash.join(' ')}"` : '';
     parts.push(
       polyline(

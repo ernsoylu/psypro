@@ -11,23 +11,15 @@
 
 import { useT } from '../i18n/useT';
 import { ENVELOPES, PROFILES } from '../data';
-import { CurveFamilyId } from '../psychro';
-import type { TranslationKey } from '../i18n';
-
-/** Each toggleable curve family, and what it is called. */
-const FAMILIES = [
-  [CurveFamilyId.DryBulb, 'family.dryBulb'],
-  [CurveFamilyId.HumidityRatio, 'family.humidityRatio'],
-  [CurveFamilyId.RelativeHumidity, 'family.relativeHumidity'],
-  [CurveFamilyId.WetBulb, 'family.wetBulb'],
-  [CurveFamilyId.Enthalpy, 'family.enthalpy'],
-  [CurveFamilyId.SpecificVolume, 'family.specificVolume'],
-] as const satisfies readonly (readonly [CurveFamilyId, TranslationKey])[];
+import { FAMILY_LABELS } from '../store/useStyleStore';
+import type { CurveFamilyId } from '../psychro';
 
 /** What the panel needs. */
 export interface LayerOptionsProps {
   visible: Record<CurveFamilyId, boolean>;
   onToggleFamily: (family: CurveFamilyId) => void;
+  /** Opens the line-styling matrix for the grid families. */
+  onOpenStyles: () => void;
   showLabels: boolean;
   onShowLabels: (show: boolean) => void;
   profileId: string;
@@ -39,6 +31,7 @@ export interface LayerOptionsProps {
 export function LayerOptions({
   visible,
   onToggleFamily,
+  onOpenStyles,
   showLabels,
   onShowLabels,
   profileId,
@@ -104,7 +97,7 @@ export function LayerOptions({
 
       <h2 className="panel__section">{t('layers.grid')}</h2>
       <div className="panel__fields">
-        {FAMILIES.map(([family, key]) => (
+        {FAMILY_LABELS.map(([family, key]) => (
           <label className="checkbox" key={family}>
             <input
               type="checkbox"
@@ -122,6 +115,9 @@ export function LayerOptions({
           />
           <span>{t('layers.showLabels')}</span>
         </label>
+        <button type="button" className="btn btn--block" onClick={onOpenStyles}>
+          {t('layers.openStyles')}
+        </button>
         <p className="panel__note">{t('layers.saturationNote')}</p>
       </div>
     </aside>

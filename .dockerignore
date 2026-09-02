@@ -1,0 +1,18 @@
+# VCS / agent / scratch state
+.git
+.gitignore
+.claude
+.playwright-mcp
+
+# Build artifacts the image rebuilds from source
+target
+node_modules
+web/node_modules
+web/dist
+web/src/wasm
+
+# Not needed to build or serve
+design.pen
+docs
+Dockerfile
+.dockerignore
