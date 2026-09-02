@@ -81,7 +81,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 9 — Standards overlays and industry profiles | **Done** — envelopes are data, polygons computed at altitude, profiles proven inert |
 | 10 — BYOD weather data | **Done** — 8760 hours, worst frame gap 17 ms, traced not eyeballed |
 | 11 — Teaching mode | **Done** — four worked examples graded against their books, every step cited |
-| 12–13 | Not started |
+| 12 — Export, import, and persistence | **Done** — round trip byte-identical; DXF audits clean under ezdxf |
+| 13 — Customization, distribution, docs | Not started |
 
 ---
 
@@ -552,6 +553,39 @@ moves when they flip a switch is not.
 
 **Exit:** Round-trip test — save a project, reload, and the point/process set is identical.
 DXF opens cleanly in a CAD viewer.
+
+**Done.** The round trip is byte-identical, and a test asserts it twice — save, reload, save
+again, and the two files must compare equal as strings, so a format that loses a digit on read
+or invents one on write fails rather than "mostly survives". A humidity ratio typed as
+0.0093401 comes back as 0.0093401, because **the file stores inputs, never derived values**:
+what the engine made of them belongs to the elevation it resolved them at, and a document
+opened at another altitude re-resolves every point from its own definition rather than carrying
+stale readings across. The version is checked on read, and a file from a *newer* version is
+refused with a message rather than guessed at. Save uses the File System Access API where the
+browser has it and falls back to a download where it does not; a save that fails says so in a
+banner, because failing silently is worse than failing loudly.
+
+Three export formats, each verified outside the app:
+
+- **SVG** — 158 polylines with zero `var(--…)` in the output. A variable that resolves in the
+  app is a literal string in a file opened elsewhere, so every colour is resolved before the
+  XML is written, and a test asserts none survive.
+- **CSV** — the unit lives in the header row, so a number cannot leave the building without
+  its unit.
+- **DXF** — validated with **ezdxf** rather than claimed compliant: audit errors 0, all nine
+  `PSY-*` layers declared, saturation on its own layer, coordinates in model space (°C and
+  g/kg × scale), never pixels.
+
+The DXF carries the correction worth recording. The first version declared
+`$ACADVER = AC1009` (R12) while emitting `LWPOLYLINE` entities — which are **not** an R12
+entity; they enter the format at R2000. A lenient reader opens that file and says nothing, a
+strict reader refuses it, and both readings of "opens cleanly" are true at once. The file now
+declares **AC1015**, and the test asserts both the version it carries and the one it does not.
+
+The PDF report stays open. It is a rendering of the Report page — chart, flow diagram, tables
+on one document — and that page does not exist yet (its tab is still disabled). Exporting a
+report the app cannot show would be a PDF-shaped promise, so the format ships when the page
+does.
 
 ---
 

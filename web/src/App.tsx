@@ -13,6 +13,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ChartCanvas } from './chart/ChartCanvas';
+import type { GridCurve } from './chart/useBaseGrid';
+import type { Viewport as ChartViewport } from './chart/geometry';
+import type { ChartTokens } from './chart/useChartTokens';
 import { DEFAULT_DOMAIN } from './chart/useBaseGrid';
 import type { ChartTransform } from './chart/useChartTransform';
 import { ChartPage } from './pages/ChartPage';
@@ -27,7 +30,7 @@ import { WorkingPanel } from './shell/WorkingPanel';
 import { ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type ToolId, type ViewActionId } from './shell/Toolbox';
-import { TopNav } from './shell/TopNav';
+import { TopNav, type FileActionId } from './shell/TopNav';
 import { Viewport } from './shell/Viewport';
 import { useTheme } from './shell/useTheme';
 import { useT } from './i18n/useT';
@@ -41,6 +44,12 @@ import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
 import { useResolvedPoints } from './store/useResolvedPoints';
 import { useResolvedProcesses } from './store/useResolvedProcesses';
 import { envelopeById, exampleById } from './data';
+import { chartToDxf } from './export/dxf';
+import { chartToSvg } from './export/svg';
+import { pointsToCsv } from './export/csv';
+import { deserialise, serialise } from './project/format';
+import { download, openText, saveText, type FileHandle } from './project/files';
+import { formatProperties } from './chart/format';
 import { useCycleStore } from './store/useCycleStore';
 import { useProfileStore } from './store/useProfileStore';
 import { useWeatherStore } from './store/useWeatherStore';
@@ -49,6 +58,7 @@ import type { EnvelopeBounds } from './weather/epw.worker';
 import { useStyleStore } from './store/useStyleStore';
 import {
   calculate_state,
+  ChartLayout,
   engine_version,
   explain_state,
   initEngine,
@@ -75,6 +85,13 @@ const WEATHER_DESIGN = {
   evaporative: 0.85,
 };
 
+/** The export formats on offer, in the order §12 lists them. */
+const EXPORT_FORMATS = [
+  { id: 'svg', label: 'SVG' },
+  { id: 'dxf', label: 'DXF' },
+  { id: 'csv', label: 'CSV' },
+];
+
 export function App() {
   const t = useT();
   const { theme, toggleTheme } = useTheme();
@@ -85,6 +102,23 @@ export function App() {
   const [page, setPage] = useState<PageId>('chart');
   const [showLayers, setShowLayers] = useState(false);
   const [exampleId, setExampleId] = useState<string | null>(null);
+  const [fileHandle, setFileHandle] = useState<FileHandle>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  /**
+   * The last state the canvas drew, kept for export.
+   *
+   * A ref rather than lifted state: it changes on every pan, and an export
+   * happens once. Storing it in state would re-render the shell at 60 FPS to
+   * serve a button nobody has pressed.
+   */
+  const drawn = useRef<{
+    curves: GridCurve[];
+    viewport: ChartViewport;
+    tokens: ChartTokens;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const project = useProjectStore();
   const psych = usePsychStore();
@@ -304,6 +338,104 @@ export function App() {
 
   const { addPoint, updatePoint, selectPoint, removePoint } = psych;
 
+  /** Save, open, and the export menu. */
+  const onFileAction = useCallback(
+    (action: FileActionId) => {
+      setFileError(null);
+      if (action === 'save') {
+        const text = serialise(
+          {
+            name: project.name,
+            isSi: project.isSi,
+            altitude: project.altitude,
+            layout: project.layout,
+            realGas: project.realGas,
+            points: usePsychStore.getState().points,
+            processes: useProcessStore.getState().processes,
+          },
+          engineReady ? engine_version() : 'unknown',
+        );
+        saveText(text, `${project.name || 'project'}.psy`, fileHandle)
+          .then(setFileHandle)
+          .catch((e: unknown) => {
+            // A cancelled picker is not an error; anything else is.
+            if (e instanceof DOMException && e.name === 'AbortError') return;
+            setFileError(e instanceof Error ? e.message : String(e));
+          });
+        return;
+      }
+
+      openText()
+        .then((opened) => {
+          if (!opened) return;
+          const snapshot = deserialise(opened.text);
+          project.setIsSi(snapshot.isSi);
+          project.setAltitude(snapshot.altitude);
+          project.setLayout(snapshot.layout);
+          project.setRealGas(snapshot.realGas);
+          project.setName(snapshot.name);
+          usePsychStore.getState().replaceAll(snapshot.points);
+          useProcessStore.getState().replaceAll(snapshot.processes);
+          setFileHandle(opened.handle);
+        })
+        .catch((e: unknown) => {
+          if (e instanceof DOMException && e.name === 'AbortError') return;
+          setFileError(e instanceof Error ? e.message : String(e));
+        });
+    },
+    [project, fileHandle, engineReady],
+  );
+
+  const onExport = useCallback(
+    (format: string) => {
+      const name = project.name || 'chart';
+      if (format === 'csv') {
+        const csv = pointsToCsv(resolved, (p) =>
+          formatProperties(p.state!, project.isSi, t),
+        );
+        if (csv) download(csv, `${name}.csv`, 'text/csv');
+        return;
+      }
+      const state = drawn.current;
+      if (!state) return;
+      if (format === 'svg') {
+        download(
+          chartToSvg({
+            ...state,
+            points: resolved,
+            processes: resolvedProcesses,
+            title: project.name || t('app.untitledProject'),
+            subtitle: t('export.subtitle', {
+              altitude: project.altitude,
+              unit: t(project.isSi ? 'unit.metre' : 'unit.foot'),
+              layout: t(
+                project.layout === ChartLayout.Ashrae
+                  ? 'layout.ashrae'
+                  : 'layout.mollier',
+              ),
+            }),
+          }),
+          `${name}.svg`,
+          'image/svg+xml',
+        );
+      } else {
+        download(
+          chartToDxf({
+            curves: state.curves,
+            points: resolved,
+            processes: resolvedProcesses,
+            // Puts the two axes on comparable footing: 60 units against 0.03 is
+            // an unusable drawing whatever the numbers mean.
+            humidityScale: 1000,
+          }),
+          `${name}.dxf`,
+          'application/dxf',
+        );
+      }
+    },
+    [project, resolved, resolvedProcesses, t],
+  );
+
   /** Loads a worked example as the selected point. */
   const loadExample = useCallback(
     (id: string) => {
@@ -394,10 +526,22 @@ export function App() {
           layout={project.layout}
           onLayoutChange={project.setLayout}
           engineVersion={engineReady ? engine_version() : null}
+          onFileAction={onFileAction}
+          exportFormats={EXPORT_FORMATS}
+          onExport={onExport}
         />
       }
       tabs={
-        <PageTabs active={page} onChange={setPage} unavailable={['report']} />
+        <>
+          <PageTabs active={page} onChange={setPage} unavailable={['report']} />
+          {/* A save that fails silently is worse than one that fails loudly:
+              the user walks away believing their work is on disk. */}
+          {fileError ? (
+            <p className="banner" role="alert">
+              {fileError}
+            </p>
+          ) : null}
+        </>
       }
       toolbox={
         <Toolbox
@@ -472,6 +616,7 @@ export function App() {
                   onSelectPoint={selectPoint}
                   onPlacePoint={onPlacePoint}
                   onTransformReady={onTransformReady}
+                  onDrawn={(state) => (drawn.current = state)}
                 />
               ) : null}
             </Viewport>

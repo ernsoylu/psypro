@@ -1,0 +1,8 @@
+[     272ms] [LOG] [inline] Script tag çalışıyor, before module @ https://rektoroldum.oguzergin.net/:557
+[     307ms] [LOG] [inline-module] Sürüm: 0.4.64 @ https://rektoroldum.oguzergin.net/:561
+[    1146ms] [LOG] [main] main.js modülü yükleniyor... @ https://rektoroldum.oguzergin.net/js/main.js?v=0.4.64:4
+[    1146ms] [LOG] [main] DOM zaten hazır, oyun başlatılıyor... @ https://rektoroldum.oguzergin.net/js/main.js?v=0.4.64:116
+[    1146ms] [LOG] [main] init() @ https://rektoroldum.oguzergin.net/js/main.js?v=0.4.64:129
+[    1147ms] [LOG] [main] Klavye kısayolları bağlandı (Ctrl+S: kaydet, Esc: modal kapat) @ https://rektoroldum.oguzergin.net/js/main.js?v=0.4.64:880
+[    1148ms] [LOG] [main] Başlangıç tamamlandı. @ https://rektoroldum.oguzergin.net/js/main.js?v=0.4.64:202
+[    1148ms] [LOG] [inline-module] main.js başarıyla yüklendi @ https://rektoroldum.oguzergin.net/:564
