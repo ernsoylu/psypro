@@ -15,7 +15,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChartCanvas } from './chart/ChartCanvas';
 import { DEFAULT_DOMAIN } from './chart/useBaseGrid';
 import type { ChartTransform } from './chart/useChartTransform';
+import { ChartPage } from './pages/ChartPage';
+import { DataTablePage } from './pages/DataTablePage';
+import { ProcessDesignPage } from './pages/ProcessDesignPage';
 import { AppShell } from './shell/AppShell';
+import { PageTabs, type PageId } from './shell/PageTabs';
 import { ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type ToolId, type ViewActionId } from './shell/Toolbox';
@@ -24,12 +28,25 @@ import { Viewport } from './shell/Viewport';
 import { useTheme } from './shell/useTheme';
 import { useT } from './i18n/useT';
 import { altitudeInMetres, useProjectStore } from './store/useProjectStore';
-import { defaultProcess, useProcessStore, type ProcessKind } from './store/useProcessStore';
+import {
+  defaultProcess,
+  useProcessStore,
+  type ProcessKind,
+} from './store/useProcessStore';
 import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
 import { useResolvedPoints } from './store/useResolvedPoints';
 import { useResolvedProcesses } from './store/useResolvedProcesses';
+import { useCycleStore } from './store/useCycleStore';
 import { useStyleStore } from './store/useStyleStore';
-import { engine_version, initEngine, protractor_slope, InputState } from './psychro';
+import {
+  engine_version,
+  initEngine,
+  protractor_slope,
+  solve_return_air_cycle,
+  InputState,
+  StatePointInput,
+  type CycleOutput,
+} from './psychro';
 
 export function App() {
   const t = useT();
@@ -38,11 +55,13 @@ export function App() {
   const [engineReady, setEngineReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolId>('select');
+  const [page, setPage] = useState<PageId>('chart');
 
   const project = useProjectStore();
   const psych = usePsychStore();
   const style = useStyleStore();
   const proc = useProcessStore();
+  const design = useCycleStore();
 
   const altitudeM = altitudeInMetres(project);
   const altitude = Number(project.altitude) || 0;
@@ -69,8 +88,7 @@ export function App() {
     points: pointsById,
     missingPointMessage,
   });
-  const selectedProcess =
-    proc.processes.find((p) => p.id === proc.selectedId) ?? null;
+  const selectedProcess = proc.processes.find((p) => p.id === proc.selectedId) ?? null;
   const selectedProcessResolved =
     resolvedProcesses.find((r) => r.process.id === proc.selectedId) ?? null;
 
@@ -88,6 +106,55 @@ export function App() {
     const slope = protractor_slope(r.load.shr);
     return { slope: Number.isFinite(slope) ? slope : null, through: r.from };
   }, [selectedProcessResolved]);
+
+  /**
+   * The primary return-air cycle, solved from the design case.
+   *
+   * Derived like everything else: the store holds eight numbers, and every
+   * intermediate state comes back from the engine. An unsolvable case — supply
+   * air warmer than the room, say — is an ordinary outcome that the page
+   * reports, not an exception.
+   */
+  const [cycle, cycleError] = useMemo<[CycleOutput | null, string | null]>(() => {
+    if (!engineReady) return [null, null];
+    try {
+      const point = (dbt: number, rh: number) =>
+        new StatePointInput(
+          dbt,
+          rh,
+          InputState.DbtRh,
+          altitude,
+          project.isSi,
+          project.realGas,
+        );
+      return [
+        solve_return_air_cycle(
+          point(design.outdoorT, design.outdoorRh),
+          point(design.roomT, design.roomRh),
+          design.qSensible,
+          design.qLatent,
+          design.supplyT,
+          design.outdoorFraction,
+        ),
+        null,
+      ];
+    } catch (e: unknown) {
+      return [null, e instanceof Error ? e.message : String(e)];
+    }
+  }, [
+    engineReady,
+    altitude,
+    project.isSi,
+    project.realGas,
+    design.outdoorT,
+    design.outdoorRh,
+    design.roomT,
+    design.roomRh,
+    design.qSensible,
+    design.qLatent,
+    design.supplyT,
+    design.outdoorFraction,
+  ]);
 
   // The canvas hands its transform up so the toolbox can drive zoom and fit.
   // A ref rather than state: the transform changes on every pan, and storing it
@@ -162,7 +229,13 @@ export function App() {
         <TopNav
           projectName={project.name || t('app.untitledProject')}
           isSi={project.isSi}
-          onUnitChange={project.setIsSi}
+          onUnitChange={(next: boolean) => {
+            // The design case holds quantities, not labels: switching the
+            // document to IP has to convert them, or a 24 °C room silently
+            // becomes a 24 °F one.
+            if (next !== project.isSi) design.setForUnits(next);
+            project.setIsSi(next);
+          }}
           altitude={project.altitude}
           onAltitudeChange={project.setAltitude}
           theme={theme}
@@ -172,73 +245,93 @@ export function App() {
           engineVersion={engineReady ? engine_version() : null}
         />
       }
+      tabs={
+        <PageTabs active={page} onChange={setPage} unavailable={['weather', 'report']} />
+      }
       toolbox={
         <Toolbox activeTool={tool} onToolChange={setTool} onViewAction={onViewAction} />
       }
-      viewport={
-        <Viewport>
-          {engineReady ? (
-            <ChartCanvas
-              domain={DEFAULT_DOMAIN}
-              layout={project.layout}
-              altitudeM={altitudeM}
-              altitude={altitude}
-              realGas={project.realGas}
-              isSi={project.isSi}
-              points={resolved}
-              selectedId={psych.selectedId}
-              processes={resolvedProcesses}
-              selectedProcessId={proc.selectedId}
-              onSelectProcess={proc.selectProcess}
-              protractor={protractor}
-              visible={style.visible}
-              showLabels={style.showLabels}
-              showCrosshair={style.showCrosshair && tool === 'crosshair'}
-              placing={tool === 'addPoint'}
-              onMovePoint={onMovePoint}
-              onSelectPoint={selectPoint}
-              onPlacePoint={onPlacePoint}
-              onTransformReady={onTransformReady}
-            />
-          ) : null}
-        </Viewport>
-      }
-      panel={
-        <PropertiesPanel
-          point={selected}
-          resolved={selectedResolved}
+    >
+      {page === 'design' ? (
+        <ProcessDesignPage
+          design={design}
+          onChange={design.set}
+          cycle={cycle}
+          error={cycleError}
           isSi={project.isSi}
-          realGas={project.realGas}
-          onRealGasChange={project.setRealGas}
-          onChange={(patch) => selected && updatePoint(selected.id, patch)}
-          onAdd={() =>
-            addPoint({
-              label: nextLabel(psych.points),
-              dryBulb: project.isSi ? 24 : 75,
-              mode: InputState.DbtRh,
-              secondValue: 50,
-            })
+        />
+      ) : page === 'table' ? (
+        <DataTablePage points={resolved} isSi={project.isSi} />
+      ) : (
+        <ChartPage
+          viewport={
+            <Viewport>
+              {engineReady ? (
+                <ChartCanvas
+                  domain={DEFAULT_DOMAIN}
+                  layout={project.layout}
+                  altitudeM={altitudeM}
+                  altitude={altitude}
+                  realGas={project.realGas}
+                  isSi={project.isSi}
+                  points={resolved}
+                  selectedId={psych.selectedId}
+                  processes={resolvedProcesses}
+                  selectedProcessId={proc.selectedId}
+                  onSelectProcess={proc.selectProcess}
+                  protractor={protractor}
+                  visible={style.visible}
+                  showLabels={style.showLabels}
+                  showCrosshair={style.showCrosshair && tool === 'crosshair'}
+                  placing={tool === 'addPoint'}
+                  onMovePoint={onMovePoint}
+                  onSelectPoint={selectPoint}
+                  onPlacePoint={onPlacePoint}
+                  onTransformReady={onTransformReady}
+                />
+              ) : null}
+            </Viewport>
           }
-          onRemove={onRemovePoint}
-          processSection={
-            <ProcessSection
-              process={selectedProcess}
-              resolved={selectedProcessResolved}
-              points={psych.points}
+          panel={
+            <PropertiesPanel
+              point={selected}
+              resolved={selectedResolved}
               isSi={project.isSi}
-              canAdd={psych.points.length > 0}
-              onChange={(patch) =>
-                selectedProcess && proc.updateProcess(selectedProcess.id, patch)
+              realGas={project.realGas}
+              onRealGasChange={project.setRealGas}
+              onChange={(patch) => selected && updatePoint(selected.id, patch)}
+              onAdd={() =>
+                addPoint({
+                  label: nextLabel(psych.points),
+                  dryBulb: project.isSi ? 24 : 75,
+                  mode: InputState.DbtRh,
+                  secondValue: 50,
+                })
               }
-              onAdd={(kind: ProcessKind) => {
-                const from = selected ?? psych.points[0];
-                if (from) proc.addProcess(defaultProcess(kind, from.id));
-              }}
-              onRemove={() => selectedProcess && proc.removeProcess(selectedProcess.id)}
+              onRemove={onRemovePoint}
+              processSection={
+                <ProcessSection
+                  process={selectedProcess}
+                  resolved={selectedProcessResolved}
+                  points={psych.points}
+                  isSi={project.isSi}
+                  canAdd={psych.points.length > 0}
+                  onChange={(patch) =>
+                    selectedProcess && proc.updateProcess(selectedProcess.id, patch)
+                  }
+                  onAdd={(kind: ProcessKind) => {
+                    const from = selected ?? psych.points[0];
+                    if (from) proc.addProcess(defaultProcess(kind, from.id));
+                  }}
+                  onRemove={() =>
+                    selectedProcess && proc.removeProcess(selectedProcess.id)
+                  }
+                />
+              }
             />
           }
         />
-      }
-    />
+      )}
+    </AppShell>
   );
 }

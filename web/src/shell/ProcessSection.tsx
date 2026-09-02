@@ -61,14 +61,16 @@ function fieldsFor(kind: ProcessKind, isSi: boolean, t: Translator): Field[] {
     case 'steam':
       return [
         mdot,
-        { key: 'targetW', label: 'process.targetW', unit: t('unit.kgPerKg'), step: 0.001 },
+        {
+          key: 'targetW',
+          label: 'process.targetW',
+          unit: t('unit.kgPerKg'),
+          step: 0.001,
+        },
         { key: 'steamEnthalpy', label: 'process.steamEnthalpy', unit: enthalpy },
       ];
     case 'evaporative':
-      return [
-        mdot,
-        { key: 'effectiveness', label: 'process.effectiveness', step: 0.01 },
-      ];
+      return [mdot, { key: 'effectiveness', label: 'process.effectiveness', step: 0.01 }];
     case 'recovery':
       return [
         mdot,
@@ -146,7 +148,10 @@ export function ProcessSection({
           <div className="panel__fields">
             <div className="field field--row">
               <span className="field__label">
-                {t(PROCESS_KINDS.find(([k]) => k === process.kind)?.[1] ?? 'process.sensible')}
+                {t(
+                  PROCESS_KINDS.find(([k]) => k === process.kind)?.[1] ??
+                    'process.sensible',
+                )}
               </span>
               <button
                 type="button"
@@ -248,7 +253,9 @@ export function ProcessSection({
                     {/* A ratio of zero to zero is not zero. A process that moves
                         no energy has no sensible heat ratio, and printing 0.000
                         would be a number a reader would act on. */}
-                    {resolved.load.has_shr ? resolved.load.shr.toFixed(3) : t('process.noShr')}
+                    {resolved.load.has_shr
+                      ? resolved.load.shr.toFixed(3)
+                      : t('process.noShr')}
                   </td>
                   <td className="readout__unit" />
                 </tr>

@@ -26,9 +26,7 @@ vi.mock('./psychro', async () => {
   return {
     ChartLayout,
     CurveFamilyId,
-    generate_base_grid: () => [
-      { family: 2, value: 1, coords: [0, 0, 30, 0.03] },
-    ],
+    generate_base_grid: () => [{ family: 2, value: 1, coords: [0, 0, 30, 0.03] }],
     get_chart_extent: () => ({ x_min: -10, x_max: 52, y_min: 0, y_max: 0.03 }),
     InputState,
     StatePointInput: class {
@@ -83,9 +81,7 @@ describe('application shell', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('navigation')).toBeInTheDocument();
     expect(screen.getByRole('main', { name: 'Psychrometric chart' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('complementary', { name: 'Properties' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Properties' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('engine 0.1.0')).toBeInTheDocument());
   });
 
@@ -112,7 +108,9 @@ describe('application shell', () => {
     render(<App />);
     const tools = within(screen.getByRole('group', { name: 'Tools' }));
     const pressed = () =>
-      tools.getAllByRole('button').filter((b) => b.getAttribute('aria-pressed') === 'true');
+      tools
+        .getAllByRole('button')
+        .filter((b) => b.getAttribute('aria-pressed') === 'true');
 
     expect(pressed()).toHaveLength(1);
     expect(pressed()[0]).toHaveAccessibleName('Select');
@@ -178,7 +176,9 @@ describe('application shell', () => {
     const user = userEvent.setup();
     render(<App />);
     const before = document.documentElement.dataset.theme;
-    await user.click(screen.getByRole('button', { name: /Switch to (light|dark) theme/ }));
+    await user.click(
+      screen.getByRole('button', { name: /Switch to (light|dark) theme/ }),
+    );
     expect(document.documentElement.dataset.theme).not.toBe(before);
   });
 });

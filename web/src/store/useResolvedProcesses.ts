@@ -123,17 +123,19 @@ export interface ProcessContext extends ResolveContext {
  * throw: deleting a point while a process references it is a normal edit, and
  * the panel needs to say what happened rather than go blank.
  */
-export function resolveProcess(
-  process: Process,
-  ctx: ProcessContext,
-): ResolvedProcess {
+export function resolveProcess(process: Process, ctx: ProcessContext): ResolvedProcess {
   const inlet = ctx.points.get(process.fromId);
   if (!inlet) return failed(process, ctx.missingPointMessage);
 
   try {
     const input = inputFor(inlet, ctx);
     const second = process.secondId ? ctx.points.get(process.secondId) : undefined;
-    if ((process.kind === 'mix' || process.kind === 'recovery' || process.kind === 'link') && !second) {
+    if (
+      (process.kind === 'mix' ||
+        process.kind === 'recovery' ||
+        process.kind === 'link') &&
+      !second
+    ) {
       return failed(process, ctx.missingPointMessage);
     }
 
@@ -183,11 +185,7 @@ export function resolveProcess(
           inputFor(second!, ctx)(),
           process.mdotSecond,
         );
-        const load = process_load(
-          input(),
-          inputForState(r.outlet, ctx)(),
-          process.mdot,
-        );
+        const load = process_load(input(), inputForState(r.outlet, ctx)(), process.mdot);
         const base = present(process, input, r.outlet, load, false, ctx);
         return { ...base, fogged: r.fogged, condensate: r.condensate };
       }

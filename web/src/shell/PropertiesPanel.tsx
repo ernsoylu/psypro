@@ -131,8 +131,7 @@ export function PropertiesPanel({
     );
   }
 
-  const active =
-    INPUT_MODES.find((m) => m.state === point.mode) ?? INPUT_MODES[0];
+  const active = INPUT_MODES.find((m) => m.state === point.mode) ?? INPUT_MODES[0];
 
   return (
     <aside className="panel" aria-label={t('panel.label')}>

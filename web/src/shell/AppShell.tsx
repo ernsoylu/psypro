@@ -9,26 +9,26 @@
 
 import type { ReactNode } from 'react';
 
-/** The three regions the shell places around the viewport. */
+/** The regions the shell places around the active page. */
 export interface AppShellProps {
   /** Rendered in the 48px top bar. */
   nav: ReactNode;
+  /** The page tab strip, below the nav. */
+  tabs: ReactNode;
   /** Rendered in the 64px left rail. */
   toolbox: ReactNode;
-  /** Rendered in the central area. */
-  viewport: ReactNode;
-  /** Rendered in the 320px right rail. */
-  panel: ReactNode;
+  /** The active page — everything between the rails. */
+  children: ReactNode;
 }
 
-export function AppShell({ nav, toolbox, viewport, panel }: AppShellProps) {
+export function AppShell({ nav, tabs, toolbox, children }: AppShellProps) {
   return (
     <div className="shell">
       {nav}
+      {tabs}
       <div className="shell__body">
         {toolbox}
-        {viewport}
-        {panel}
+        {children}
       </div>
     </div>
   );

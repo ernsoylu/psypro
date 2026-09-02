@@ -77,7 +77,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 5 — Canvas Layer 0 (base grid) | **Done** — both layouts, pan/zoom, grid cached and the cache asserted |
 | 6 — Stores and interactive points | **Done** — three stores tested headless, drag round-trip measured at 61 FPS |
 | 7 — Processes and equipment models | **Done** — 15 worked textbook cases, protractor exact by construction |
-| 8–13 | Not started |
+| 8 — Coil model, cycle macros, Process Design page | **Done** — 14 coil cases, three BF forms agree, page verified against the real engine |
+| 9–13 | Not started |
 
 ---
 
@@ -378,6 +379,34 @@ mixing box, and returning an error there is refusing to model it.
 
 **Exit:** A macro run on a known design case reproduces published cycle values, and the coil's
 three bypass-factor forms agree to within tolerance on the same case.
+
+**Done.** The summer design case — 35 °C/40% outdoor, 24 °C/50% room, 20 kW sensible and 5 kW
+latent, 20% outdoor air, supply at 13 °C — resolves in the browser to:
+
+```
+ADP 10.20 °C · BF  t 0.1746  W 0.1739  h 0.1739 · coil SHR 0.7185
+air-side drop 33.41 kW · total load 33.21 kW · condensate 0.00372 kg/s
+supply 1.455 m³/s · 1.772 kg/s dry air · RSHF 0.800
+```
+
+Two things worth recording:
+
+- **The design derivation solves for the flow rather than using the one-shot.**
+  `ṁ_da = q_s/(c_p,ma·Δt)` and the §4.9 load split disagree by a fraction of a percent whenever
+  the humidity ratio moves, because `Δh − h_g,ref·ΔW` carries a `c_p,wv·Δ(W·t)` term a single
+  `c_p,ma` cannot. Sizing by one and reporting by the other produces a design whose own numbers
+  do not add up — 20.06 kW of load delivered by air sized for 20.00 kW. The flow is now solved
+  so the supply air absorbs *precisely* the stated loads under the decomposition the panel
+  prints, and a test asserts that on three different load splits.
+- **Resolving an exactly saturated state used to be impossible.** Asking for RH = 1 produced a
+  humidity ratio that came back as RH = 1.0000000000000002 one round trip later, which the
+  backend refuses as out of range — so the saturation curve could only be approached, never
+  reached. Apparatus dew points live on that curve, as do evaporative outlets. `from_db_w` now
+  treats a state inside its own supersaturation tolerance as saturated by definition.
+
+The page tests run against the **real engine**, with the module loaded off disk rather than
+mocked, so "the three bypass-factor forms agree in the rendered page" is a claim about the coil
+rather than about a stub.
 
 ---
 

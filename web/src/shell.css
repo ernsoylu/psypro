@@ -481,3 +481,217 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-label);
 }
+
+/* ── Page tabs ──────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex: none;
+  padding: 0 var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  padding: var(--space-3) var(--space-5);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-label);
+  cursor: pointer;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Pages ──────────────────────────────────────────────────────────────── */
+
+.page {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page__main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.page__empty {
+  margin: 0;
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.page--table {
+  overflow: auto;
+}
+
+/* ── The AHU schematic ──────────────────────────────────────────────────── */
+
+.schematic {
+  padding: var(--space-6);
+}
+
+.train {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 118px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-accent);
+}
+
+.block--inactive {
+  opacity: 0.45;
+  background: var(--color-surface);
+}
+
+.block--room {
+  width: 168px;
+  border-color: var(--color-accent);
+}
+
+.block__title {
+  color: var(--color-text);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+.block__sub {
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-section);
+}
+
+.block__node {
+  position: absolute;
+  top: calc(var(--space-2) * -1);
+  right: var(--space-3);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--chart-point);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-section);
+  font-weight: 600;
+}
+
+/* ── Cycle results strip ────────────────────────────────────────────────── */
+
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: var(--space-6) 0 0;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.results__cell dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+}
+
+.results__cell dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.results__unit {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+  font-weight: normal;
+}
+
+.panel__note {
+  margin: var(--space-4) var(--space-6) var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+  line-height: 1.5;
+}
+
+/* ── Data table ─────────────────────────────────────────────────────────── */
+
+.datatable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-label);
+}
+
+.datatable th,
+.datatable td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.datatable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+  font-weight: 600;
+  text-align: right;
+}
+
+.datatable tbody th {
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-weight: 600;
+  text-align: left;
+}
+
+.datatable td {
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+}
+
+.datatable__unit {
+  display: block;
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+  font-weight: normal;
+}

@@ -37,7 +37,9 @@ describe('chart labels', () => {
   it('anchors every label on a vertex of the curve it names', () => {
     for (const label of labels) {
       const named = GRID.find(
-        (c) => c.family === label.family && `${label.key.split(':')[0]}:${c.value}` === label.key,
+        (c) =>
+          c.family === label.family &&
+          `${label.key.split(':')[0]}:${c.value}` === label.key,
       );
       expect(named, `no curve matches ${label.key}`).toBeDefined();
 

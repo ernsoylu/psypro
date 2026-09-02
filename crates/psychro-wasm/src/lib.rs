@@ -630,6 +630,281 @@ pub fn protractor_shr(slope: f64) -> f64 {
     process::protractor::shr_from_slope(slope).unwrap_or(f64::NAN)
 }
 
+// ── Coils and the design derivation ─────────────────────────────────────────
+
+/// A cooling coil, as a datasheet would describe it.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct CoilOutput {
+    /// Air leaving the coil.
+    pub leaving: StatePointOutput,
+    /// The apparatus dew point: saturated air at the coil's effective surface.
+    pub adp: StatePointOutput,
+    /// Bypass factor read on temperature.
+    pub bf_temperature: f64,
+    /// Bypass factor read on humidity ratio.
+    pub bf_humidity_ratio: f64,
+    /// Bypass factor read on enthalpy.
+    pub bf_enthalpy: f64,
+    /// Coil sensible heat ratio, on the air-side enthalpy drop.
+    pub shr: f64,
+    /// Total load with the condensate credited, kW or Btu/h.
+    pub total_load: f64,
+    /// The air-side enthalpy drop alone, kW or Btu/h.
+    pub air_side_load: f64,
+    /// Condensate, kg/s or lb/h.
+    pub condensate: f64,
+    /// Whether the coil ran dry, so there is no apparatus dew point to speak of.
+    pub dry: bool,
+}
+
+fn present_coil(c: &psychro_core::coil::Coil, is_si: bool) -> CoilOutput {
+    let power = |q: f64| {
+        if is_si {
+            q
+        } else {
+            units::kw_to_btu_per_hour(q)
+        }
+    };
+    let flow = |m: f64| {
+        if is_si {
+            m
+        } else {
+            units::kg_per_second_to_lb_per_hour(m)
+        }
+    };
+    CoilOutput {
+        leaving: present(&c.leaving, is_si),
+        adp: present(&c.adp, is_si),
+        bf_temperature: c.bf_temperature,
+        bf_humidity_ratio: c.bf_humidity_ratio,
+        bf_enthalpy: c.bf_enthalpy,
+        shr: c.shr,
+        total_load: power(c.total_load),
+        air_side_load: power(c.air_side_load),
+        condensate: flow(c.condensate),
+        dry: c.dry,
+    }
+}
+
+/// Solves a coil from its entering and leaving states.
+///
+/// The apparatus dew point is the intersection of the extended process line
+/// with the saturation curve. All three bypass-factor forms come back so a
+/// result can be checked against whichever one a reference uses.
+#[wasm_bindgen]
+pub fn solve_coil(
+    entering: StatePointInput,
+    leaving: StatePointInput,
+    mdot_da: f64,
+) -> Result<CoilOutput, JsValue> {
+    if entering.is_si != leaving.is_si {
+        return Err(JsValue::from_str(
+            "both states must use the same unit system",
+        ));
+    }
+    let a = resolve(&entering).map_err(|e| JsValue::from_str(&e))?;
+    let b = resolve(&leaving).map_err(|e| JsValue::from_str(&e))?;
+    let c = psychro_core::coil::from_leaving(
+        &a,
+        &b,
+        mass_flow_si(mdot_da, entering.is_si),
+        &atmosphere_for(&entering),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_coil(&c, entering.is_si))
+}
+
+/// Solves a coil forward, from an apparatus dew point and a bypass factor.
+///
+/// The form a designer selects equipment in: pick a coil, which fixes the ADP,
+/// and a face velocity, which fixes the bypass factor.
+#[wasm_bindgen]
+pub fn solve_coil_from_adp(
+    entering: StatePointInput,
+    t_adp: f64,
+    bypass_factor: f64,
+    mdot_da: f64,
+) -> Result<CoilOutput, JsValue> {
+    let a = resolve(&entering).map_err(|e| JsValue::from_str(&e))?;
+    let adp = if entering.is_si {
+        t_adp
+    } else {
+        units::f_to_c(t_adp)
+    };
+    let c = psychro_core::coil::from_adp(
+        &a,
+        adp,
+        bypass_factor,
+        mass_flow_si(mdot_da, entering.is_si),
+        &atmosphere_for(&entering),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_coil(&c, entering.is_si))
+}
+
+/// The supply air condition and flow a room load implies.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct DesignAirOutput {
+    /// Room sensible heat ratio.
+    pub rshf: f64,
+    /// Dry-air mass flow, kg/s or lb/h.
+    pub mdot_da: f64,
+    /// Volumetric flow at the supply state, m³/s or ft³/min.
+    pub volumetric_flow: f64,
+    /// The supply state the room condition line reaches.
+    pub supply: StatePointOutput,
+}
+
+/// Cubic metres per second to cubic feet per minute.
+fn m3s_to_cfm(v: f64) -> f64 {
+    v * 2_118.880_003
+}
+
+/// Derives the supply air condition and flow for a room load.
+///
+/// `REQUIREMENTS.md` §4.9. The flow is *solved for* rather than taken from the
+/// textbook one-shot, so the air it sizes absorbs precisely the stated loads
+/// under the same decomposition the panel reports — see `coil::design_air`.
+#[wasm_bindgen]
+pub fn solve_design_air(
+    room: StatePointInput,
+    q_sensible: f64,
+    q_latent: f64,
+    t_supply: f64,
+) -> Result<DesignAirOutput, JsValue> {
+    let r = resolve(&room).map_err(|e| JsValue::from_str(&e))?;
+    let to_kw = |q: f64| {
+        if room.is_si {
+            q
+        } else {
+            units::btu_per_hour_to_kw(q)
+        }
+    };
+    let t = if room.is_si {
+        t_supply
+    } else {
+        units::f_to_c(t_supply)
+    };
+    let d = psychro_core::coil::design_air(
+        &r,
+        to_kw(q_sensible),
+        to_kw(q_latent),
+        t,
+        &atmosphere_for(&room),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+
+    Ok(DesignAirOutput {
+        rshf: d.rshf,
+        mdot_da: if room.is_si {
+            d.mdot_da
+        } else {
+            units::kg_per_second_to_lb_per_hour(d.mdot_da)
+        },
+        volumetric_flow: if room.is_si {
+            d.volumetric_flow
+        } else {
+            m3s_to_cfm(d.volumetric_flow)
+        },
+        supply: present(&d.supply, room.is_si),
+    })
+}
+
+/// A primary return-air cycle: every intermediate state, plus the coil.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct CycleOutput {
+    /// The mixed state entering the coil.
+    pub mixed: StatePointOutput,
+    /// The state leaving the coil — the supply air.
+    pub supply: StatePointOutput,
+    /// The coil that produces it.
+    pub coil: CoilOutput,
+    /// The room's own design derivation.
+    pub design: DesignAirOutput,
+    /// Outdoor-air dry-air mass flow, kg/s or lb/h.
+    pub mdot_outdoor: f64,
+    /// Total supply dry-air mass flow, kg/s or lb/h.
+    pub mdot_supply: f64,
+    /// Whether the mixing line crossed saturation and the mixture fogged.
+    pub mixing_fogged: bool,
+}
+
+/// Computes the primary return-air cycle in one action.
+///
+/// Every intermediate state comes back, so each one can be drawn and checked. A
+/// macro reporting only the coil load would be faster to write and impossible
+/// to trust.
+#[wasm_bindgen]
+pub fn solve_return_air_cycle(
+    outdoor: StatePointInput,
+    room: StatePointInput,
+    q_sensible: f64,
+    q_latent: f64,
+    t_supply: f64,
+    outdoor_fraction: f64,
+) -> Result<CycleOutput, JsValue> {
+    if outdoor.is_si != room.is_si {
+        return Err(JsValue::from_str(
+            "both states must use the same unit system",
+        ));
+    }
+    let is_si = room.is_si;
+    let o = resolve(&outdoor).map_err(|e| JsValue::from_str(&e))?;
+    let r = resolve(&room).map_err(|e| JsValue::from_str(&e))?;
+    let to_kw = |q: f64| {
+        if is_si {
+            q
+        } else {
+            units::btu_per_hour_to_kw(q)
+        }
+    };
+    let t = if is_si {
+        t_supply
+    } else {
+        units::f_to_c(t_supply)
+    };
+
+    let c = psychro_core::coil::return_air_cycle(
+        &o,
+        &r,
+        to_kw(q_sensible),
+        to_kw(q_latent),
+        t,
+        outdoor_fraction,
+        &atmosphere_for(&room),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+
+    let flow = |m: f64| {
+        if is_si {
+            m
+        } else {
+            units::kg_per_second_to_lb_per_hour(m)
+        }
+    };
+    Ok(CycleOutput {
+        mixed: present(&c.mixed, is_si),
+        supply: present(&c.supply, is_si),
+        coil: present_coil(&c.coil, is_si),
+        design: DesignAirOutput {
+            rshf: c.design.rshf,
+            mdot_da: flow(c.design.mdot_da),
+            volumetric_flow: if is_si {
+                c.design.volumetric_flow
+            } else {
+                m3s_to_cfm(c.design.volumetric_flow)
+            },
+            supply: present(&c.design.supply, is_si),
+        },
+        mdot_outdoor: flow(c.mdot_outdoor),
+        mdot_supply: flow(c.mdot_supply),
+        mixing_fogged: c.mixing_fogged,
+    })
+}
+
 /// Which chart layout coordinates are expressed in.
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

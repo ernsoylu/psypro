@@ -12,6 +12,7 @@
 
 pub mod backend;
 pub mod chart;
+pub mod coil;
 pub mod constants;
 pub mod process;
 pub mod saturation;

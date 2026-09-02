@@ -63,7 +63,10 @@ export function CrosshairLayer({
   // Flip the tooltip toward whichever side has room, so it never runs off the
   // canvas — the readout is the point of the HUD, and a clipped one is useless.
   const left = x + 14 + TOOLTIP_WIDTH > width ? x - 14 - TOOLTIP_WIDTH : x + 14;
-  const top = Math.min(Math.max(y - boxHeight / 2, 4), Math.max(height - boxHeight - 4, 4));
+  const top = Math.min(
+    Math.max(y - boxHeight / 2, 4),
+    Math.max(height - boxHeight - 4, 4),
+  );
 
   return (
     <Layer listening={false}>
