@@ -29,9 +29,9 @@ import { PsychGrid } from './PsychGrid';
 import { WeatherLayer } from './WeatherLayer';
 import { ZoneLayer } from './ZoneLayer';
 import { formatHud } from './format';
-import { toChart, ZOOM_STEP } from './geometry';
-import { useBaseGrid, type BaseGridParams } from './useBaseGrid';
-import { useChartTokens } from './useChartTokens';
+import { toChart, ZOOM_STEP, type Viewport } from './geometry';
+import { useBaseGrid, type BaseGridParams, type GridCurve } from './useBaseGrid';
+import { useChartTokens, type ChartTokens } from './useChartTokens';
 import { useChartTransform, type ChartTransform } from './useChartTransform';
 import { useT } from '../i18n/useT';
 import { state_from_chart_coordinates_clamped, type StatePointOutput } from '../psychro';
@@ -85,6 +85,20 @@ export interface ChartCanvasProps extends BaseGridParams {
   placing: boolean;
   /** Receives the transform so the toolbox can drive zoom and fit. */
   onTransformReady?: (transform: ChartTransform) => void;
+  /**
+   * Reports what was drawn, so an export can reproduce it.
+   *
+   * An export has to render the same curves at the same viewport the reader is
+   * looking at; asking the canvas afterwards is the only way to be sure it is
+   * the same one.
+   */
+  onDrawn?: (state: {
+    curves: GridCurve[];
+    viewport: Viewport;
+    tokens: ChartTokens;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 export function ChartCanvas({
@@ -106,6 +120,7 @@ export function ChartCanvas({
   onPlacePoint,
   placing,
   onTransformReady,
+  onDrawn,
   ...params
 }: ChartCanvasProps) {
   const t = useT();
@@ -124,6 +139,10 @@ export function ChartCanvas({
   } | null>(null);
 
   const curves = grid.curves.filter((c) => isCurveVisible(visible, c.family, c.value));
+
+  if (tokens && size.width > 0) {
+    onDrawn?.({ curves, viewport, tokens, width: size.width, height: size.height });
+  }
 
   /** Chart-space position and resolved state under a screen point. */
   const probe = useCallback(

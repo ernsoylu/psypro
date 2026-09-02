@@ -36,12 +36,21 @@ export interface TopNavProps {
   onLayoutChange: (layout: ChartLayout) => void;
   /** Engine version, or null while the module is still loading. */
   engineVersion: string | null;
+  /** Runs a file action. */
+  onFileAction: (action: FileActionId) => void;
+  /** Which export formats are on offer. */
+  exportFormats: { id: string; label: string }[];
+  /** Runs an export. */
+  onExport: (format: string) => void;
 }
 
-const FILE_ACTIONS: { key: TranslationKey; icon: IconName }[] = [
-  { key: 'nav.save', icon: 'save' },
-  { key: 'nav.open', icon: 'open' },
-  { key: 'nav.export', icon: 'export' },
+/** What a file action does, keyed so the handler can switch on it. */
+export type FileActionId = 'save' | 'open' | 'export';
+
+const FILE_ACTIONS: { id: FileActionId; key: TranslationKey; icon: IconName }[] = [
+  { id: 'save', key: 'nav.save', icon: 'save' },
+  { id: 'open', key: 'nav.open', icon: 'open' },
+  { id: 'export', key: 'nav.export', icon: 'export' },
 ];
 
 export function TopNav({
@@ -55,6 +64,9 @@ export function TopNav({
   layout,
   onLayoutChange,
   engineVersion,
+  onFileAction,
+  exportFormats,
+  onExport,
 }: TopNavProps) {
   const t = useT();
 
@@ -75,12 +87,33 @@ export function TopNav({
       </div>
 
       <div className="topnav__group">
-        {FILE_ACTIONS.map(({ key, icon }) => (
-          <button key={key} type="button" className="btn">
+        {FILE_ACTIONS.filter((a) => a.id !== 'export').map(({ id, key, icon }) => (
+          <button
+            key={key}
+            type="button"
+            className="btn"
+            onClick={() => onFileAction(id)}
+          >
             <Icon name={icon} />
             {t(key)}
           </button>
         ))}
+        <span className="btn btn--select">
+          <Icon name="export" />
+          <select
+            className="btn__select"
+            value=""
+            aria-label={t('nav.export')}
+            onChange={(e) => e.target.value && onExport(e.target.value)}
+          >
+            <option value="">{t('nav.export')}</option>
+            {exportFormats.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </span>
       </div>
 
       <div className="topnav__group">

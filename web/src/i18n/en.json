@@ -178,6 +178,8 @@
   "weather.binStepW": "Humidity-ratio increment",
   "weather.binNote": "0.5 to 6 degrees, per REQUIREMENTS §5. A finer increment shows more structure and puts fewer hours in each cell.",
 
+  "export.subtitle": "Elevation {altitude} {unit} · {layout} construction",
+
   "working.section": "SHOW THE WORKING",
   "working.realGas": "Real-gas correction",
   "working.realGasValues": "W = {real} real-gas · {ideal} ideal-gas · {percent}% apart",
