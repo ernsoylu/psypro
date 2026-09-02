@@ -367,6 +367,95 @@ pub fn state_from_chart_coordinates(
         .map_err(|e| JsValue::from_str(&e))
 }
 
+/// Recovers a state from a chart-space coordinate, **clamped to saturation**.
+///
+/// The unclamped [`state_from_chart_coordinates`] is right for a hit test and
+/// wrong for a drag. A pointer above the saturation curve is not a state, so the
+/// unclamped call correctly refuses it — but a user drags there within seconds of
+/// picking up the tool, and a point that stops responding mid-gesture reads as a
+/// bug rather than as physics.
+///
+/// This clamps instead: past saturation the point slides *along* the saturation
+/// curve at the dry bulb the pointer is over, which is what every psychrometric
+/// tool does and what the boundary means. The clamp lives here rather than in the
+/// view because deciding what "the saturated state at this dry bulb" is remains a
+/// thermodynamic question, and TypeScript must not answer one.
+///
+/// `clamped` in the result says whether it bit, so a caller can show that the
+/// pointer has left the physical region rather than silently disagreeing with it.
+#[wasm_bindgen]
+pub fn state_from_chart_coordinates_clamped(
+    x: f64,
+    y: f64,
+    layout: ChartLayout,
+    altitude: f64,
+    is_si: bool,
+    real_gas: bool,
+) -> Result<ClampedState, JsValue> {
+    let altitude_m = if is_si {
+        altitude
+    } else {
+        units::ft_to_m(altitude)
+    };
+    let atm = Atmosphere {
+        p_bar: pressure_from_altitude(altitude_m),
+        real_gas,
+    };
+    let (t_db, w) = chart::from_chart(ChartPoint { x, y }, layout.into());
+    let (state, clamped) = resolve_clamped(t_db, w, &atm).map_err(|e| JsValue::from_str(&e))?;
+    Ok(ClampedState {
+        state: present(&state, is_si),
+        clamped,
+    })
+}
+
+/// A resolved state, and whether the request had to be pulled back to the
+/// physical region to get one.
+#[wasm_bindgen]
+pub struct ClampedState {
+    state: StatePointOutput,
+    clamped: bool,
+}
+
+#[wasm_bindgen]
+impl ClampedState {
+    /// The resolved state.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn state(&self) -> StatePointOutput {
+        self.state
+    }
+
+    /// Whether the humidity ratio was pulled down to saturation.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn clamped(&self) -> bool {
+        self.clamped
+    }
+}
+
+/// Resolves `(t_db, W)`, pulling `W` back to the physical range if it has to.
+///
+/// Natively testable, for the same reason `resolve_from_chart` is: `JsValue`
+/// cannot be constructed outside a wasm context.
+fn resolve_clamped(
+    t_db: f64,
+    w: f64,
+    atm: &Atmosphere,
+) -> Result<(psychro_core::StatePoint, bool), String> {
+    match psychro_core::StatePoint::from_db_w(t_db, w, atm) {
+        Ok(s) => Ok((s, false)),
+        // Not a state: the pointer is above saturation or below zero humidity.
+        // Both have an obvious nearest physical point at the same dry bulb.
+        Err(_) => {
+            let rh = if w < 0.0 { 0.0 } else { 1.0 };
+            psychro_core::StatePoint::from_db_rh(t_db, rh, atm)
+                .map(|s| (s, true))
+                .map_err(|e| e.message().to_string())
+        }
+    }
+}
+
 /// Chart-space point to state, as a natively testable `Result<_, String>`.
 ///
 /// Split out from [`state_from_chart_coordinates`] because `JsValue` cannot be
@@ -692,6 +781,45 @@ mod chart_bridge_tests {
     }
 
     /// Points above saturation are refused rather than silently returned.
+    /// The clamp is what makes a drag survive the boundary. Above saturation
+    /// there is no state, so the unclamped call correctly refuses; this one
+    /// slides the point onto the saturation curve at the same dry bulb, which
+    /// is what the boundary means and what every psychrometric tool does.
+    #[test]
+    fn dragging_past_saturation_slides_along_the_curve() {
+        let atm = Atmosphere::sea_level();
+        // 30 C dry bulb with W = 0.040 is well above saturation (~0.0273).
+        let (state, clamped) = resolve_clamped(30.0, 0.040, &atm).unwrap();
+        assert!(clamped, "the request should have been pulled back");
+        assert!((state.rh - 1.0).abs() < 1e-9, "rh = {}", state.rh);
+        // The dry bulb the pointer was over is preserved: the point slides
+        // ALONG the curve rather than jumping to some nearest point on it.
+        assert!((state.t_db - 30.0).abs() < 1e-9);
+        assert!(state.w < 0.040);
+    }
+
+    /// Below zero humidity there is no state either, and the nearest one is the
+    /// dry-air line rather than the saturation curve.
+    #[test]
+    fn dragging_below_the_dry_air_line_clamps_to_it() {
+        let atm = Atmosphere::sea_level();
+        let (state, clamped) = resolve_clamped(24.0, -0.004, &atm).unwrap();
+        assert!(clamped);
+        assert!(state.w.abs() < 1e-12, "w = {}", state.w);
+        assert!((state.t_db - 24.0).abs() < 1e-9);
+    }
+
+    /// A request inside the physical region is passed through untouched, and
+    /// says so — a clamp that fired on every drag would be indistinguishable
+    /// from one that never fired.
+    #[test]
+    fn a_physical_request_is_not_clamped() {
+        let atm = Atmosphere::sea_level();
+        let (state, clamped) = resolve_clamped(24.0, 0.0093, &atm).unwrap();
+        assert!(!clamped);
+        assert!((state.w - 0.0093).abs() < 1e-12);
+    }
+
     #[test]
     fn inverse_mapping_rejects_supersaturated_points() {
         let atm = Atmosphere::sea_level();

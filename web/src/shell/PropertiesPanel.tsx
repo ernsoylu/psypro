@@ -1,26 +1,31 @@
 /**
  * Right-hand properties panel — known inputs above, derived properties below.
  *
- * This panel is where §3.2's three distinctions either survive or get lost, so
- * they are structural rather than editorial:
+ * Two-way, and the same both ways: typing a number and dragging the marker write
+ * the *same two fields* on the *same stored point*. There is no "chart point"
+ * and "typed point" to reconcile, which is the bug that shape of design
+ * produces on about the third interaction.
+ *
+ * This panel is also where §3.2's three distinctions either survive or get lost,
+ * so they are structural rather than editorial:
  *
  * * **Relative humidity and degree of saturation are separate rows**, each with
  *   its defining ratio beside the name. They agree only at 0% and 100%, and a
- *   panel that shows one of them labelled "humidity" teaches the conflation.
+ *   panel showing one of them labelled "humidity" teaches the conflation.
  * * **Wet-bulb is labelled thermodynamic**, because a psychrometer reads
  *   something else and the difference is not a rounding error.
  * * **Specific volume says "dry-air basis"** and density says "reference only",
  *   because a mass balance run on moist-air density is wrong by about 1% and
  *   nothing in the number itself says so.
- *
- * Phase 6 replaces the local input state with `usePsychStore` and adds
- * click-to-place. The presentation is already the shape that will need.
  */
 
+import { formatProperties } from '../chart/format';
 import { Icon } from './Icon';
-import { useT, type Translator } from '../i18n/useT';
-import { InputState, type StatePointOutput } from '../psychro';
+import { useT } from '../i18n/useT';
+import { InputState } from '../psychro';
 import type { TranslationKey } from '../i18n';
+import type { NewStatePoint, StatePoint } from '../store/usePsychStore';
+import type { ResolvedPoint } from '../store/useResolvedPoints';
 
 /** The second known property, paired with the unit label for each system. */
 export const INPUT_MODES = [
@@ -61,126 +66,87 @@ export const INPUT_MODES = [
   ip: TranslationKey;
 }[];
 
-/** One derived row: label, formatted value, unit. */
-interface DerivedRow {
-  label: string;
-  detail?: string;
-  value: string;
-  unit: string;
-}
-
-/** Builds the derived rows in the order an engineer reads them. */
-function derivedRows(o: StatePointOutput, si: boolean, t: Translator): DerivedRow[] {
-  const temp = t(si ? 'unit.celsius' : 'unit.fahrenheit');
-  return [
-    { label: t('prop.dryBulb'), value: o.dbt.toFixed(2), unit: temp },
-    { label: t('prop.wetBulb'), value: o.wbt.toFixed(2), unit: temp },
-    {
-      label: t(o.dew_point < 0 ? 'prop.frostPoint' : 'prop.dewPoint'),
-      value: o.dew_point.toFixed(2),
-      unit: temp,
-    },
-    {
-      label: t('prop.humidityRatio'),
-      value: o.humidity_ratio.toFixed(6),
-      unit: t(si ? 'unit.kgPerKg' : 'unit.lbPerLb'),
-    },
-    {
-      label: t('prop.humidityRatio'),
-      value: o.humidity_ratio_grains.toFixed(1),
-      unit: t('unit.grainsPerLb'),
-    },
-    {
-      label: t('prop.relativeHumidity'),
-      detail: t('prop.relativeHumidityFormula'),
-      value: o.rh.toFixed(2),
-      unit: t('unit.percent'),
-    },
-    {
-      label: t('prop.degreeOfSaturation'),
-      detail: t('prop.degreeOfSaturationFormula'),
-      value: o.degree_of_saturation.toFixed(2),
-      unit: t('unit.percent'),
-    },
-    {
-      label: t('prop.enthalpy'),
-      value: o.enthalpy.toFixed(3),
-      unit: t(si ? 'unit.kjPerKg' : 'unit.btuPerLb'),
-    },
-    {
-      label: t('prop.specificVolume'),
-      value: o.specific_volume.toFixed(5),
-      unit: t(si ? 'unit.m3PerKg' : 'unit.ft3PerLb'),
-    },
-    {
-      label: t('prop.density'),
-      value: o.density.toFixed(5),
-      unit: t(si ? 'unit.kgPerM3' : 'unit.lbPerFt3'),
-    },
-    {
-      label: t('prop.vapourPressure'),
-      value: o.vapor_pressure.toFixed(4),
-      unit: t(si ? 'unit.kilopascal' : 'unit.psi'),
-    },
-    {
-      label: t('prop.barometricPressure'),
-      value: o.barometric_pressure.toFixed(4),
-      unit: t(si ? 'unit.kilopascal' : 'unit.psi'),
-    },
-  ];
+/**
+ * How many decimals an input keeps when a drag rewrites it.
+ *
+ * A drag produces full precision, and echoing sixteen digits into a text field
+ * makes it unusable to type in. Humidity ratio needs six because at 0.009 a
+ * third decimal is a 10% error; a temperature needs two.
+ */
+function trim(mode: InputState, value: number): string {
+  return value.toFixed(mode === InputState.DbtHumidityRatio ? 6 : 2);
 }
 
 /** What the panel needs from the application above it. */
 export interface PropertiesPanelProps {
-  /** Dry-bulb temperature, as typed. */
-  dryBulb: string;
-  /** Accepts a new dry-bulb entry. */
-  onDryBulbChange: (value: string) => void;
-  /** Which second property is being supplied. */
-  mode: InputState;
-  /** Selects the second property. */
-  onModeChange: (mode: InputState) => void;
-  /** The second property's value, as typed. */
-  secondValue: string;
-  /** Accepts a new second-property entry. */
-  onSecondValueChange: (value: string) => void;
+  /** The point being edited, or null when nothing is selected. */
+  point: StatePoint | null;
+  /** That point's resolved properties. */
+  resolved: ResolvedPoint | null;
   /** Whether the document is in SI. */
   isSi: boolean;
   /** Whether the real-gas enhancement factor is applied. */
   realGas: boolean;
   /** Toggles the enhancement factor, which is the teaching-mode switch. */
   onRealGasChange: (realGas: boolean) => void;
-  /** The resolved state, or null while loading or on error. */
-  result: StatePointOutput | null;
-  /** Why the state could not be resolved, if it could not. */
-  error: string | null;
+  /** Writes a change back to the store. */
+  onChange: (patch: Partial<NewStatePoint>) => void;
+  /** Adds a point at a sensible default state. */
+  onAdd: () => void;
+  /** Deletes the selected point. */
+  onRemove: () => void;
 }
 
 export function PropertiesPanel({
-  dryBulb,
-  onDryBulbChange,
-  mode,
-  onModeChange,
-  secondValue,
-  onSecondValueChange,
+  point,
+  resolved,
   isSi,
   realGas,
   onRealGasChange,
-  result,
-  error,
+  onChange,
+  onAdd,
+  onRemove,
 }: PropertiesPanelProps) {
   const t = useT();
-  const active = INPUT_MODES.find((m) => m.state === mode) ?? INPUT_MODES[0];
+
+  if (!point) {
+    return (
+      <aside className="panel" aria-label={t('panel.label')}>
+        <div className="panel__header">
+          <span className="panel__title">{t('panel.noSelection')}</span>
+        </div>
+        <p className="panel__empty">{t('panel.emptyHint')}</p>
+        <div className="panel__fields">
+          <button type="button" className="btn btn--block" onClick={onAdd}>
+            {t('panel.addPoint')}
+          </button>
+        </div>
+      </aside>
+    );
+  }
+
+  const active =
+    INPUT_MODES.find((m) => m.state === point.mode) ?? INPUT_MODES[0];
 
   return (
     <aside className="panel" aria-label={t('panel.label')}>
       <div className="panel__header">
         <span className="panel__title">
           <span className="panel__swatch" />
-          {t('panel.title')}
+          <input
+            className="panel__name"
+            value={point.label}
+            aria-label={t('panel.pointLabel')}
+            onChange={(e) => onChange({ label: e.target.value })}
+          />
         </span>
-        <button type="button" className="btn btn--icon" aria-label={t('panel.menu')}>
-          <Icon name="menu" />
+        <button
+          type="button"
+          className="btn btn--icon"
+          aria-label={t('panel.removePoint')}
+          onClick={onRemove}
+        >
+          <Icon name="trash" />
         </button>
       </div>
 
@@ -196,9 +162,9 @@ export function PropertiesPanel({
           </span>
           <input
             className="field__input"
-            value={dryBulb}
+            value={trim(InputState.DbtWbt, point.dryBulb)}
             inputMode="decimal"
-            onChange={(e) => onDryBulbChange(e.target.value)}
+            onChange={(e) => onChange({ dryBulb: Number(e.target.value) })}
           />
         </label>
 
@@ -206,8 +172,8 @@ export function PropertiesPanel({
           <span className="field__label">{t('input.secondProperty')}</span>
           <select
             className="field__input"
-            value={mode}
-            onChange={(e) => onModeChange(Number(e.target.value) as InputState)}
+            value={point.mode}
+            onChange={(e) => onChange({ mode: Number(e.target.value) as InputState })}
           >
             {INPUT_MODES.map((m) => (
               <option key={m.key} value={m.state}>
@@ -224,9 +190,9 @@ export function PropertiesPanel({
           </span>
           <input
             className="field__input"
-            value={secondValue}
+            value={trim(point.mode, point.secondValue)}
             inputMode="decimal"
-            onChange={(e) => onSecondValueChange(e.target.value)}
+            onChange={(e) => onChange({ secondValue: Number(e.target.value) })}
           />
         </label>
 
@@ -243,19 +209,19 @@ export function PropertiesPanel({
         </label>
       </div>
 
-      {error ? (
+      {resolved?.error ? (
         <p className="panel__error" role="alert">
-          {error}
+          {resolved.error}
         </p>
       ) : null}
 
-      {result ? (
+      {resolved?.state ? (
         <>
           <h2 className="panel__section">{t('panel.sectionDerived')}</h2>
           <table className="readout">
             <tbody>
-              {derivedRows(result, isSi, t).map((row) => (
-                <tr key={`${row.label}-${row.unit}`}>
+              {formatProperties(resolved.state, isSi, t).map((row) => (
+                <tr key={row.key}>
                   <th scope="row" className="readout__label">
                     {row.label}
                     {row.detail ? (

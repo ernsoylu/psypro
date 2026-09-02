@@ -45,6 +45,10 @@ export interface ChartTokens {
   text: string;
   /** The canvas ground. */
   background: string;
+  /** State-point markers. */
+  point: string;
+  /** Process lines between points. */
+  process: string;
 }
 
 /** Reads the live palette off the document root, or `null` if it has not resolved. */
@@ -67,6 +71,8 @@ function readTokens(): ChartTokens | null {
     axis: read('--color-text-muted'),
     text: read('--color-text'),
     background: read('--color-bg'),
+    point: read('--chart-point'),
+    process: read('--chart-process'),
   };
 }
 

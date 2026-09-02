@@ -13,12 +13,14 @@ import init, {
   get_coordinate_mapping,
   mix_air,
   state_from_chart_coordinates,
+  state_from_chart_coordinates_clamped,
   ChartLayout,
   CurveFamilyId,
   InputState,
   StatePointInput,
   type ChartCurve,
   type ChartExtent,
+  type ClampedState,
   type Point2D,
   type StatePointOutput,
 } from './wasm/psychro';
@@ -35,8 +37,9 @@ export {
   get_coordinate_mapping,
   mix_air,
   state_from_chart_coordinates,
+  state_from_chart_coordinates_clamped,
 };
-export type { ChartCurve, ChartExtent, Point2D, StatePointOutput };
+export type { ChartCurve, ChartExtent, ClampedState, Point2D, StatePointOutput };
 
 let ready: Promise<void> | null = null;
 
