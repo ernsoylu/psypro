@@ -17,6 +17,7 @@ import { useT } from '../i18n/useT';
 import { envelopeById } from '../data';
 import type { TranslationKey } from '../i18n';
 import type { WeatherResult } from '../weather/epw.worker';
+import { UnitField } from '../shell/UnitField';
 
 /** What the page needs. */
 export interface WeatherPageProps {
@@ -174,32 +175,22 @@ export function WeatherPage({
           <span className="panel__title">{t('weather.binning')}</span>
         </div>
         <div className="panel__fields">
-          <label className="field">
-            <span className="field__label">
-              {t('weather.binStepT')}
-              <span className="field__unit">
-                {t(isSi ? 'unit.celsius' : 'unit.fahrenheit')}
-              </span>
-            </span>
-            <input
-              className="field__input"
-              value={String(binStepT)}
-              inputMode="decimal"
-              onChange={(e) => onBinStepT(Number(e.target.value))}
-            />
-          </label>
-          <label className="field">
-            <span className="field__label">
-              {t('weather.binStepW')}
-              <span className="field__unit">{t('unit.kgPerKg')}</span>
-            </span>
-            <input
-              className="field__input"
-              value={String(binStepW)}
-              inputMode="decimal"
-              onChange={(e) => onBinStepW(Number(e.target.value))}
-            />
-          </label>
+          {/* A bin width is a temperature *difference*, so it scales rather
+              than offsets: 1 °C of width is 1.8 °F of width, not 33.8. */}
+          <UnitField
+            label={t('weather.binStepT')}
+            dimension="temperatureDelta"
+            isSi={isSi}
+            value={binStepT}
+            onCommit={onBinStepT}
+          />
+          <UnitField
+            label={t('weather.binStepW')}
+            dimension="humidityRatio"
+            isSi={isSi}
+            value={binStepW}
+            onCommit={onBinStepW}
+          />
           <p className="panel__note">{t('weather.binNote')}</p>
         </div>
       </aside>

@@ -29,7 +29,8 @@ export type IconName =
   | 'fit'
   | 'menu'
   | 'trash'
-  | 'layers';
+  | 'layers'
+  | 'learn';
 
 const PATHS: Record<IconName, string> = {
   // A saturation curve rising to the right, which is the one shape that says
@@ -52,6 +53,7 @@ const PATHS: Record<IconName, string> = {
   menu: 'M12 5h.01M12 12h.01M12 19h.01',
   trash: 'M4 7h16M10 4h4M6 7l1 13h10l1-13M10 11v6M14 11v6',
   layers: 'M12 3 3 8l9 5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5',
+  learn: 'M12 7C10 5.5 7 5 4 5.5v12C7 17 10 17.5 12 19c2-1.5 5-2 8-1.5v-12C17 5 14 5.5 12 7m0 0v12',
 };
 
 /**

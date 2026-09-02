@@ -18,6 +18,23 @@ export type ToolId = 'select' | 'addPoint' | 'drawProcess' | 'drawShape' | 'cros
 /** The view actions, which act once rather than changing a mode. */
 export type ViewActionId = 'zoomIn' | 'zoomOut' | 'fitToWindow';
 
+/**
+ * Which panel the one right-hand rail is showing.
+ *
+ * One rail, three panels, and the rail is the only place any of them appear:
+ * the inspector for the selected point, the layers, and teaching mode. Two of
+ * these are toggles here rather than sections stacked inside the inspector,
+ * because a panel that scrolls past three unrelated subjects is a panel nobody
+ * reads to the bottom of.
+ */
+export type PanelId = 'properties' | 'layers' | 'teaching';
+
+const PANELS: { id: Exclude<PanelId, 'properties'>; icon: IconName; key: TranslationKey }[] =
+  [
+    { id: 'layers', icon: 'layers', key: 'tool.layers' },
+    { id: 'teaching', icon: 'learn', key: 'tool.teaching' },
+  ];
+
 const TOOLS: { id: ToolId; icon: IconName; key: TranslationKey }[] = [
   { id: 'select', icon: 'select', key: 'tool.select' },
   { id: 'addPoint', icon: 'point', key: 'tool.addPoint' },
@@ -40,18 +57,18 @@ export interface ToolboxProps {
   onToolChange: (tool: ToolId) => void;
   /** Runs a view action. */
   onViewAction: (action: ViewActionId) => void;
-  /** Whether the layers panel is open. */
-  showLayers: boolean;
-  /** Opens or closes the layers panel. */
-  onToggleLayers: () => void;
+  /** Which panel the right-hand rail is showing. */
+  panel: PanelId;
+  /** Shows a panel, or returns to the inspector when it is already showing. */
+  onPanelChange: (panel: PanelId) => void;
 }
 
 export function Toolbox({
   activeTool,
   onToolChange,
   onViewAction,
-  showLayers,
-  onToggleLayers,
+  panel,
+  onPanelChange,
 }: ToolboxProps) {
   const t = useT();
 
@@ -76,16 +93,19 @@ export function Toolbox({
       <span className="rule rule--horizontal" />
 
       <div className="toolbox__group" role="group" aria-label={t('tool.group.view')}>
-        <button
-          type="button"
-          className="tool"
-          aria-label={t('tool.layers')}
-          title={t('tool.layers')}
-          aria-pressed={showLayers}
-          onClick={onToggleLayers}
-        >
-          <Icon name="layers" size={17} />
-        </button>
+        {PANELS.map(({ id, icon, key }) => (
+          <button
+            key={id}
+            type="button"
+            className="tool"
+            aria-label={t(key)}
+            title={t(key)}
+            aria-pressed={panel === id}
+            onClick={() => onPanelChange(panel === id ? 'properties' : id)}
+          >
+            <Icon name={icon} size={17} />
+          </button>
+        ))}
         {VIEW_ACTIONS.map(({ id, icon, key }) => (
           <button
             key={id}

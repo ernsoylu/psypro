@@ -13,6 +13,8 @@
 
 import { create } from 'zustand';
 
+import { convertForUnits } from '../units';
+
 /** The elementary processes from `REQUIREMENTS.md` §4.1. */
 export type ProcessKind =
   /** Humidity ratio held, dry bulb moved. Horizontal on the chart. */
@@ -107,6 +109,13 @@ export interface ProcessState {
   removeForPoint: (pointId: string) => void;
   /** Replaces the whole list, for file open and for tests. */
   replaceAll: (processes: Process[]) => void;
+  /**
+   * Rewrites every process for a new unit system.
+   *
+   * A flow, a duty and a target temperature are quantities like a point's, and
+   * the effectivenesses are ratios that carry across untouched.
+   */
+  setForUnits: (toSi: boolean) => void;
 }
 
 let counter = 0;
@@ -153,6 +162,19 @@ export const useProcessStore = create<ProcessState>((set) => ({
     }),
 
   replaceAll: (processes) => set({ processes, selectedId: null }),
+
+  setForUnits: (toSi) =>
+    set((s) => ({
+      processes: s.processes.map((p) => ({
+        ...p,
+        mdot: convertForUnits('flow', p.mdot, toSi),
+        mdotSecond: convertForUnits('flow', p.mdotSecond, toSi),
+        targetT: convertForUnits('temperature', p.targetT, toSi),
+        duty: convertForUnits('power', p.duty, toSi),
+        targetW: convertForUnits('humidityRatio', p.targetW, toSi),
+        steamEnthalpy: convertForUnits('enthalpy', p.steamEnthalpy, toSi),
+      })),
+    })),
 }));
 
 /** Resets the id counter. Test-only; production ids are never reused. */

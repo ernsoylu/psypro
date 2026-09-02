@@ -23,61 +23,28 @@ import type { ReactNode } from 'react';
 
 import { formatProperties } from '../chart/format';
 import { Icon } from './Icon';
+import { UnitField } from './UnitField';
 import { useT } from '../i18n/useT';
 import { InputState } from '../psychro';
 import type { TranslationKey } from '../i18n';
+import { SECOND_PROPERTY_DIMENSION } from '../store/usePsychStore';
 import type { NewStatePoint, StatePoint } from '../store/usePsychStore';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
 
-/** The second known property, paired with the unit label for each system. */
-export const INPUT_MODES = [
-  {
-    state: InputState.DbtRh,
-    key: 'prop.relativeHumidity',
-    si: 'unit.percent',
-    ip: 'unit.percent',
-  },
-  {
-    state: InputState.DbtWbt,
-    key: 'prop.wetBulb',
-    si: 'unit.celsius',
-    ip: 'unit.fahrenheit',
-  },
-  {
-    state: InputState.DbtDewPoint,
-    key: 'prop.dewPoint',
-    si: 'unit.celsius',
-    ip: 'unit.fahrenheit',
-  },
-  {
-    state: InputState.DbtHumidityRatio,
-    key: 'prop.humidityRatio',
-    si: 'unit.kgPerKg',
-    ip: 'unit.lbPerLb',
-  },
-  {
-    state: InputState.DbtEnthalpy,
-    key: 'prop.enthalpy',
-    si: 'unit.kjPerKg',
-    ip: 'unit.btuPerLb',
-  },
-] as const satisfies readonly {
-  state: InputState;
-  key: TranslationKey;
-  si: TranslationKey;
-  ip: TranslationKey;
-}[];
-
 /**
- * How many decimals an input keeps when a drag rewrites it.
+ * The second known property, paired with the *kind* of quantity it is.
  *
- * A drag produces full precision, and echoing sixteen digits into a text field
- * makes it unusable to type in. Humidity ratio needs six because at 0.009 a
- * third decimal is a 10% error; a temperature needs two.
+ * The dimension, not a unit: which unit it is typed in is the field's business
+ * and the reader's choice, and the decimals a drag leaves behind come from that
+ * unit rather than from a table here.
  */
-function trim(mode: InputState, value: number): string {
-  return value.toFixed(mode === InputState.DbtHumidityRatio ? 6 : 2);
-}
+export const INPUT_MODES = [
+  { state: InputState.DbtRh, key: 'prop.relativeHumidity' },
+  { state: InputState.DbtWbt, key: 'prop.wetBulb' },
+  { state: InputState.DbtDewPoint, key: 'prop.dewPoint' },
+  { state: InputState.DbtHumidityRatio, key: 'prop.humidityRatio' },
+  { state: InputState.DbtEnthalpy, key: 'prop.enthalpy' },
+] as const satisfies readonly { state: InputState; key: TranslationKey }[];
 
 /** What the panel needs from the application above it. */
 export interface PropertiesPanelProps {
@@ -99,8 +66,6 @@ export interface PropertiesPanelProps {
   onRemove: () => void;
   /** The process editor, rendered below the derived properties. */
   processSection?: ReactNode;
-  /** The worked examples and the working, rendered below the processes. */
-  teachingSection?: ReactNode;
 }
 
 export function PropertiesPanel({
@@ -113,7 +78,6 @@ export function PropertiesPanel({
   onAdd,
   onRemove,
   processSection,
-  teachingSection,
 }: PropertiesPanelProps) {
   const t = useT();
 
@@ -130,7 +94,6 @@ export function PropertiesPanel({
           </button>
         </div>
         {processSection}
-        {teachingSection}
       </aside>
     );
   }
@@ -162,20 +125,13 @@ export function PropertiesPanel({
       <h2 className="panel__section">{t('panel.sectionInputs')}</h2>
 
       <div className="panel__fields">
-        <label className="field">
-          <span className="field__label">
-            {t('input.dryBulb')}
-            <span className="field__unit">
-              {t(isSi ? 'unit.celsius' : 'unit.fahrenheit')}
-            </span>
-          </span>
-          <input
-            className="field__input"
-            value={trim(InputState.DbtWbt, point.dryBulb)}
-            inputMode="decimal"
-            onChange={(e) => onChange({ dryBulb: Number(e.target.value) })}
-          />
-        </label>
+        <UnitField
+          label={t('input.dryBulb')}
+          dimension="temperature"
+          isSi={isSi}
+          value={point.dryBulb}
+          onCommit={(dryBulb) => onChange({ dryBulb })}
+        />
 
         <label className="field">
           <span className="field__label">{t('input.secondProperty')}</span>
@@ -192,18 +148,13 @@ export function PropertiesPanel({
           </select>
         </label>
 
-        <label className="field">
-          <span className="field__label">
-            {t(active.key)}
-            <span className="field__unit">{t(isSi ? active.si : active.ip)}</span>
-          </span>
-          <input
-            className="field__input"
-            value={trim(point.mode, point.secondValue)}
-            inputMode="decimal"
-            onChange={(e) => onChange({ secondValue: Number(e.target.value) })}
-          />
-        </label>
+        <UnitField
+          label={t(active.key)}
+          dimension={SECOND_PROPERTY_DIMENSION[point.mode]}
+          isSi={isSi}
+          value={point.secondValue}
+          onCommit={(secondValue) => onChange({ secondValue })}
+        />
 
         <label className="checkbox">
           <input
@@ -247,7 +198,6 @@ export function PropertiesPanel({
       ) : null}
 
       {processSection}
-      {teachingSection}
     </aside>
   );
 }

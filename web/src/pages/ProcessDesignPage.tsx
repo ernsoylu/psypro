@@ -17,6 +17,9 @@ import { Icon, type IconName } from '../shell/Icon';
 import { useT, type Translator } from '../i18n/useT';
 import type { TranslationKey } from '../i18n';
 import type { CycleOutput, StatePointOutput } from '../psychro';
+import { UnitField } from '../shell/UnitField';
+import { specificVolumeSi } from '../units';
+import type { DimensionId } from '../units';
 
 /** One block in the air-handling train. */
 interface Block {
@@ -103,16 +106,16 @@ export function ProcessDesignPage({
   const inputs: {
     key: keyof ProcessDesignPageProps['design'];
     label: TranslationKey;
-    unit: string;
+    dimension: DimensionId;
   }[] = [
-    { key: 'outdoorT', label: 'design.outdoorT', unit: temp },
-    { key: 'outdoorRh', label: 'design.outdoorRh', unit: t('unit.percent') },
-    { key: 'roomT', label: 'design.roomT', unit: temp },
-    { key: 'roomRh', label: 'design.roomRh', unit: t('unit.percent') },
-    { key: 'qSensible', label: 'design.qSensible', unit: power },
-    { key: 'qLatent', label: 'design.qLatent', unit: power },
-    { key: 'supplyT', label: 'design.supplyT', unit: temp },
-    { key: 'outdoorFraction', label: 'design.outdoorFraction', unit: '' },
+    { key: 'outdoorT', label: 'design.outdoorT', dimension: 'temperature' },
+    { key: 'outdoorRh', label: 'design.outdoorRh', dimension: 'percent' },
+    { key: 'roomT', label: 'design.roomT', dimension: 'temperature' },
+    { key: 'roomRh', label: 'design.roomRh', dimension: 'percent' },
+    { key: 'qSensible', label: 'design.qSensible', dimension: 'power' },
+    { key: 'qLatent', label: 'design.qLatent', dimension: 'power' },
+    { key: 'supplyT', label: 'design.supplyT', dimension: 'temperature' },
+    { key: 'outdoorFraction', label: 'design.outdoorFraction', dimension: 'ratio' },
   ];
 
   return (
@@ -201,18 +204,17 @@ export function ProcessDesignPage({
         <h2 className="panel__section">{t('design.sectionCase')}</h2>
         <div className="panel__fields">
           {inputs.map((field) => (
-            <label className="field" key={field.key}>
-              <span className="field__label">
-                {t(field.label)}
-                {field.unit ? <span className="field__unit">{field.unit}</span> : null}
-              </span>
-              <input
-                className="field__input"
-                value={String(design[field.key])}
-                inputMode="decimal"
-                onChange={(e) => onChange({ [field.key]: Number(e.target.value) })}
-              />
-            </label>
+            <UnitField
+              key={field.key}
+              label={t(field.label)}
+              dimension={field.dimension}
+              isSi={isSi}
+              value={design[field.key]}
+              // The supply air's own specific volume, so a designer may state
+              // the case in m³/h or cfm as readily as in kg/s.
+              vDaSi={specificVolumeSi(cycle?.supply.specific_volume ?? null, isSi)}
+              onCommit={(value) => onChange({ [field.key]: value })}
+            />
           ))}
         </div>
 

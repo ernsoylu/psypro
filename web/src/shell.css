@@ -155,6 +155,19 @@
   font-size: var(--font-size-label);
 }
 
+.field-inline__unit--select {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+  cursor: pointer;
+}
+
+.field-inline__unit--select:hover,
+.field-inline__unit--select:focus-visible {
+  color: var(--color-text);
+}
+
 .field-inline__input {
   width: 4ch;
   border: 0;
@@ -311,6 +324,30 @@
 
 .field__unit {
   font-family: var(--font-numeric);
+}
+
+/* The unit beside an input is a control, not a caption: it reads as the label
+   it replaced until you go near it, and then it behaves like the select it is. */
+.field__unit--select {
+  padding: 0 var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-label);
+  cursor: pointer;
+}
+
+.field__unit--select:hover,
+.field__unit--select:focus-visible {
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.field__unit--select:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .field__input {
@@ -543,7 +580,13 @@
 }
 
 .page--table {
+  /* A table is not a flex item. `.page` is a row flex container, so a stretched
+     `<table>` child gets the full page height and spreads its two rows to the
+     top and bottom of the viewport — header up here, values down there. Block
+     layout inside a scroll port is what a data table wants. */
+  display: block;
   overflow: auto;
+  padding: var(--space-4) var(--space-6) var(--space-6);
 }
 
 /* ── The AHU schematic ──────────────────────────────────────────────────── */
@@ -654,7 +697,10 @@
 /* ── Data table ─────────────────────────────────────────────────────────── */
 
 .datatable {
-  width: 100%;
+  /* Natural column widths, not the viewport's. A 100%-wide table with a dozen
+     narrow numeric columns pads every gap until the row reads as unrelated
+     numbers rather than one point's properties. */
+  width: auto;
   border-collapse: collapse;
   font-size: var(--font-size-label);
 }

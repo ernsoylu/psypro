@@ -13,11 +13,13 @@
  */
 
 import { Icon } from './Icon';
-import { useT, type Translator } from '../i18n/useT';
+import { useT } from '../i18n/useT';
+import type { DimensionId } from '../units';
 import type { TranslationKey } from '../i18n';
 import type { Process, ProcessKind } from '../store/useProcessStore';
 import type { StatePoint } from '../store/usePsychStore';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
+import { UnitField } from './UnitField';
 
 /** The process kinds a user can add, in the order §4.1 introduces them. */
 export const PROCESS_KINDS = [
@@ -37,50 +39,53 @@ const NEEDS_SECOND: Partial<Record<ProcessKind, TranslationKey>> = {
   link: 'process.targetPoint',
 };
 
-/** One editable number. */
+/** One editable number, and what kind of quantity it is. */
 interface Field {
   key: keyof Process;
   label: TranslationKey;
-  unit?: string;
-  step?: number;
+  dimension: DimensionId;
 }
 
-/** The fields each kind exposes, and nothing it does not use. */
-function fieldsFor(kind: ProcessKind, isSi: boolean, t: Translator): Field[] {
-  const temp = t(isSi ? 'unit.celsius' : 'unit.fahrenheit');
-  const flow = t(isSi ? 'unit.kgPerSecond' : 'unit.lbPerHour');
-  const power = t(isSi ? 'unit.kilowatt' : 'unit.btuPerHour');
-  const enthalpy = t(isSi ? 'unit.kjPerKg' : 'unit.btuPerLb');
-  const mdot: Field = { key: 'mdot', label: 'process.massFlow', unit: flow };
+/**
+ * The fields each kind exposes, and nothing it does not use.
+ *
+ * A flow field carries the `flow` dimension rather than a mass unit, which is
+ * what lets it be typed as m³/h or cfm against the inlet's specific volume —
+ * `ṁ = V̇ / v_da`, the dry-air basis §3.2 insists on.
+ */
+function fieldsFor(kind: ProcessKind): Field[] {
+  const mdot: Field = { key: 'mdot', label: 'process.massFlow', dimension: 'flow' };
 
   switch (kind) {
     case 'sensible':
-      return [mdot, { key: 'targetT', label: 'process.targetT', unit: temp }];
+      return [mdot, { key: 'targetT', label: 'process.targetT', dimension: 'temperature' }];
     case 'sensibleDuty':
-      return [mdot, { key: 'duty', label: 'process.duty', unit: power }];
+      return [mdot, { key: 'duty', label: 'process.duty', dimension: 'power' }];
     case 'steam':
       return [
         mdot,
+        { key: 'targetW', label: 'process.targetW', dimension: 'humidityRatio' },
         {
-          key: 'targetW',
-          label: 'process.targetW',
-          unit: t('unit.kgPerKg'),
-          step: 0.001,
+          key: 'steamEnthalpy',
+          label: 'process.steamEnthalpy',
+          dimension: 'enthalpy',
         },
-        { key: 'steamEnthalpy', label: 'process.steamEnthalpy', unit: enthalpy },
       ];
     case 'evaporative':
-      return [mdot, { key: 'effectiveness', label: 'process.effectiveness', step: 0.01 }];
+      return [
+        mdot,
+        { key: 'effectiveness', label: 'process.effectiveness', dimension: 'ratio' },
+      ];
     case 'recovery':
       return [
         mdot,
-        { key: 'epsSensible', label: 'process.epsSensible', step: 0.01 },
-        { key: 'epsLatent', label: 'process.epsLatent', step: 0.01 },
+        { key: 'epsSensible', label: 'process.epsSensible', dimension: 'ratio' },
+        { key: 'epsLatent', label: 'process.epsLatent', dimension: 'ratio' },
       ];
     case 'mix':
       return [
-        { key: 'mdot', label: 'process.massFlowA', unit: flow },
-        { key: 'mdotSecond', label: 'process.massFlowB', unit: flow },
+        { key: 'mdot', label: 'process.massFlowA', dimension: 'flow' },
+        { key: 'mdotSecond', label: 'process.massFlowB', dimension: 'flow' },
       ];
     case 'link':
       return [mdot];
@@ -97,6 +102,11 @@ export interface ProcessSectionProps {
   points: StatePoint[];
   /** Whether the document is in SI. */
   isSi: boolean;
+  /**
+   * The inlet's dry-air specific volume in m³/kg, or null when it has not
+   * resolved. A volumetric flow entry is only offered where this exists.
+   */
+  inletSpecificVolume: number | null;
   /** Whether adding a process is possible — it needs a point to start from. */
   canAdd: boolean;
   /** Writes a change back to the store. */
@@ -112,6 +122,7 @@ export function ProcessSection({
   resolved,
   points,
   isSi,
+  inletSpecificVolume,
   canAdd,
   onChange,
   onAdd,
@@ -183,19 +194,16 @@ export function ProcessSection({
               </label>
             ) : null}
 
-            {fieldsFor(process.kind, isSi, t).map((field) => (
-              <label className="field" key={field.key}>
-                <span className="field__label">
-                  {t(field.label)}
-                  {field.unit ? <span className="field__unit">{field.unit}</span> : null}
-                </span>
-                <input
-                  className="field__input"
-                  value={String(process[field.key] ?? '')}
-                  inputMode="decimal"
-                  onChange={(e) => onChange({ [field.key]: Number(e.target.value) })}
-                />
-              </label>
+            {fieldsFor(process.kind).map((field) => (
+              <UnitField
+                key={field.key}
+                label={t(field.label)}
+                dimension={field.dimension}
+                isSi={isSi}
+                value={(process[field.key] as number | undefined) ?? 0}
+                vDaSi={inletSpecificVolume}
+                onCommit={(value) => onChange({ [field.key]: value })}
+              />
             ))}
           </div>
 

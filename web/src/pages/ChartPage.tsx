@@ -7,25 +7,35 @@
 
 import type { ReactNode } from 'react';
 
+import type { PanelId } from '../shell/Toolbox';
+
 /** The chart page's regions. */
 export interface ChartPageProps {
   /** The canvas, inside its measured viewport. */
   viewport: ReactNode;
-  /** The properties panel. */
+  /** The properties panel — the rail's default occupant. */
   panel: ReactNode;
-  /** The layers panel, shown instead of the properties panel when open. */
+  /** The layers panel. */
   layers: ReactNode;
-  /** Which of the two right-hand panels is showing. */
-  showLayers: boolean;
+  /** Teaching mode: the worked examples and the working. */
+  teaching: ReactNode;
+  /** Which of the three right-hand panels is showing. */
+  activePanel: PanelId;
 }
 
-export function ChartPage({ viewport, panel, layers, showLayers }: ChartPageProps) {
+export function ChartPage({
+  viewport,
+  panel,
+  layers,
+  teaching,
+  activePanel,
+}: ChartPageProps) {
   return (
     <>
       {viewport}
-      {/* One rail, two panels. Two rails would leave under half the width for
+      {/* One rail, three panels. Two rails would leave under half the width for
           the chart at 1280px, and the chart is the thing being read. */}
-      {showLayers ? layers : panel}
+      {activePanel === 'layers' ? layers : activePanel === 'teaching' ? teaching : panel}
     </>
   );
 }

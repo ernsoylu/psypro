@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ChartLayout, CurveFamilyId, InputState } from '../psychro';
 import { altitudeInMetres, useProjectStore } from './useProjectStore';
 import { nextLabel, resetIdCounter, selectedPoint, usePsychStore } from './usePsychStore';
+import { defaultProcess, useProcessStore } from './useProcessStore';
 import {
   DEFAULT_STYLES,
   MAX_STYLE_WIDTH,
@@ -23,6 +24,7 @@ import {
 const project = () => useProjectStore.getState();
 const psych = () => usePsychStore.getState();
 const style = () => useStyleStore.getState();
+const processes = () => useProcessStore.getState();
 
 beforeEach(() => {
   resetIdCounter();
@@ -171,6 +173,71 @@ describe('point store', () => {
   it('reuses a freed cycle name rather than skipping to a number', () => {
     const taken = [{ label: 'OA' }, { label: 'MA' }] as never;
     expect(nextLabel(taken)).toBe('RA');
+  });
+});
+
+describe('the unit switch', () => {
+  it('converts a point rather than relabelling it', () => {
+    const id = psych().addPoint({
+      label: 'RA',
+      dryBulb: 24,
+      mode: InputState.DbtWbt,
+      secondValue: 17,
+    });
+
+    psych().setForUnits(false);
+
+    // 24 °C is 75.2 °F. Leaving the 24 alone would move the point across the
+    // chart on a switch that is meant only to change how it is written down.
+    const stored = psych().points.find((p) => p.id === id);
+    expect(stored?.dryBulb).toBeCloseTo(75.2, 10);
+    expect(stored?.secondValue).toBeCloseTo(62.6, 10);
+  });
+
+  it('leaves a percentage alone, because a percentage is a percentage', () => {
+    const id = psych().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    });
+
+    psych().setForUnits(false);
+    expect(psych().points.find((p) => p.id === id)?.secondValue).toBe(40);
+  });
+
+  it('returns a point to where it started on a round trip', () => {
+    const id = psych().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtHumidityRatio,
+      secondValue: 0.0142,
+    });
+
+    psych().setForUnits(false);
+    psych().setForUnits(true);
+
+    const stored = psych().points.find((p) => p.id === id);
+    expect(stored?.dryBulb).toBeCloseTo(35, 10);
+    expect(stored?.secondValue).toBeCloseTo(0.0142, 12);
+  });
+
+  it('converts a process flow, duty and target too', () => {
+    useProcessStore.setState({ processes: [], selectedId: null });
+    const id = processes().addProcess({
+      ...defaultProcess('sensibleDuty', 'pt-1'),
+      mdot: 1,
+      duty: 10,
+      targetT: 13,
+    });
+
+    processes().setForUnits(false);
+
+    const stored = processes().processes.find((p) => p.id === id);
+    // 1 kg/s is 7936.6 lb/h; 10 kW is 34121 Btu/h; 13 °C is 55.4 °F.
+    expect(stored?.mdot).toBeCloseTo(7936.641, 3);
+    expect(stored?.duty).toBeCloseTo(34121.41633, 4);
+    expect(stored?.targetT).toBeCloseTo(55.4, 10);
   });
 });
 
