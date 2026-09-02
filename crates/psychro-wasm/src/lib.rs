@@ -15,6 +15,7 @@
 use psychro_core::chart::{
     self, ChartDomain, ChartLayout as CoreLayout, ChartPoint, CurveFamily, GridSpec,
 };
+use psychro_core::process;
 use psychro_core::state::{pressure_from_altitude, Atmosphere, StatePoint};
 use psychro_core::units;
 use wasm_bindgen::prelude::*;
@@ -280,6 +281,353 @@ pub fn mix_air(
     let atm = atmosphere_for(&a);
     let mixed = StatePoint::from_h_w(h, w, &atm).map_err(|e| JsValue::from_str(e.message()))?;
     Ok(present(&mixed, a.is_si))
+}
+
+// ── Processes ───────────────────────────────────────────────────────────────
+
+/// What a process moved, in the unit system that was requested.
+///
+/// Loads are in kW or Btu/h and mass flows in kg/s or lb/h. Unit handling lives
+/// at this boundary and nowhere else, so a caller never has to know which system
+/// the engine works in.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct LoadOutput {
+    /// Total load. Positive when the process adds energy to the air.
+    pub total: f64,
+    /// Sensible load.
+    pub sensible: f64,
+    /// Latent load.
+    pub latent: f64,
+    /// Moisture added; negative for dehumidification.
+    pub moisture: f64,
+    /// Sensible heat ratio, `q_s / q_t`.
+    ///
+    /// `NaN` when the process moves no energy at all, which is the honest answer
+    /// — a ratio of zero to zero is not zero, and reporting `0` would be a
+    /// number a reader would believe.
+    pub shr: f64,
+    /// Whether `shr` carries a value.
+    pub has_shr: bool,
+}
+
+/// A resolved process: where the air ends up, and what it cost.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct ProcessOutput {
+    /// The state the air leaves in.
+    pub outlet: StatePointOutput,
+    /// What the process moved.
+    pub load: LoadOutput,
+    /// Whether the outlet sits close enough to saturation to need a second look.
+    ///
+    /// `REQUIREMENTS.md` §4.1 puts the practical limit of a "sensible-only"
+    /// process at about 85% RH. Past that, condensation begins and the
+    /// horizontal line the chart draws is a fiction.
+    pub near_saturation: bool,
+}
+
+/// Converts a core load into the requested unit system.
+fn present_load(load: &process::Load, is_si: bool) -> LoadOutput {
+    let power = |q: f64| {
+        if is_si {
+            q
+        } else {
+            units::kw_to_btu_per_hour(q)
+        }
+    };
+    let flow = |m: f64| {
+        if is_si {
+            m
+        } else {
+            units::kg_per_second_to_lb_per_hour(m)
+        }
+    };
+    LoadOutput {
+        total: power(load.total),
+        sensible: power(load.sensible),
+        latent: power(load.latent),
+        moisture: flow(load.moisture),
+        shr: load.shr.unwrap_or(f64::NAN),
+        has_shr: load.shr.is_some(),
+    }
+}
+
+/// Wraps a core process result for the boundary.
+fn present_process(r: &process::ProcessResult, is_si: bool) -> ProcessOutput {
+    ProcessOutput {
+        outlet: present(&r.outlet, is_si),
+        load: present_load(&r.load, is_si),
+        near_saturation: r.near_saturation,
+    }
+}
+
+/// Dry-air mass flow in kg/s, whatever the caller expressed it in.
+fn mass_flow_si(mdot_da: f64, is_si: bool) -> f64 {
+    if is_si {
+        mdot_da
+    } else {
+        units::lb_per_hour_to_kg_per_second(mdot_da)
+    }
+}
+
+/// The energy and moisture moved between two states.
+///
+/// The general case: draw a line between any two points and read what it costs.
+/// `mdot_da` is **dry-air** mass flow — `V̇ / v_da`, never `V̇ · ρ_moist`.
+#[wasm_bindgen]
+pub fn process_load(
+    from: StatePointInput,
+    to: StatePointInput,
+    mdot_da: f64,
+) -> Result<LoadOutput, JsValue> {
+    let a = resolve(&from).map_err(|e| JsValue::from_str(&e))?;
+    let b = resolve(&to).map_err(|e| JsValue::from_str(&e))?;
+    let l = process::load(&a, &b, mass_flow_si(mdot_da, from.is_si));
+    Ok(present_load(&l, from.is_si))
+}
+
+/// Sensible heating or cooling to a target dry-bulb temperature.
+///
+/// Horizontal on the chart. A load that is entirely sensible — SHR = 1.0, the
+/// data-centre case — is the normal use of this, not a degenerate one.
+#[wasm_bindgen]
+pub fn apply_sensible(
+    inlet: StatePointInput,
+    t_out: f64,
+    mdot_da: f64,
+) -> Result<ProcessOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let target = if inlet.is_si {
+        t_out
+    } else {
+        units::f_to_c(t_out)
+    };
+    let r = process::sensible_to(
+        &s,
+        target,
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_process(&r, inlet.is_si))
+}
+
+/// Sensible heating or cooling by a duty rather than to a temperature.
+///
+/// `q` is in kW or Btu/h, positive for heating: a reheat coil specified by its
+/// rating lands where the chart says it does.
+#[wasm_bindgen]
+pub fn apply_sensible_duty(
+    inlet: StatePointInput,
+    q: f64,
+    mdot_da: f64,
+) -> Result<ProcessOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let q_kw = if inlet.is_si {
+        q
+    } else {
+        units::btu_per_hour_to_kw(q)
+    };
+    let r = process::sensible_duty(
+        &s,
+        q_kw,
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_process(&r, inlet.is_si))
+}
+
+/// Steam (isothermal) humidification to a target humidity ratio.
+///
+/// `h_steam` is the enthalpy of the injected steam, in kJ/kg or Btu/lb. It is a
+/// parameter rather than a constant because dry saturated steam at 100 °C and
+/// superheated steam from an electrode cylinder put the outlet in different
+/// places.
+#[wasm_bindgen]
+pub fn apply_steam_humidification(
+    inlet: StatePointInput,
+    w_target: f64,
+    h_steam: f64,
+    mdot_da: f64,
+) -> Result<SteamOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let h = if inlet.is_si {
+        h_steam
+    } else {
+        units::btu_per_lb_to_kj_per_kg(h_steam)
+    };
+    let m = mass_flow_si(mdot_da, inlet.is_si);
+    let r = process::steam_humidify(&s, w_target, h, m, &atmosphere_for(&inlet))
+        .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(SteamOutput {
+        process: present_process(&r.process, inlet.is_si),
+        steam_flow: if inlet.is_si {
+            r.steam_flow
+        } else {
+            units::kg_per_second_to_lb_per_hour(r.steam_flow)
+        },
+    })
+}
+
+/// A humidification process and the water it consumed.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct SteamOutput {
+    /// Where the air ended up and what it cost.
+    pub process: ProcessOutput,
+    /// Steam injected, kg/s or lb/h. `ṁ_steam = ṁ_da·(W_out − W_in)`.
+    pub steam_flow: f64,
+}
+
+/// Evaporative (adiabatic) humidification along a constant wet-bulb line.
+///
+/// `effectiveness` is the saturation effectiveness
+/// `ε = (t_in − t_out)/(t_in − t_wb,in)`. Typical values: air washer with
+/// opposed spray banks 0.95–0.98, 300 mm rigid media 0.88–0.91, residential
+/// aspen or mesh media 0.50–0.60.
+#[wasm_bindgen]
+pub fn apply_evaporative(
+    inlet: StatePointInput,
+    effectiveness: f64,
+    mdot_da: f64,
+) -> Result<ProcessOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let r = process::evaporative(
+        &s,
+        effectiveness,
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_process(&r, inlet.is_si))
+}
+
+/// Air-to-air energy recovery, per ASHRAE Standard 84.
+///
+/// `eps_sensible` acts on temperature and `eps_latent` on humidity ratio, as two
+/// independently measured ratings. Set `eps_latent` to zero for the
+/// sensible-only family: fixed plate, heat wheel, heat pipe, run-around loop,
+/// thermosiphon.
+#[wasm_bindgen]
+pub fn apply_energy_recovery(
+    supply_in: StatePointInput,
+    exhaust_in: StatePointInput,
+    eps_sensible: f64,
+    eps_latent: f64,
+    mdot_da: f64,
+) -> Result<ProcessOutput, JsValue> {
+    if supply_in.is_si != exhaust_in.is_si {
+        return Err(JsValue::from_str(
+            "both streams must use the same unit system",
+        ));
+    }
+    let supply = resolve(&supply_in).map_err(|e| JsValue::from_str(&e))?;
+    let exhaust = resolve(&exhaust_in).map_err(|e| JsValue::from_str(&e))?;
+    let r = process::energy_recovery(
+        &supply,
+        &exhaust,
+        eps_sensible,
+        eps_latent,
+        mass_flow_si(mdot_da, supply_in.is_si),
+        &atmosphere_for(&supply_in),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_process(&r, supply_in.is_si))
+}
+
+/// Adiabatic mixing of two airstreams on a dry-air mass basis.
+///
+/// Unlike [`mix_air`], this takes the two mass flows rather than a fraction, and
+/// reports the **Winter V** case: when the mix line crosses saturation the
+/// mixture fogs, settles on the saturation curve at its own enthalpy, and drops
+/// the excess water out. That happens in every cold-climate mixing box, and a
+/// tool that returns an error there is refusing to model it.
+#[wasm_bindgen]
+pub fn apply_mixing(
+    a: StatePointInput,
+    mdot_a: f64,
+    b: StatePointInput,
+    mdot_b: f64,
+) -> Result<MixOutput, JsValue> {
+    if a.is_si != b.is_si {
+        return Err(JsValue::from_str(
+            "both streams must use the same unit system",
+        ));
+    }
+    let sa = resolve(&a).map_err(|e| JsValue::from_str(&e))?;
+    let sb = resolve(&b).map_err(|e| JsValue::from_str(&e))?;
+    let ma = mass_flow_si(mdot_a, a.is_si);
+    let mb = mass_flow_si(mdot_b, a.is_si);
+
+    match process::mix(&sa, ma, &sb, mb, &atmosphere_for(&a)) {
+        process::MixResult::Mixed { outlet, mdot_da } => Ok(MixOutput {
+            outlet: present(&outlet, a.is_si),
+            mdot_da: if a.is_si {
+                mdot_da
+            } else {
+                units::kg_per_second_to_lb_per_hour(mdot_da)
+            },
+            fogged: false,
+            condensate: 0.0,
+        }),
+        process::MixResult::WinterV {
+            outlet,
+            mdot_da,
+            condensate,
+        } => Ok(MixOutput {
+            outlet: present(&outlet, a.is_si),
+            mdot_da: if a.is_si {
+                mdot_da
+            } else {
+                units::kg_per_second_to_lb_per_hour(mdot_da)
+            },
+            fogged: true,
+            condensate: if a.is_si {
+                condensate
+            } else {
+                units::kg_per_second_to_lb_per_hour(condensate)
+            },
+        }),
+        process::MixResult::NoFlow => Err(JsValue::from_str("both streams have zero mass flow")),
+        process::MixResult::Failed(e) => Err(JsValue::from_str(e.message())),
+    }
+}
+
+/// A mixed airstream, and whether it fogged getting there.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct MixOutput {
+    /// The mixed state.
+    pub outlet: StatePointOutput,
+    /// Combined dry-air mass flow, kg/s or lb/h.
+    pub mdot_da: f64,
+    /// Whether the mix line crossed saturation.
+    pub fogged: bool,
+    /// Water condensed out of the mixture, kg/s or lb/h. Zero unless it fogged.
+    pub condensate: f64,
+}
+
+/// The enthalpy-to-moisture slope for a sensible heat ratio.
+///
+/// `Δh/ΔW = 2499.86/(1 − SHR)`. Returns `NaN` at SHR = 1, where the slope is
+/// infinite because the process moves no moisture — the data-centre case, drawn
+/// as the horizontal line it is.
+#[wasm_bindgen]
+#[must_use]
+pub fn protractor_slope(shr: f64) -> f64 {
+    process::protractor::slope_from_shr(shr).unwrap_or(f64::NAN)
+}
+
+/// The sensible heat ratio for an enthalpy-to-moisture slope.
+///
+/// Inverse of [`protractor_slope`]. A zero slope is SHR = 0: all latent, the
+/// dehumidification-only vector.
+#[wasm_bindgen]
+#[must_use]
+pub fn protractor_shr(slope: f64) -> f64 {
+    process::protractor::shr_from_slope(slope).unwrap_or(f64::NAN)
 }
 
 /// Which chart layout coordinates are expressed in.
@@ -818,6 +1166,48 @@ mod chart_bridge_tests {
         let (state, clamped) = resolve_clamped(24.0, 0.0093, &atm).unwrap();
         assert!(!clamped);
         assert!((state.w - 0.0093).abs() < 1e-12);
+    }
+
+    /// The unit system is an input at this boundary and nowhere else, so this
+    /// is where a load can come back off by a factor of 3412.
+    #[test]
+    fn a_load_is_the_same_physics_in_either_unit_system() {
+        let atm = Atmosphere::sea_level();
+        let inlet = StatePoint::from_db_rh(13.0, 0.90, &atm).unwrap();
+        let si = process::sensible_to(&inlet, 23.0, 2.0, &atm).unwrap();
+        let si_load = present_load(&si.load, true);
+        let ip_load = present_load(&si.load, false);
+
+        assert!((units::btu_per_hour_to_kw(ip_load.total) - si_load.total).abs() < 1e-9);
+        assert!(
+            (units::lb_per_hour_to_kg_per_second(ip_load.moisture) - si_load.moisture).abs()
+                < 1e-12
+        );
+        // A ratio is a ratio in both systems.
+        assert!((ip_load.shr - si_load.shr).abs() < 1e-12);
+    }
+
+    /// `mass_flow_si` is the only place a caller's flow is interpreted, so a
+    /// round trip through it has to be exact.
+    #[test]
+    fn mass_flow_round_trips_through_the_boundary() {
+        let si = mass_flow_si(2.0, true);
+        assert!((si - 2.0).abs() < 1e-12);
+        let from_ip = mass_flow_si(units::kg_per_second_to_lb_per_hour(2.0), false);
+        assert!((from_ip - 2.0).abs() < 1e-9, "got {from_ip}");
+    }
+
+    /// SHR has no value when a process moves no energy, and `has_shr` is how a
+    /// caller finds out — a `NaN` that silently formats as "NaN" in a panel is
+    /// worse than an explicit absence.
+    #[test]
+    fn a_zero_load_reports_no_sensible_heat_ratio() {
+        let atm = Atmosphere::sea_level();
+        let s = StatePoint::from_db_rh(24.0, 0.5, &atm).unwrap();
+        let out = present_load(&process::load(&s, &s, 1.0), true);
+        assert!(!out.has_shr);
+        assert!(out.shr.is_nan());
+        assert!(out.total.abs() < 1e-12);
     }
 
     #[test]

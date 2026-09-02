@@ -18,12 +18,13 @@
  */
 
 import { useCallback, useRef, useState, type WheelEvent } from 'react';
-import { Stage } from 'react-konva';
+import { Layer, Stage } from 'react-konva';
 import type Konva from 'konva';
 
 import { ChartAxes } from './ChartAxes';
 import { CrosshairLayer } from './CrosshairLayer';
 import { PointLayer } from './PointLayer';
+import { ProcessLayer, ProtractorLine } from './ProcessLayer';
 import { PsychGrid } from './PsychGrid';
 import { formatHud } from './format';
 import { toChart, ZOOM_STEP } from './geometry';
@@ -35,6 +36,7 @@ import { state_from_chart_coordinates_clamped, type StatePointOutput } from '../
 import { isCurveVisible } from '../store/useStyleStore';
 import type { CurveFamilyId } from '../psychro';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
+import type { ResolvedProcess } from '../store/useResolvedProcesses';
 
 /** What the canvas needs, and what it hands back to the shell. */
 export interface ChartCanvasProps extends BaseGridParams {
@@ -46,6 +48,19 @@ export interface ChartCanvasProps extends BaseGridParams {
   points: ResolvedPoint[];
   /** Which point is selected. */
   selectedId: string | null;
+  /** The document's processes, already resolved. */
+  processes: ResolvedProcess[];
+  /** Which process is selected. */
+  selectedProcessId: string | null;
+  /** Selects a process. */
+  onSelectProcess: (id: string) => void;
+  /**
+   * The SHR reference line to draw, or null for none.
+   *
+   * `slope: null` inside a present object means SHR = 1 — a horizontal line —
+   * which is different from drawing nothing.
+   */
+  protractor: { slope: number | null; through: { x: number; y: number } } | null;
   /** Which curve families are drawn. */
   visible: Record<CurveFamilyId, boolean>;
   /** Whether the numerals are drawn. */
@@ -69,6 +84,10 @@ export function ChartCanvas({
   altitude,
   points,
   selectedId,
+  processes,
+  selectedProcessId,
+  onSelectProcess,
+  protractor,
   visible,
   showLabels,
   showCrosshair,
@@ -202,6 +221,13 @@ export function ChartCanvas({
               isSi={isSi}
             />
           ) : null}
+          <ProcessLayer
+            processes={processes}
+            selectedId={selectedProcessId}
+            viewport={viewport}
+            tokens={tokens}
+            onSelect={onSelectProcess}
+          />
           <PointLayer
             points={points}
             selectedId={selectedId}
@@ -214,6 +240,19 @@ export function ChartCanvas({
             onMove={onMovePoint}
             onSelect={onSelectPoint}
           />
+          {protractor ? (
+            <Layer listening={false}>
+              <ProtractorLine
+                slope={protractor.slope}
+                layout={params.layout}
+                through={protractor.through}
+                viewport={viewport}
+                tokens={tokens}
+                width={size.width}
+                height={size.height}
+              />
+            </Layer>
+          ) : null}
           {showCrosshair ? (
             <CrosshairLayer
               at={hover?.at ?? null}

@@ -37,9 +37,20 @@ export interface ResolvedPoint {
 
 /** The document settings a resolution depends on. */
 export interface ResolveContext {
+  /** Whether the document is in SI. */
   isSi: boolean;
+  /**
+   * Elevation **as the document expresses it**, in metres or feet.
+   *
+   * The engine converts. Passing metres here when the document is in feet is
+   * the one unit mistake this layer can make, so the field says which it is.
+   */
+  altitude: number;
+  /** The same elevation in metres, for the grid, which takes only metres. */
   altitudeM: number;
+  /** Whether the real-gas enhancement factor is applied. */
   realGas: boolean;
+  /** Which chart construction positions are expressed in. */
   layout: ChartLayout;
 }
 
@@ -55,27 +66,18 @@ export function resolvePoint(
   point: StatePoint,
   ctx: ResolveContext,
 ): ResolvedPoint {
-  const input = new StatePointInput(
-    point.dryBulb,
-    point.secondValue,
-    point.mode,
-    ctx.altitudeM,
-    ctx.isSi,
-    ctx.realGas,
-  );
-  try {
-    const state = calculate_state(input);
-    const mapped = get_coordinate_mapping(
-      new StatePointInput(
-        point.dryBulb,
-        point.secondValue,
-        point.mode,
-        ctx.altitudeM,
-        ctx.isSi,
-        ctx.realGas,
-      ),
-      ctx.layout,
+  const build = () =>
+    new StatePointInput(
+      point.dryBulb,
+      point.secondValue,
+      point.mode,
+      ctx.altitude,
+      ctx.isSi,
+      ctx.realGas,
     );
+  try {
+    const state = calculate_state(build());
+    const mapped = get_coordinate_mapping(build(), ctx.layout);
     return {
       point,
       state,
@@ -103,9 +105,12 @@ export function useResolvedPoints(
   points: StatePoint[],
   ctx: ResolveContext,
 ): ResolvedPoint[] {
-  const { isSi, altitudeM, realGas, layout } = ctx;
+  const { isSi, altitude, altitudeM, realGas, layout } = ctx;
   return useMemo(
-    () => points.map((p) => resolvePoint(p, { isSi, altitudeM, realGas, layout })),
-    [points, isSi, altitudeM, realGas, layout],
+    () =>
+      points.map((p) =>
+        resolvePoint(p, { isSi, altitude, altitudeM, realGas, layout }),
+      ),
+    [points, isSi, altitude, altitudeM, realGas, layout],
   );
 }
