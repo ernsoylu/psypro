@@ -66,9 +66,7 @@ function useMeasuredSize(ref: React.RefObject<HTMLElement | null>): Size {
         const { clientWidth: width, clientHeight: height } = el;
         // Bail out when nothing moved: a ResizeObserver fires on any layout
         // pass, and a fresh object every time would re-render the whole canvas.
-        return prev.width === width && prev.height === height
-          ? prev
-          : { width, height };
+        return prev.width === width && prev.height === height ? prev : { width, height };
       });
 
     read();

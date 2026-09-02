@@ -307,13 +307,38 @@ impl StatePoint {
                  the fog region is not yet modelled"
             )));
         }
+        // Exactly saturated is a state the boundary makes hard to ask for. A
+        // humidity ratio produced by asking for RH = 1 comes back as an RH of
+        // 1.0000000000000002 one round trip later, and the backend refuses that
+        // as out of range — so the *only* way to resolve the saturation curve
+        // would be to approach it from below and never arrive. Saturation is
+        // where an apparatus dew point lives and where an evaporative cooler
+        // ends, so this is not an edge case: it is a place the tool has to work.
+        //
+        // Within the guard's own tolerance the state IS saturated, and its
+        // relative humidity is 1 by definition rather than by measurement.
+        let saturated = w >= w_s * (1.0 - 1e-9);
         let v = backend::specific_volume(t_db, w, p)?;
         Ok(Self {
             t_db,
-            t_wb: backend::wet_bulb(t_db, w, p)?,
-            t_dp: backend::dew_point(t_db, w, p)?,
+            t_wb: if saturated {
+                // At saturation the wet bulb is the dry bulb, and asking the
+                // backend risks the same out-of-range refusal.
+                t_db
+            } else {
+                backend::wet_bulb(t_db, w, p)?
+            },
+            t_dp: if saturated {
+                t_db
+            } else {
+                backend::dew_point(t_db, w, p)?
+            },
             w,
-            rh: backend::relative_humidity(t_db, w, p)?,
+            rh: if saturated {
+                1.0
+            } else {
+                backend::relative_humidity(t_db, w, p)?
+            },
             // Degree of saturation is W/W_s. Reported separately from relative
             // humidity on purpose: the two agree only at 0% and 100%, and
             // conflating them is one of the field's most common errors.

@@ -96,7 +96,11 @@ describe('point store', () => {
       secondValue: 50,
     });
 
-    psych().updatePoint(a, { dryBulb: 30, mode: InputState.DbtHumidityRatio, secondValue: 0.012 });
+    psych().updatePoint(a, {
+      dryBulb: 30,
+      mode: InputState.DbtHumidityRatio,
+      secondValue: 0.012,
+    });
 
     const first = psych().points.find((p) => p.id === a);
     expect(first).toMatchObject({ id: a, label: 'OA', dryBulb: 30, secondValue: 0.012 });

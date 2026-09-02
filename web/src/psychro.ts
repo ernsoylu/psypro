@@ -21,6 +21,10 @@ import init, {
   process_load,
   protractor_shr,
   protractor_slope,
+  solve_coil,
+  solve_coil_from_adp,
+  solve_design_air,
+  solve_return_air_cycle,
   state_from_chart_coordinates,
   state_from_chart_coordinates_clamped,
   ChartLayout,
@@ -30,6 +34,9 @@ import init, {
   type ChartCurve,
   type ChartExtent,
   type ClampedState,
+  type CoilOutput,
+  type CycleOutput,
+  type DesignAirOutput,
   type LoadOutput,
   type MixOutput,
   type ProcessOutput,
@@ -58,6 +65,10 @@ export {
   process_load,
   protractor_shr,
   protractor_slope,
+  solve_coil,
+  solve_coil_from_adp,
+  solve_design_air,
+  solve_return_air_cycle,
   state_from_chart_coordinates,
   state_from_chart_coordinates_clamped,
 };
@@ -65,6 +76,9 @@ export type {
   ChartCurve,
   ChartExtent,
   ClampedState,
+  CoilOutput,
+  CycleOutput,
+  DesignAirOutput,
   LoadOutput,
   MixOutput,
   Point2D,
@@ -77,8 +91,14 @@ let ready: Promise<void> | null = null;
 
 /**
  * Initialises the WASM module once. Safe to await from many callers.
+ *
+ * `source` overrides where the module comes from. The browser needs nothing —
+ * the generated loader fetches it — but a test runner has no HTTP server, and
+ * mocking the engine there would mean a page test asserted the mock rather than
+ * the coil. Handing it the bytes off disk instead lets the rendered page be
+ * checked against the real thermodynamics.
  */
-export function initEngine(): Promise<void> {
-  ready ??= init().then(() => undefined);
+export function initEngine(source?: BufferSource | WebAssembly.Module): Promise<void> {
+  ready ??= (source ? init(source) : init()).then(() => undefined);
   return ready;
 }

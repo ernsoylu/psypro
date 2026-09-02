@@ -106,8 +106,14 @@ const { defaultProcess } = await import('./useProcessStore');
 const { ChartLayout, InputState } = await import('../psychro');
 
 const POINTS = new Map([
-  ['pt-1', { id: 'pt-1', label: 'OA', dryBulb: 20, mode: InputState.DbtRh, secondValue: 50 }],
-  ['pt-2', { id: 'pt-2', label: 'RA', dryBulb: 24, mode: InputState.DbtRh, secondValue: 40 }],
+  [
+    'pt-1',
+    { id: 'pt-1', label: 'OA', dryBulb: 20, mode: InputState.DbtRh, secondValue: 50 },
+  ],
+  [
+    'pt-2',
+    { id: 'pt-2', label: 'RA', dryBulb: 24, mode: InputState.DbtRh, secondValue: 40 },
+  ],
 ]);
 
 const CTX = {

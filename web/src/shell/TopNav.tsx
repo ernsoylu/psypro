@@ -123,7 +123,9 @@ export function TopNav({
             aria-label={t('nav.elevationLabel')}
             onChange={(e) => onAltitudeChange(e.target.value)}
           />
-          <span className="field-inline__unit">{t(isSi ? 'unit.metre' : 'unit.foot')}</span>
+          <span className="field-inline__unit">
+            {t(isSi ? 'unit.metre' : 'unit.foot')}
+          </span>
         </label>
 
         <button

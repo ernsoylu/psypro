@@ -74,7 +74,8 @@ describe('theming', () => {
     // fork cannot rebrand by editing theme.css, which is the whole contract.
     const colour = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|color-mix)\(/g;
     const offenders = FILES.filter(
-      (f) => !THEME_FILES.has(f.name) && colour.test(f.text) && (colour.lastIndex = 0) === 0,
+      (f) =>
+        !THEME_FILES.has(f.name) && colour.test(f.text) && (colour.lastIndex = 0) === 0,
     ).map((f) => f.name);
     expect(offenders).toEqual([]);
   });
@@ -108,7 +109,9 @@ describe('internationalisation', () => {
   const keys = new Set(Object.keys(en));
 
   it('resolves every key the source asks for', () => {
-    const asked = FILES.flatMap((f) => captures(f.text, /\bt\(\s*'([^']+)'/g));
+    // Either quote style: `.prettierrc.json` settles the convention, but a
+    // formatting choice must not be able to break a correctness gate.
+    const asked = FILES.flatMap((f) => captures(f.text, /\bt\(\s*['"]([^'"]+)['"]/g));
     expect(asked.filter((k) => !keys.has(k))).toEqual([]);
     expect(asked.length).toBeGreaterThan(0);
   });
@@ -117,7 +120,9 @@ describe('internationalisation', () => {
     const text = FILES.map((f) => f.text).join('\n');
     // Keys reached through a table (`{ key: 'nav.save' }`) count as referenced,
     // so this looks for the quoted key anywhere rather than only inside `t(`.
-    expect([...keys].filter((k) => !text.includes(`'${k}'`))).toEqual([]);
+    expect(
+      [...keys].filter((k) => !text.includes(`'${k}'`) && !text.includes(`"${k}"`)),
+    ).toEqual([]);
   });
 
   it('has no user-facing literal in a component', () => {

@@ -62,10 +62,7 @@ export interface ResolveContext {
  * will do within seconds of picking up the tool. The error text comes back so
  * the panel can say *why* rather than showing blanks.
  */
-export function resolvePoint(
-  point: StatePoint,
-  ctx: ResolveContext,
-): ResolvedPoint {
+export function resolvePoint(point: StatePoint, ctx: ResolveContext): ResolvedPoint {
   const build = () =>
     new StatePointInput(
       point.dryBulb,
@@ -108,9 +105,7 @@ export function useResolvedPoints(
   const { isSi, altitude, altitudeM, realGas, layout } = ctx;
   return useMemo(
     () =>
-      points.map((p) =>
-        resolvePoint(p, { isSi, altitude, altitudeM, realGas, layout }),
-      ),
+      points.map((p) => resolvePoint(p, { isSi, altitude, altitudeM, realGas, layout })),
     [points, isSi, altitude, altitudeM, realGas, layout],
   );
 }
