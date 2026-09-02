@@ -1,0 +1,68 @@
+{
+  "$comment": "Envelopes are DATA, not code (REQUIREMENTS.md §5). Adding one means writing down what a standard publishes — its limits — and nothing else. The polygon is computed by the engine at the document's own altitude, because a relative-humidity bound is a curve whose shape depends on barometric pressure. Bounds are in SI and are omitted when the standard does not state them; `null` means unbounded, not zero.",
+  "envelopes": [
+    {
+      "id": "tc99-recommended",
+      "name": "TC 9.9 Recommended",
+      "group": "datacenter",
+      "colorVar": "--chart-zone-datacenter",
+      "source": "ASHRAE TC 9.9, Thermal Guidelines for Data Processing Environments",
+      "rationale": "The upper dew-point bound guards against condensation on cold heat sinks and against corrosion and conductive anodic filament growth; the lower bound guards against electrostatic discharge. The band is far taller than a comfort zone because its floor is a −9 °C dew point, not a comfort humidity.",
+      "limits": { "tMin": 18, "tMax": 27, "dpMin": -9, "dpMax": 15, "rhMax": 60 }
+    },
+    {
+      "id": "tc99-a1",
+      "name": "TC 9.9 Allowable A1",
+      "group": "datacenter",
+      "colorVar": "--chart-zone-datacenter",
+      "source": "ASHRAE TC 9.9, Thermal Guidelines for Data Processing Environments",
+      "rationale": "Enterprise servers and storage. Allowable means the equipment is warranted to operate here, not that it should be run here continuously.",
+      "limits": { "tMin": 15, "tMax": 32, "rhMin": 20, "rhMax": 80, "dpMax": 17 }
+    },
+    {
+      "id": "tc99-a2",
+      "name": "TC 9.9 Allowable A2",
+      "group": "datacenter",
+      "colorVar": "--chart-zone-datacenter",
+      "source": "ASHRAE TC 9.9, Thermal Guidelines for Data Processing Environments",
+      "rationale": "Volume servers, storage and networking equipment.",
+      "limits": { "tMin": 10, "tMax": 35, "rhMin": 20, "rhMax": 80, "dpMax": 21 }
+    },
+    {
+      "id": "tc99-a3",
+      "name": "TC 9.9 Allowable A3",
+      "group": "datacenter",
+      "colorVar": "--chart-zone-datacenter",
+      "source": "ASHRAE TC 9.9, Thermal Guidelines for Data Processing Environments",
+      "rationale": "Equipment specified for wider environmental ranges, which is what makes economiser hours available in more climates.",
+      "limits": { "tMin": 5, "tMax": 40, "rhMin": 8, "rhMax": 85, "dpMax": 24 }
+    },
+    {
+      "id": "tc99-a4",
+      "name": "TC 9.9 Allowable A4",
+      "group": "datacenter",
+      "colorVar": "--chart-zone-datacenter",
+      "source": "ASHRAE TC 9.9, Thermal Guidelines for Data Processing Environments",
+      "rationale": "The widest class, intended for facilities running chiller-less on outdoor air for most of the year.",
+      "limits": { "tMin": 5, "tMax": 45, "rhMin": 8, "rhMax": 90, "dpMax": 24 }
+    },
+    {
+      "id": "std55-summer",
+      "name": "Std 55 comfort — summer",
+      "group": "comfort",
+      "colorVar": "--chart-zone-comfort",
+      "source": "ASHRAE Standard 55, graphic comfort zone method",
+      "rationale": "0.5 clo clothing, sedentary activity, still air. The upper humidity bound is a humidity ratio rather than a relative humidity: the standard limits absolute moisture, because that is what governs skin wettedness.",
+      "limits": { "tMin": 23.5, "tMax": 28, "wMin": 0.004, "wMax": 0.012 }
+    },
+    {
+      "id": "std55-winter",
+      "name": "Std 55 comfort — winter",
+      "group": "comfort",
+      "colorVar": "--chart-zone-comfort",
+      "source": "ASHRAE Standard 55, graphic comfort zone method",
+      "rationale": "1.0 clo clothing, sedentary activity, still air. Cooler than the summer zone by about two kelvin, for the same reason people wear more indoors in winter.",
+      "limits": { "tMin": 20, "tMax": 24.5, "wMin": 0.004, "wMax": 0.012 }
+    }
+  ]
+}

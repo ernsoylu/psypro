@@ -19,6 +19,7 @@ import { ChartPage } from './pages/ChartPage';
 import { DataTablePage } from './pages/DataTablePage';
 import { ProcessDesignPage } from './pages/ProcessDesignPage';
 import { AppShell } from './shell/AppShell';
+import { LayerOptions } from './shell/LayerOptions';
 import { PageTabs, type PageId } from './shell/PageTabs';
 import { ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
@@ -36,7 +37,9 @@ import {
 import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
 import { useResolvedPoints } from './store/useResolvedPoints';
 import { useResolvedProcesses } from './store/useResolvedProcesses';
+import { envelopeById } from './data';
 import { useCycleStore } from './store/useCycleStore';
+import { useProfileStore } from './store/useProfileStore';
 import { useStyleStore } from './store/useStyleStore';
 import {
   engine_version,
@@ -56,12 +59,20 @@ export function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolId>('select');
   const [page, setPage] = useState<PageId>('chart');
+  const [showLayers, setShowLayers] = useState(false);
 
   const project = useProjectStore();
   const psych = usePsychStore();
   const style = useStyleStore();
   const proc = useProcessStore();
   const design = useCycleStore();
+  const profile = useProfileStore();
+
+  /** The envelopes the active profile and the layer toggles between them show. */
+  const envelopes = profile.visibleEnvelopes.flatMap((id) => {
+    const e = envelopeById(id);
+    return e ? [e] : [];
+  });
 
   const altitudeM = altitudeInMetres(project);
   const altitude = Number(project.altitude) || 0;
@@ -249,7 +260,13 @@ export function App() {
         <PageTabs active={page} onChange={setPage} unavailable={['weather', 'report']} />
       }
       toolbox={
-        <Toolbox activeTool={tool} onToolChange={setTool} onViewAction={onViewAction} />
+        <Toolbox
+          activeTool={tool}
+          onToolChange={setTool}
+          onViewAction={onViewAction}
+          showLayers={showLayers}
+          onToggleLayers={() => setShowLayers((s) => !s)}
+        />
       }
     >
       {page === 'design' ? (
@@ -264,6 +281,19 @@ export function App() {
         <DataTablePage points={resolved} isSi={project.isSi} />
       ) : (
         <ChartPage
+          showLayers={showLayers}
+          layers={
+            <LayerOptions
+              visible={style.visible}
+              onToggleFamily={style.toggleFamily}
+              showLabels={style.showLabels}
+              onShowLabels={style.setShowLabels}
+              profileId={profile.profileId}
+              onProfileChange={profile.setProfile}
+              visibleEnvelopes={profile.visibleEnvelopes}
+              onToggleEnvelope={profile.toggleEnvelope}
+            />
+          }
           viewport={
             <Viewport>
               {engineReady ? (
@@ -280,6 +310,7 @@ export function App() {
                   selectedProcessId={proc.selectedId}
                   onSelectProcess={proc.selectProcess}
                   protractor={protractor}
+                  envelopes={envelopes}
                   visible={style.visible}
                   showLabels={style.showLabels}
                   showCrosshair={style.showCrosshair && tool === 'crosshair'}

@@ -28,7 +28,8 @@ export type IconName =
   | 'zoomOut'
   | 'fit'
   | 'menu'
-  | 'trash';
+  | 'trash'
+  | 'layers';
 
 const PATHS: Record<IconName, string> = {
   // A saturation curve rising to the right, which is the one shape that says
@@ -50,6 +51,7 @@ const PATHS: Record<IconName, string> = {
   fit: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   menu: 'M12 5h.01M12 12h.01M12 19h.01',
   trash: 'M4 7h16M10 4h4M6 7l1 13h10l1-13M10 11v6M14 11v6',
+  layers: 'M12 3 3 8l9 5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5',
 };
 
 /**

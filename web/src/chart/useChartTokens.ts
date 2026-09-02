@@ -49,6 +49,10 @@ export interface ChartTokens {
   point: string;
   /** Process lines between points. */
   process: string;
+  /** Comfort-zone fill. */
+  zoneComfort: string;
+  /** Equipment-envelope fill. */
+  zoneDatacenter: string;
 }
 
 /** Reads the live palette off the document root, or `null` if it has not resolved. */
@@ -73,6 +77,8 @@ function readTokens(): ChartTokens | null {
     background: read('--color-bg'),
     point: read('--chart-point'),
     process: read('--chart-process'),
+    zoneComfort: read('--chart-zone-comfort'),
+    zoneDatacenter: read('--chart-zone-datacenter'),
   };
 }
 

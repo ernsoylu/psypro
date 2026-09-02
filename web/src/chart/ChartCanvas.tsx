@@ -26,6 +26,7 @@ import { CrosshairLayer } from './CrosshairLayer';
 import { PointLayer } from './PointLayer';
 import { ProcessLayer, ProtractorLine } from './ProcessLayer';
 import { PsychGrid } from './PsychGrid';
+import { ZoneLayer } from './ZoneLayer';
 import { formatHud } from './format';
 import { toChart, ZOOM_STEP } from './geometry';
 import { useBaseGrid, type BaseGridParams } from './useBaseGrid';
@@ -37,6 +38,7 @@ import { isCurveVisible } from '../store/useStyleStore';
 import type { CurveFamilyId } from '../psychro';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
+import type { Envelope } from '../data';
 
 /** What the canvas needs, and what it hands back to the shell. */
 export interface ChartCanvasProps extends BaseGridParams {
@@ -61,6 +63,8 @@ export interface ChartCanvasProps extends BaseGridParams {
    * which is different from drawing nothing.
    */
   protractor: { slope: number | null; through: { x: number; y: number } } | null;
+  /** The standards envelopes to draw beneath the points. */
+  envelopes: Envelope[];
   /** Which curve families are drawn. */
   visible: Record<CurveFamilyId, boolean>;
   /** Whether the numerals are drawn. */
@@ -88,6 +92,7 @@ export function ChartCanvas({
   selectedProcessId,
   onSelectProcess,
   protractor,
+  envelopes,
   visible,
   showLabels,
   showCrosshair,
@@ -209,6 +214,15 @@ export function ChartCanvas({
             tokens={tokens}
             width={size.width}
             height={size.height}
+          />
+          <ZoneLayer
+            envelopes={envelopes}
+            viewport={viewport}
+            tokens={tokens}
+            layout={params.layout}
+            altitude={altitude}
+            isSi={isSi}
+            realGas={params.realGas}
           />
           {showLabels ? (
             <ChartAxes

@@ -78,7 +78,8 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 6 — Stores and interactive points | **Done** — three stores tested headless, drag round-trip measured at 61 FPS |
 | 7 — Processes and equipment models | **Done** — 15 worked textbook cases, protractor exact by construction |
 | 8 — Coil model, cycle macros, Process Design page | **Done** — 14 coil cases, three BF forms agree, page verified against the real engine |
-| 9–13 | Not started |
+| 9 — Standards overlays and industry profiles | **Done** — envelopes are data, polygons computed at altitude, profiles proven inert |
+| 10–13 | Not started |
 
 ---
 
@@ -427,6 +428,26 @@ rather than about a stub.
 **Exit:** Overlays toggle, respect the active unit system and altitude, and sit correctly
 beneath points and above the grid. Switching profile changes only presentation and defaults —
 a state point's computed properties are byte-identical across profiles.
+
+**Done.** `src/data/profiles.test.ts` resolves 24 °C / 50% RH under all three profiles and
+asserts the eleven properties are identical *as strings*, so a difference in the last bit fails
+rather than rounding away.
+
+**An envelope is stored as limits, never as a polygon.** That is the decision the phase turns
+on. A relative-humidity bound is a *curve* whose shape depends on barometric pressure, so an
+outline traced once at sea level is wrong in Denver — and wrong invisibly, which is worse than
+wrong loudly. Storing what the standard publishes and computing the shape means a contributor
+adds an envelope by writing down its bounds and nothing else, which is what §5 asks for.
+
+Membership is judged against the limits rather than the drawn outline, so the answer to "is
+this room compliant?" does not depend on how finely the zone was sampled for the screen. The
+check reports *how far* outside and *which bound*, because a data centre two kelvin over is a
+different conversation from one twelve kelvin over, and the bound that is violated says which
+mechanism is at risk.
+
+Every envelope carries its rationale into the UI, per §10.3: a dew-point ceiling that exists to
+stop conductive anodic filament growth is a different constraint from one that exists for
+comfort, and a reader who knows which is which can judge exceeding it.
 
 ---
 
