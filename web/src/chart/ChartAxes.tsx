@@ -51,7 +51,7 @@ export function ChartAxes({
 }: ChartAxesProps) {
   const t = useT();
   const layer = useRef<Konva.Layer>(null);
-  const labels = chartLabels(curves, layout);
+  const labels = chartLabels(curves, layout, isSi);
 
   // The two axis titles, placed in screen space rather than chart space: they
   // describe the edge of the canvas, not a position on the chart, so they must

@@ -22,7 +22,7 @@
 import type { GridCurve } from '../chart/useBaseGrid';
 import type { ResolvedPoint } from '../store/useResolvedPoints';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
-import { CurveFamilyId } from '../psychro';
+import { ChartLayout, CurveFamilyId } from '../psychro';
 
 /** What a DXF export draws. */
 export interface DxfExportInput {
@@ -38,6 +38,23 @@ export interface DxfExportInput {
    * comparable footing while keeping the drawing a faithful model.
    */
   humidityScale: number;
+  /**
+   * Which construction the coordinates are in.
+   *
+   * It decides *which axis* `humidityScale` applies to: ASHRAE puts humidity
+   * ratio on `y` and Mollier i-x exchanges the two, so scaling `y`
+   * unconditionally stretched the enthalpy axis by a thousand on a Mollier
+   * export and left humidity ratio spanning 0.03 units.
+   */
+  layout: ChartLayout;
+}
+
+/** How far a point's label sits from its marker, in drawing units. */
+const LABEL_OFFSET = 0.4;
+
+/** The per-axis scale factors for a layout. */
+function axisScale(layout: ChartLayout, humidityScale: number): [number, number] {
+  return layout === ChartLayout.MollierIx ? [humidityScale, 1] : [1, humidityScale];
 }
 
 /** One DXF group code and its value. */
@@ -90,7 +107,12 @@ function layerTable(): string[] {
 }
 
 /** A LWPOLYLINE from a flat chart-space run. */
-function polyline(coords: Float64Array, layer: string, scale: number): string[] {
+function polyline(
+  coords: Float64Array,
+  layer: string,
+  sx: number,
+  sy: number,
+): string[] {
   const vertices = coords.length / 2;
   if (vertices < 2) return [];
   const out = [
@@ -102,14 +124,17 @@ function polyline(coords: Float64Array, layer: string, scale: number): string[] 
     pair(70, 0),
   ];
   for (let i = 0; i < coords.length; i += 2) {
-    out.push(pair(10, coords[i]!.toFixed(6)), pair(20, (coords[i + 1]! * scale).toFixed(6)));
+    out.push(
+      pair(10, (coords[i]! * sx).toFixed(6)),
+      pair(20, (coords[i + 1]! * sy).toFixed(6)),
+    );
   }
   return out;
 }
 
 /** Renders the chart as a DXF R2000 ASCII drawing. */
 export function chartToDxf(input: DxfExportInput): string {
-  const s = input.humidityScale;
+  const [sx, sy] = axisScale(input.layout, input.humidityScale);
   const body: string[] = [
     pair(0, 'SECTION'),
     pair(2, 'HEADER'),
@@ -127,7 +152,12 @@ export function chartToDxf(input: DxfExportInput): string {
     const saturation =
       curve.family === CurveFamilyId.RelativeHumidity && Math.abs(curve.value - 1) < 1e-9;
     body.push(
-      ...polyline(curve.coords, saturation ? 'PSY-SATURATION' : LAYER[curve.family], s),
+      ...polyline(
+        curve.coords,
+        saturation ? 'PSY-SATURATION' : LAYER[curve.family],
+        sx,
+        sy,
+      ),
     );
   }
 
@@ -136,10 +166,10 @@ export function chartToDxf(input: DxfExportInput): string {
     body.push(
       pair(0, 'LINE'),
       pair(8, 'PSY-PROCESS'),
-      pair(10, process.from.x.toFixed(6)),
-      pair(20, (process.from.y * s).toFixed(6)),
-      pair(11, process.to.x.toFixed(6)),
-      pair(21, (process.to.y * s).toFixed(6)),
+      pair(10, (process.from.x * sx).toFixed(6)),
+      pair(20, (process.from.y * sy).toFixed(6)),
+      pair(11, (process.to.x * sx).toFixed(6)),
+      pair(21, (process.to.y * sy).toFixed(6)),
     );
   }
 
@@ -148,12 +178,15 @@ export function chartToDxf(input: DxfExportInput): string {
     body.push(
       pair(0, 'POINT'),
       pair(8, 'PSY-POINTS'),
-      pair(10, point.position.x.toFixed(6)),
-      pair(20, (point.position.y * s).toFixed(6)),
+      pair(10, (point.position.x * sx).toFixed(6)),
+      pair(20, (point.position.y * sy).toFixed(6)),
       pair(0, 'TEXT'),
       pair(8, 'PSY-POINTS'),
-      pair(10, (point.position.x + 0.4).toFixed(6)),
-      pair(20, (point.position.y * s + 0.4).toFixed(6)),
+      // The nudge is in drawing units, after scaling: both axes span tens of
+      // units once `humidityScale` has done its work, so 0.4 clears the marker
+      // on either of them.
+      pair(10, (point.position.x * sx + LABEL_OFFSET).toFixed(6)),
+      pair(20, (point.position.y * sy + LABEL_OFFSET).toFixed(6)),
       pair(40, '0.8'),
       pair(1, point.point.label),
     );

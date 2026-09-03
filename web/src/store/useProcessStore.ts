@@ -120,9 +120,26 @@ export interface ProcessState {
 
 let counter = 0;
 
+/** The prefix every generated process id carries. */
+const ID_PREFIX = 'pr-';
+
 function nextId(): string {
   counter += 1;
-  return `pr-${counter}`;
+  return `${ID_PREFIX}${counter}`;
+}
+
+/**
+ * Moves the counter past every id in a document that was handed to us.
+ *
+ * Same reason as `usePsychStore.adoptIds`: a saved file carries its own ids,
+ * and minting a duplicate makes two processes respond to one selection.
+ */
+function adoptIds(processes: readonly Process[]): void {
+  for (const p of processes) {
+    if (!p.id.startsWith(ID_PREFIX)) continue;
+    const n = Number(p.id.slice(ID_PREFIX.length));
+    if (Number.isInteger(n) && n > counter) counter = n;
+  }
 }
 
 export const useProcessStore = create<ProcessState>((set) => ({
@@ -161,7 +178,10 @@ export const useProcessStore = create<ProcessState>((set) => ({
       };
     }),
 
-  replaceAll: (processes) => set({ processes, selectedId: null }),
+  replaceAll: (processes) => {
+    adoptIds(processes);
+    set({ processes, selectedId: null });
+  },
 
   setForUnits: (toSi) =>
     set((s) => ({

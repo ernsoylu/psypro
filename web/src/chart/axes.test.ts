@@ -109,4 +109,26 @@ describe('chart labels', () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(chartLabels(GRID, ChartLayout.Ashrae).map((l) => l.key)).toEqual(keys);
   });
+
+  /**
+   * The grid is generated over an SI domain, so every `value` on it is SI —
+   * but the axis title already reads "°F" on an IP document. Without a
+   * conversion here a reader saw a line labelled `25` under a caption saying
+   * it was Fahrenheit, which is not a rounding difference: it is 48 °F out.
+   */
+  it('writes the numerals in the document\'s units', () => {
+    const ip = chartLabels(GRID, ChartLayout.Ashrae, false);
+    const text = (key: string) => ip.find((l) => l.key === key)?.text;
+
+    // 25 °C is 77 °F.
+    expect(text('t:25')).toBe('77');
+    // 50 kJ/kg_da is 21.5 Btu/lb_da. A decimal, because the SI lattice's
+    // 10 kJ/kg step is 4.3 Btu/lb and whole numbers would label two adjacent
+    // isenthalps with the same figure.
+    expect(text('h:50')).toBe('21.5');
+    // Humidity ratio is a mass ratio: dimensionless, identical either way.
+    expect(text('w:0.01')).toBe('0.010');
+    // And relative humidity is a fraction in both systems.
+    expect(text('rh:0.5')).toBe('50%');
+  });
 });

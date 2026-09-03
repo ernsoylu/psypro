@@ -228,7 +228,7 @@ fn resolve(input: &StatePointInput) -> Result<StatePoint, String> {
             } else {
                 units::btu_per_lb_to_kj_per_kg(input.val2)
             };
-            StatePoint::from_h_w(h, backend_w_from_enthalpy(t_db, h, &atm)?, &atm)
+            StatePoint::from_h_w(h, w_from_enthalpy(t_db, h, &atm)?, &atm)
         }
     };
     point.map_err(|e| e.message().to_string())
@@ -236,11 +236,23 @@ fn resolve(input: &StatePointInput) -> Result<StatePoint, String> {
 
 /// Humidity ratio implied by a dry-bulb temperature and an enthalpy.
 ///
-/// Asked of the backend rather than inverted here, so the enthalpy relation is
-/// the backend's everywhere and this crate holds no second copy of it.
-fn backend_w_from_enthalpy(t_db: f64, h: f64, atm: &Atmosphere) -> Result<f64, String> {
-    psychro_core::backend::humidity_ratio_from_enthalpy(t_db, h, atm.p_bar)
-        .map_err(|e| e.message().to_string())
+/// Under the real-gas treatment this is asked of the backend rather than
+/// inverted here, so the enthalpy relation is the backend's everywhere and this
+/// crate holds no second copy of it.
+///
+/// Under the ideal-gas treatment it has to come from `psychro-core`'s own
+/// relation instead — which is that crate's job, not this one's. The backend is
+/// real-gas by construction, so routing this through it left the enthalpy input
+/// mode, and only that mode, answering with the enhancement factor applied
+/// while the rest of the state was resolved without it. A teaching toggle that
+/// silently does nothing for one input is worse than no toggle.
+fn w_from_enthalpy(t_db: f64, h: f64, atm: &Atmosphere) -> Result<f64, String> {
+    if atm.real_gas {
+        psychro_core::backend::humidity_ratio_from_enthalpy(t_db, h, atm.p_bar)
+            .map_err(|e| e.message().to_string())
+    } else {
+        Ok(psychro_core::state::humidity_ratio_from_enthalpy(h, t_db))
+    }
 }
 
 /// Resolves every psychrometric property of one moist-air state point.
@@ -627,7 +639,7 @@ pub fn protractor_slope(shr: f64) -> f64 {
 #[wasm_bindgen]
 #[must_use]
 pub fn protractor_shr(slope: f64) -> f64 {
-    process::protractor::shr_from_slope(slope).unwrap_or(f64::NAN)
+    process::protractor::shr_from_slope(slope)
 }
 
 // ── Coils and the design derivation ─────────────────────────────────────────
@@ -907,18 +919,17 @@ pub fn solve_return_air_cycle(
 
 // ── Envelopes ───────────────────────────────────────────────────────────────
 
-/// The eight bounds a published envelope states, in the caller's unit system.
+/// Converts the eight bounds a published envelope states into core limits, in SI.
 ///
 /// Passed as scalars rather than as a struct, deliberately. A `#[wasm_bindgen]`
 /// struct is *moved* into Rust when it is passed, so a caller checking three
 /// states against one envelope would find their limits object dead after the
 /// first call — the same "null pointer passed to rust" the process layer hit.
-/// Thirteen arguments is a worse signature than one object and a much better
+/// A long argument list is a worse signature than one object and a much better
 /// API than one that breaks on its second use.
 ///
 /// `f64::NAN` marks a bound the standard does not state, which is different
 /// from stating zero.
-/// Converts published bounds into core limits, in SI.
 #[allow(clippy::too_many_arguments)]
 fn core_limits(
     t_min: f64,
@@ -1899,6 +1910,33 @@ mod tests {
         ))
         .unwrap();
         assert!((high.w - high_ip.w).abs() / high.w < 1e-3);
+    }
+
+    /// Every input mode has to answer the ideal-gas toggle, not just most of
+    /// them. The enthalpy mode has to invert `h` to a `W` before it can resolve
+    /// anything, and asking the backend for that inversion — which is real-gas
+    /// by construction — left this one mode ignoring the switch.
+    #[test]
+    fn the_ideal_gas_toggle_reaches_every_input_mode() {
+        let ideal = |dbt, val2, st| {
+            resolve(&StatePointInput::new(dbt, val2, st, 0.0, true, false)).unwrap()
+        };
+        let base = ideal(24.0, 50.0, InputState::DbtRh);
+        for c in [
+            (base.t_wb, InputState::DbtWbt),
+            (base.t_dp, InputState::DbtDewPoint),
+            (base.w, InputState::DbtHumidityRatio),
+            (base.h, InputState::DbtEnthalpy),
+        ] {
+            let s = ideal(24.0, c.0, c.1);
+            assert!(
+                (s.w - base.w).abs() < 1e-7,
+                "mode {:?} gave W = {}, expected the ideal-gas {}",
+                c.1,
+                s.w,
+                base.w
+            );
+        }
     }
 
     /// The ideal-gas mode must actually change the answer, or the toggle is a lie.

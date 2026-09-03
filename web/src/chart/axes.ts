@@ -14,6 +14,7 @@
  */
 
 import { ChartLayout, CurveFamilyId } from '../psychro';
+import { convertForUnits } from '../units';
 import type { GridCurve } from './useBaseGrid';
 
 /** Which chart-space axis carries which quantity, per layout. */
@@ -80,6 +81,29 @@ function formatW(value: number): string {
   return value.toFixed(3);
 }
 
+/**
+ * A curve's constant value, written in the document's units.
+ *
+ * The base grid is generated over an SI domain and every `value` on it is SI:
+ * °C for dry bulb, kJ/kg_da for enthalpy. The axis *title* already reads "°F"
+ * on an IP document, so without this a reader saw a line labelled `24` under a
+ * caption that said it was Fahrenheit.
+ *
+ * Only the numeral is converted. The gridlines themselves stay on the SI
+ * lattice, so an IP chart is drawn at round SI intervals rather than round IP
+ * ones — that needs an IP `GridSpec` in the engine, not a change here.
+ */
+function inDocumentUnits(
+  family: CurveFamilyId,
+  value: number,
+  isSi: boolean,
+): number {
+  if (isSi) return value;
+  if (family === CurveFamilyId.DryBulb) return convertForUnits('temperature', value, false);
+  if (family === CurveFamilyId.Enthalpy) return convertForUnits('enthalpy', value, false);
+  return value;
+}
+
 /** How far the axis numerals sit outside the plotted region, in pixels. */
 const TICK_OFFSET = 6;
 
@@ -92,9 +116,15 @@ const TICK_OFFSET = 6;
  * unlabelled here: they cross the other families at shallow angles, and their
  * scales belong on the saturation line, which arrives with the protractor.
  */
-export function chartLabels(curves: GridCurve[], layout: ChartLayout): ChartLabel[] {
+export function chartLabels(
+  curves: GridCurve[],
+  layout: ChartLayout,
+  isSi = true,
+): ChartLabel[] {
   const { humidity, reduced } = axisRoles(layout);
   const out: ChartLabel[] = [];
+  const shown = (family: CurveFamilyId, value: number) =>
+    inDocumentUnits(family, value, isSi);
 
   // Dry-bulb: numbered where each isotherm meets the driest edge of the domain,
   // which is the bottom of an ASHRAE chart and the left of a Mollier one.
@@ -109,7 +139,7 @@ export function chartLabels(curves: GridCurve[], layout: ChartLayout): ChartLabe
       y: at[1],
       dx: humidity === 1 ? 0 : -TICK_OFFSET,
       dy: humidity === 1 ? TICK_OFFSET : 0,
-      text: String(Math.round(curve.value)),
+      text: String(Math.round(shown(CurveFamilyId.DryBulb, curve.value))),
       family: CurveFamilyId.DryBulb,
       align: humidity === 1 ? 'center' : 'right',
     });
@@ -168,7 +198,9 @@ export function chartLabels(curves: GridCurve[], layout: ChartLayout): ChartLabe
       y: at[1],
       dx: -TICK_OFFSET,
       dy: -TICK_OFFSET,
-      text: String(Math.round(curve.value)),
+      text: isSi
+        ? String(Math.round(curve.value))
+        : shown(CurveFamilyId.Enthalpy, curve.value).toFixed(1),
       family: CurveFamilyId.Enthalpy,
       align: 'right',
     });

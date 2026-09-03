@@ -299,13 +299,13 @@ fn a_sensible_only_exchanger_moves_no_moisture() {
 fn the_protractor_scales_invert_each_other() {
     for shr in [0.0, 0.25, 0.5, 0.7, 0.85, 0.95, 1.5, -0.5] {
         let slope = protractor::slope_from_shr(shr).expect("a finite slope");
-        let back = protractor::shr_from_slope(slope).expect("a ratio");
+        let back = protractor::shr_from_slope(slope);
         assert!((back - shr).abs() < 1e-9, "{shr} -> {slope} -> {back}");
     }
     // SHR = 1 has no finite slope, and that is the data-centre case.
     assert_eq!(protractor::slope_from_shr(1.0), None);
     // A zero slope is all-latent: the dehumidification-only vector.
-    assert_eq!(protractor::shr_from_slope(0.0), Some(0.0));
+    assert_eq!(protractor::shr_from_slope(0.0), 0.0);
 }
 
 /// The load decomposition and the protractor must agree on the same process, or

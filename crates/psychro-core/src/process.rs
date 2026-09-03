@@ -357,12 +357,15 @@ pub mod protractor {
     /// Inverse of [`slope_from_shr`]. A zero slope is `SHR = 0`: all latent,
     /// which is the dehumidification-only vector an internally cooled liquid
     /// desiccant draws.
+    ///
+    /// Unlike [`slope_from_shr`] this always has an answer, so it returns one
+    /// rather than an `Option` a caller has to unwrap.
     #[must_use]
-    pub fn shr_from_slope(slope: f64) -> Option<f64> {
+    pub fn shr_from_slope(slope: f64) -> f64 {
         if slope.abs() < f64::EPSILON {
-            Some(0.0)
+            0.0
         } else {
-            Some(1.0 - H_G_REF / slope)
+            1.0 - H_G_REF / slope
         }
     }
 }

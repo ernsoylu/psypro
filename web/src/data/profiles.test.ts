@@ -32,6 +32,7 @@ import {
   InputState,
   StatePointInput,
 } from '../psychro';
+import { envelopeCoords } from '../chart/ZoneLayer';
 import { useProfileStore } from '../store/useProfileStore';
 
 beforeAll(async () => {
@@ -194,6 +195,35 @@ describe('envelope geometry', () => {
     // pressure. An outline traced once at sea level is wrong in Denver, and
     // wrong invisibly — which is the whole reason the polygon is computed.
     expect(sea).not.toEqual(denver);
+  });
+
+  /**
+   * An overlay is a claim about a standard, so it has to be the same claim
+   * whichever units the reader happens to be working in. `envelope_polygon`
+   * takes one `is_si` flag covering the elevation *and* the eight bounds, and
+   * the bounds are published in SI — so handing it the document's unit system
+   * read TC 9.9's 18–27 °C band as 18–27 °F and drew the zone at −8 to −3 °C.
+   */
+  it('draws an envelope in the same place whatever the document is in', () => {
+    const envelope = envelopeById('tc99-recommended')!;
+    const si = envelopeCoords(envelope, ChartLayout.Ashrae, 0, true);
+    expect(si.length).toBeGreaterThan(20);
+
+    // The published band, mapped: at sea level TC 9.9 Recommended spans
+    // 18–27 °C, so the outline has to sit over that part of the chart.
+    const xs = Array.from(si).filter((_, i) => i % 2 === 0);
+    expect(Math.min(...xs)).toBeGreaterThan(17);
+    expect(Math.max(...xs)).toBeLessThan(30);
+
+    // Reading the same bounds as °F is what the document flag used to do.
+    const asFahrenheit = envelope_polygon(
+      ...limitsOf('tc99-recommended'),
+      ChartLayout.Ashrae,
+      0,
+      false,
+      true,
+    );
+    expect(Array.from(asFahrenheit)).not.toEqual(Array.from(si));
   });
 
   it('judges membership from the limits, not from the drawn outline', () => {

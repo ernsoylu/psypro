@@ -12,6 +12,7 @@
 
 import { create } from 'zustand';
 
+import { convertForUnits } from '../units';
 import type { WeatherResult } from '../weather/epw.worker';
 
 /** What the weather store holds. */
@@ -34,6 +35,15 @@ export interface WeatherState {
   setError: (error: string | null) => void;
   setBinStepT: (step: number) => void;
   setBinStepW: (step: number) => void;
+  /**
+   * Rewrites the bin increments for a new unit system.
+   *
+   * The field beside them holds a value *in the document's units*, like every
+   * other numeric input. Leaving the number alone across a switch relabels
+   * 1 K as 1 °F and silently re-bins the year at 5/9 of the width the reader
+   * asked for.
+   */
+  setForUnits: (toSi: boolean) => void;
 }
 
 export const useWeatherStore = create<WeatherState>((set) => ({
@@ -51,4 +61,11 @@ export const useWeatherStore = create<WeatherState>((set) => ({
   setError: (error) => set({ error, loading: false }),
   setBinStepT: (binStepT) => set({ binStepT }),
   setBinStepW: (binStepW) => set({ binStepW }),
+
+  // Humidity ratio is a mass ratio and carries across untouched; a bin width in
+  // kelvin does not.
+  setForUnits: (toSi) =>
+    set((s) => ({
+      binStepT: convertForUnits('temperatureDelta', s.binStepT, toSi),
+    })),
 }));

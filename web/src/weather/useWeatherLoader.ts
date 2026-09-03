@@ -18,7 +18,9 @@ import type { EnvelopeBounds, WeatherRequest, WeatherResponse } from './epw.work
 
 /** Everything an analysis depends on besides the file itself. */
 export interface WeatherContext {
-  altitude: number;
+  /** Site elevation in metres — the worker analyses in SI throughout. */
+  altitudeM: number;
+  /** Whether the document is in SI. Only the bin width is expressed that way. */
   isSi: boolean;
   binStepT: number;
   binStepW: number;
@@ -75,7 +77,7 @@ export function useWeatherLoader(context: WeatherContext): {
       setLoading(true);
       const request: WeatherRequest = {
         token: mine,
-        altitude: c.altitude,
+        altitudeM: c.altitudeM,
         isSi: c.isSi,
         binStepT: c.binStepT,
         binStepW: c.binStepW,
