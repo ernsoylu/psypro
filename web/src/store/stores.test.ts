@@ -11,7 +11,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ChartLayout, CurveFamilyId, InputState } from '../psychro';
 import { altitudeInMetres, useProjectStore } from './useProjectStore';
 import { nextLabel, resetIdCounter, selectedPoint, usePsychStore } from './usePsychStore';
-import { defaultProcess, useProcessStore } from './useProcessStore';
+import {
+  defaultProcess,
+  resetProcessIdCounter,
+  useProcessStore,
+} from './useProcessStore';
+import { useWeatherStore } from './useWeatherStore';
 import {
   DEFAULT_STYLES,
   MAX_STYLE_WIDTH,
@@ -28,7 +33,9 @@ const processes = () => useProcessStore.getState();
 
 beforeEach(() => {
   resetIdCounter();
+  resetProcessIdCounter();
   usePsychStore.setState({ points: [], selectedId: null });
+  useProcessStore.setState({ processes: [], selectedId: null });
   useProjectStore.setState({
     isSi: true,
     altitude: '0',
@@ -174,6 +181,37 @@ describe('point store', () => {
     const taken = [{ label: 'OA' }, { label: 'MA' }] as never;
     expect(nextLabel(taken)).toBe('RA');
   });
+
+  /**
+   * A saved project carries the ids it was written with, and the id counter
+   * starts at zero in a fresh session. Every lookup in the store is by id, so a
+   * duplicate is not cosmetic: selecting one of the two selects both, and
+   * editing one edits both.
+   */
+  it('never mints an id a freshly opened document already uses', () => {
+    psych().replaceAll([
+      { id: 'pt-1', label: 'OA', dryBulb: 32, mode: InputState.DbtRh, secondValue: 40 },
+      { id: 'pt-3', label: 'RA', dryBulb: 24, mode: InputState.DbtRh, secondValue: 50 },
+    ]);
+
+    const added = psych().addPoint({
+      label: 'SA',
+      dryBulb: 13,
+      mode: InputState.DbtRh,
+      secondValue: 90,
+    });
+    expect(added).toBe('pt-4');
+    expect(new Set(psych().points.map((p) => p.id)).size).toBe(3);
+  });
+
+  it('does the same for processes, which are looked up the same way', () => {
+    processes().replaceAll([
+      { ...defaultProcess('sensible', 'pt-1'), id: 'pr-2' },
+    ]);
+    const added = processes().addProcess(defaultProcess('sensible', 'pt-1'));
+    expect(added).toBe('pr-3');
+    expect(new Set(processes().processes.map((p) => p.id)).size).toBe(2);
+  });
 });
 
 describe('the unit switch', () => {
@@ -238,6 +276,21 @@ describe('the unit switch', () => {
     expect(stored?.mdot).toBeCloseTo(7936.641, 3);
     expect(stored?.duty).toBeCloseTo(34121.41633, 4);
     expect(stored?.targetT).toBeCloseTo(55.4, 10);
+  });
+});
+
+describe('the weather bin increments', () => {
+  it('convert across the unit switch like every other stored quantity', () => {
+    useWeatherStore.setState({ binStepT: 1, binStepW: 0.001 });
+    useWeatherStore.getState().setForUnits(false);
+    // A width is a difference: 1 K of bin width is 1.8 °F of bin width, not
+    // 33.8. Leaving it at 1 relabels it and re-bins the year at 5/9 the width.
+    expect(useWeatherStore.getState().binStepT).toBeCloseTo(1.8, 12);
+    // A mass ratio is dimensionless and carries across untouched.
+    expect(useWeatherStore.getState().binStepW).toBe(0.001);
+
+    useWeatherStore.getState().setForUnits(true);
+    expect(useWeatherStore.getState().binStepT).toBeCloseTo(1, 12);
   });
 });
 

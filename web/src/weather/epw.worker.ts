@@ -21,6 +21,7 @@ import initEngine, {
   count_hours_inside,
   resolve_weather,
 } from '../wasm/psychro';
+import { convertForUnits } from '../units';
 import { parseEpw } from './epw';
 
 /** An envelope's eight bounds, as the main thread holds them. */
@@ -41,22 +42,31 @@ export interface WeatherRequest {
   text?: string;
   /** Echoed back, so a stale reply from an earlier file can be discarded. */
   token: number;
-  /** Site elevation, as the document expresses it. */
-  altitude: number;
-  /** Whether the document is in SI. */
+  /** Site elevation in metres — the engine's own unit, not the document's. */
+  altitudeM: number;
+  /** Whether the document is in SI. Only `binStepT` is expressed that way. */
   isSi: boolean;
-  /** Dry-bulb bin increment. */
+  /** Dry-bulb bin increment, in the document's units. */
   binStepT: number;
-  /** Humidity-ratio bin increment. */
+  /** Humidity-ratio bin increment. Dimensionless, so the same in both systems. */
   binStepW: number;
-  /** The free-cooling design the hour counts are taken against. */
+  /**
+   * The free-cooling design the hour counts are taken against, **in SI**.
+   *
+   * Like every other number that reaches the engine from here it is SI, for
+   * the reason set out on `analyse`.
+   */
   design: {
+    /** Supply dry-bulb, °C. */
     tSupply: number;
+    /** Return-air enthalpy, kJ/kg_da. */
     hReturn: number;
+    /** Economiser high limit, °C. */
     tHighLimit: number;
+    /** Wet-bulb depression effectiveness, 0 to 1. */
     evaporative: number;
   };
-  /** Envelopes to count hours inside, by id. */
+  /** Envelopes to count hours inside, by id. Bounds are SI, as published. */
   envelopes: { id: string; bounds: EnvelopeBounds }[];
 }
 
@@ -116,7 +126,23 @@ let engine: Promise<unknown> | null = null;
  */
 let parsed: ReturnType<typeof parseEpw> | null = null;
 
-/** Runs the full analysis on the currently parsed year. */
+/**
+ * Runs the full analysis on the currently parsed year, **entirely in SI**.
+ *
+ * The engine takes one `is_si` flag per resolved year and applies it to
+ * everything downstream of it: the observations, the free-cooling thresholds,
+ * the envelope bounds, and the units the bins come back in. Nearly every one of
+ * those is authored in SI regardless of what the document is written in — an
+ * EPW's dry-bulb and dew-point columns are °C by the file format, the design
+ * thresholds and the published envelope limits are SI in `data/`, and the bins
+ * feed `chart_lattice`, which is geometry over °C. Passing the *document's*
+ * unit system therefore reinterpreted °C as °F four different ways at once, and
+ * an IP document got a heatmap in the wrong place and hour counts taken against
+ * a −10 °C supply condition.
+ *
+ * So the year is resolved in SI and the one genuinely document-unit input —
+ * the bin width the reader types — is converted on the way in.
+ */
 function analyse(request: WeatherRequest): WeatherResult {
   if (!parsed) throw new Error('no weather file has been loaded');
 
@@ -125,11 +151,17 @@ function analyse(request: WeatherRequest): WeatherResult {
   const year = resolve_weather(
     parsed.dryBulb,
     parsed.dewPoint,
-    request.altitude,
-    request.isSi,
+    request.altitudeM,
+    true,
   );
   try {
-    const b = bin_weather_data(year, request.binStepT, request.binStepW);
+    // A bin width is a temperature *difference*: 1 °F of width is 5/9 K, not
+    // −17 K. `temperatureDelta` scales rather than offsets, which is the whole
+    // reason it is a separate dimension.
+    const binStepK = request.isSi
+      ? request.binStepT
+      : convertForUnits('temperatureDelta', request.binStepT, true);
+    const b = bin_weather_data(year, binStepK, request.binStepW);
     const grid: BinGrid = {
       tMin: b.t_min,
       wMin: b.w_min,

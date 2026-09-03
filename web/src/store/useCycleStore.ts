@@ -12,6 +12,8 @@
 
 import { create } from 'zustand';
 
+import { convertForUnits } from '../units';
+
 /** The design case. */
 export interface CycleState {
   /** Outdoor design dry-bulb, in the document's units. */
@@ -53,22 +55,20 @@ const DEFAULT_SI = {
   outdoorFraction: 0.2,
 };
 
-const C_TO_F = (c: number) => c * 1.8 + 32;
-const F_TO_C = (f: number) => (f - 32) / 1.8;
-const KW_TO_BTUH = (q: number) => q * 3412.141633;
-const BTUH_TO_KW = (q: number) => q / 3412.141633;
-
 export const useCycleStore = create<CycleState>((set) => ({
   ...DEFAULT_SI,
 
   set: (patch) => set(patch),
 
+  // Through the same `units` table as points, processes and the site elevation.
+  // A second copy of °C↔°F here is a second place for the two to disagree, and
+  // the whole point of that table is that there is only one.
   setForUnits: (toSi) =>
     set((s) => ({
-      outdoorT: toSi ? F_TO_C(s.outdoorT) : C_TO_F(s.outdoorT),
-      roomT: toSi ? F_TO_C(s.roomT) : C_TO_F(s.roomT),
-      supplyT: toSi ? F_TO_C(s.supplyT) : C_TO_F(s.supplyT),
-      qSensible: toSi ? BTUH_TO_KW(s.qSensible) : KW_TO_BTUH(s.qSensible),
-      qLatent: toSi ? BTUH_TO_KW(s.qLatent) : KW_TO_BTUH(s.qLatent),
+      outdoorT: convertForUnits('temperature', s.outdoorT, toSi),
+      roomT: convertForUnits('temperature', s.roomT, toSi),
+      supplyT: convertForUnits('temperature', s.supplyT, toSi),
+      qSensible: convertForUnits('power', s.qSensible, toSi),
+      qLatent: convertForUnits('power', s.qLatent, toSi),
     })),
 }));

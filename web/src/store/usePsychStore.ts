@@ -97,10 +97,29 @@ export function nextLabel(existing: readonly StatePoint[]): string {
 
 let counter = 0;
 
+/** The prefix every generated point id carries. */
+const ID_PREFIX = 'pt-';
+
 /** A fresh identifier. Monotonic rather than random: reproducible in tests. */
 function nextId(): string {
   counter += 1;
-  return `pt-${counter}`;
+  return `${ID_PREFIX}${counter}`;
+}
+
+/**
+ * Moves the counter past every id in a document that was handed to us.
+ *
+ * A project file carries the ids it was saved with, and the counter starts at
+ * zero in a fresh session. Without this, opening a file with `pt-1` and then
+ * adding a point mints a *second* `pt-1` — and every lookup in the store is by
+ * id, so selecting one of them selects both and editing one edits both.
+ */
+function adoptIds(points: readonly StatePoint[]): void {
+  for (const p of points) {
+    if (!p.id.startsWith(ID_PREFIX)) continue;
+    const n = Number(p.id.slice(ID_PREFIX.length));
+    if (Number.isInteger(n) && n > counter) counter = n;
+  }
 }
 
 export const usePsychStore = create<PsychState>((set) => ({
@@ -128,7 +147,10 @@ export const usePsychStore = create<PsychState>((set) => ({
 
   selectPoint: (selectedId) => set({ selectedId }),
 
-  replaceAll: (points) => set({ points, selectedId: null }),
+  replaceAll: (points) => {
+    adoptIds(points);
+    set({ points, selectedId: null });
+  },
 
   setForUnits: (toSi) =>
     set((s) => ({

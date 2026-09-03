@@ -249,8 +249,7 @@ export function ChartCanvas({
             viewport={viewport}
             tokens={tokens}
             layout={params.layout}
-            altitude={altitude}
-            isSi={isSi}
+            altitudeM={params.altitudeM}
             realGas={params.realGas}
           />
           <WeatherLayer

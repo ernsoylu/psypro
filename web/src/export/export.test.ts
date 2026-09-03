@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { chartToDxf } from './dxf';
 import { chartToSvg } from './svg';
 import { pointsToCsv } from './csv';
-import { CurveFamilyId, InputState } from '../psychro';
+import { ChartLayout, CurveFamilyId, InputState } from '../psychro';
 import { DEFAULT_STYLES } from '../store/useStyleStore';
 import type { ChartTokens } from '../chart/useChartTokens';
 import type { GridCurve } from '../chart/useBaseGrid';
@@ -184,6 +184,7 @@ describe('DXF export', () => {
     points: POINTS,
     processes: PROCESSES,
     humidityScale: 1000,
+    layout: ChartLayout.Ashrae,
   });
   const lines = dxf.split('\n');
 
@@ -229,6 +230,24 @@ describe('DXF export', () => {
     // The two chart axes differ by three orders of magnitude; a drawing 60 units
     // wide and 0.03 tall has an unusable zoom extent and unusable snaps.
     expect(dxf).toContain('14.000000');
+  });
+
+  it('scales whichever axis carries humidity ratio', () => {
+    // Mollier i-x exchanges the two axes, so the scale has to follow the
+    // quantity rather than the axis index. Scaling `y` unconditionally
+    // stretched enthalpy by a thousand and left humidity ratio spanning 0.03.
+    const mollier = chartToDxf({
+      curves: CURVES,
+      points: POINTS,
+      processes: PROCESSES,
+      humidityScale: 1000,
+      layout: ChartLayout.MollierIx,
+    });
+    // POINTS[0] sits at (35.5, 0.014) in chart space. Under ASHRAE that is
+    // y = 14; under Mollier the same factor belongs on x.
+    expect(mollier).toContain('35500.000000');
+    expect(mollier).toContain('0.014000');
+    expect(mollier).not.toContain('14.000000');
   });
 });
 

@@ -14,7 +14,6 @@
 //! It is also what lets envelopes ship as data files, which `REQUIREMENTS.md`
 //! §5 asks for explicitly.
 
-use crate::backend::PropertyError;
 use crate::state::{saturation_humidity_ratio, Atmosphere, StatePoint};
 
 /// One published limit set.
@@ -162,9 +161,7 @@ pub fn contains(state: &StatePoint, limits: &Limits) -> bool {
 /// one cabin temperature and not at another.
 ///
 /// Returns the margin in kelvin: positive is clear, negative is fogging.
-///
-/// # Errors
-/// Returns the backend's message when the cabin state cannot be resolved.
+#[must_use]
 pub fn fogging_margin(cabin: &StatePoint, t_glass_inner: f64) -> f64 {
     t_glass_inner - cabin.t_dp
 }
@@ -197,12 +194,4 @@ pub fn excursion(state: &StatePoint, limits: &Limits) -> Excursion {
         dew_point: over(state.t_dp, limits.dp_min, limits.dp_max),
         relative_humidity: over(state.rh, limits.rh_min, limits.rh_max) * 100.0,
     }
-}
-
-/// The saturated humidity ratio at a dew point, for the wasm boundary.
-///
-/// # Errors
-/// Returns the backend's message when the temperature is out of range.
-pub fn humidity_ratio_at_dew_point(t_dp: f64, atm: &Atmosphere) -> Result<f64, PropertyError> {
-    Ok(saturation_humidity_ratio(t_dp, atm))
 }

@@ -54,6 +54,7 @@ import { formatProperties } from './chart/format';
 import { useCycleStore } from './store/useCycleStore';
 import { useProfileStore } from './store/useProfileStore';
 import { useWeatherStore } from './store/useWeatherStore';
+import { WEATHER_DESIGN_SI } from './weather/design';
 import { useWeatherLoader } from './weather/useWeatherLoader';
 import type { EnvelopeBounds } from './weather/epw.worker';
 import { useStyleStore, type FamilyStyle } from './store/useStyleStore';
@@ -71,21 +72,6 @@ import {
   type CurveFamilyId,
   type CycleOutput,
 } from './psychro';
-
-/**
- * The free-cooling design the weather hour counts are taken against.
- *
- * Phase 12 makes these editable alongside the rest of the design case; for now
- * they are the comfort-cooling defaults §4.9 and §4.3 quote — 13 °C supply,
- * a 24 °C / 50% RH return, a 21 °C economiser high limit, and 300 mm rigid
- * media at 0.85 wet-bulb depression effectiveness.
- */
-const WEATHER_DESIGN = {
-  tSupply: 13,
-  hReturn: 47.9,
-  tHighLimit: 21,
-  evaporative: 0.85,
-};
 
 /** The export formats on offer, in the order §12 lists them. */
 const EXPORT_FORMATS = [
@@ -159,11 +145,11 @@ export function App() {
    * blocked main thread on one 8760-hour file.
    */
   const weatherContext = {
-    altitude,
+    altitudeM,
     isSi: project.isSi,
     binStepT: weather.binStepT,
     binStepW: weather.binStepW,
-    design: WEATHER_DESIGN,
+    design: WEATHER_DESIGN_SI,
     envelopes: envelopes.map((e) => ({
       id: e.id,
       bounds: [
@@ -187,7 +173,7 @@ export function App() {
     reanalyse();
   }, [
     reanalyse,
-    altitude,
+    altitudeM,
     project.isSi,
     weather.binStepT,
     weather.binStepW,
@@ -448,6 +434,8 @@ export function App() {
             // Puts the two axes on comparable footing: 60 units against 0.03 is
             // an unusable drawing whatever the numbers mean.
             humidityScale: 1000,
+            // Which of the two axes carries humidity ratio.
+            layout: project.layout,
           }),
           `${name}.dxf`,
           'application/dxf',
@@ -542,6 +530,7 @@ export function App() {
               design.setForUnits(next);
               psych.setForUnits(next);
               proc.setForUnits(next);
+              weather.setForUnits(next);
               project.setAltitude(convertAltitude(project.altitude, next));
             }
             project.setIsSi(next);

@@ -44,10 +44,10 @@
 //! than about the coordinates: which families to generate, how densely to sample
 //! the curved ones, and where to clip them against saturation.
 
-use crate::constants::{CP_DA, CP_WV, H_G_REF};
 use crate::saturation::p_ws;
 use crate::state::{
-    humidity_ratio_from_p_wv, humidity_ratio_from_wet_bulb, saturation_humidity_ratio, Atmosphere,
+    humidity_ratio_from_enthalpy, humidity_ratio_from_p_wv, humidity_ratio_from_wet_bulb,
+    saturation_humidity_ratio, Atmosphere,
 };
 
 pub use frees_core::props::psychrochart::{
@@ -291,7 +291,7 @@ fn enthalpy_segment(
     layout: ChartLayout,
 ) -> Option<Vec<ChartPoint>> {
     // W along the line, as a function of t.
-    let w_of = |t: f64| (h - CP_DA * t) / (H_G_REF + CP_WV * t);
+    let w_of = |t: f64| humidity_ratio_from_enthalpy(h, t);
     // Walk in from the warm end to the first point at or above saturation.
     let steps = 240;
     let step = (domain.t_max - domain.t_min) / steps as f64;

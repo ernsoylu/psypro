@@ -143,6 +143,18 @@ pub fn temperature_from_enthalpy(h: f64, w: f64) -> f64 {
     (h - w * H_G_REF) / (CP_DA + CP_WV * w)
 }
 
+/// Humidity ratio recovered from enthalpy and dry-bulb temperature, kg_wv/kg_da.
+///
+/// The other inverse of [`enthalpy`]. Needed because the enthalpy *input* mode
+/// has to reach a `W` before it can resolve a state, and under the ideal-gas
+/// treatment that inversion must come from this module rather than from the
+/// backend — the backend has no ideal-gas mode, so asking it there would make
+/// the teaching toggle silently do nothing.
+#[must_use]
+pub fn humidity_ratio_from_enthalpy(h: f64, t_c: f64) -> f64 {
+    (h - CP_DA * t_c) / (H_G_REF + CP_WV * t_c)
+}
+
 /// Specific volume per kg of dry air, m³/kg_da.
 #[must_use]
 pub fn specific_volume(t_c: f64, w: f64, atm: &Atmosphere) -> f64 {
