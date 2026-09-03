@@ -264,14 +264,15 @@ format. C and D are independent of each other once B lands.
   desiccant and the identification are all definitions and constructions on top of properties
   frees already provides.
 
-## 5. Open questions
+## 5. Decisions taken
 
-1. **Default bypass factor for a wet cooling process.** `BF = 0.1` (a real 4–6 row coil, one
-   more number to justify) or `BF = 0` (saturated leaving air, the ideal bound, nothing to
-   justify)? Recommendation: `0.1`, with the field visible and editable, because a saturated
-   leaving state is a condition no coil actually delivers.
-2. **Dragging a derived point.** Refuse it with an explanation, or invert the drag into the
-   process parameter that would put the outlet there (drag the outlet of a sensible process →
-   its target temperature follows)? The inverse is far better to use and is only well-defined
-   for single-parameter kinds; the mixed case would have to refuse anyway.
-3. **How far to take D.** "Send cycle to chart" alone, or the full two-way binding?
+1. **Default bypass factor for a wet cooling process: `BF = 0.1`, visible and editable.** A
+   saturated leaving state is a condition no coil actually delivers, so defaulting to it would
+   make every result quietly optimistic on latent capacity. `BF = 0` remains available by
+   typing it, and it is the ideal-coil bound the tests pin.
+2. **Dragging a derived point inverts into the process parameter.** Dragging the outlet of a
+   sensible process moves its target temperature; dragging an evaporative outlet moves its
+   effectiveness. Kinds whose outlet is fixed by two parameters — mixing, recovery — refuse the
+   drag and say which field to edit instead, because one position cannot recover two numbers.
+3. **Step D is "send cycle to chart" only** in this pass. Adopt-from-point and block binding
+   are deferred; the materialised cycle is the change that stops the page being an island.

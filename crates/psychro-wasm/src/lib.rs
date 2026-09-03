@@ -15,6 +15,7 @@
 use psychro_core::chart::{
     self, ChartDomain, ChartLayout as CoreLayout, ChartPoint, CurveFamily, GridSpec,
 };
+use psychro_core::identify;
 use psychro_core::process;
 use psychro_core::state::{pressure_from_altitude, Atmosphere, StatePoint};
 use psychro_core::units;
@@ -449,6 +450,287 @@ pub fn apply_sensible_duty(
     )
     .map_err(|e| JsValue::from_str(e.message()))?;
     Ok(present_process(&r, inlet.is_si))
+}
+
+/// A cooling process, which condenses when the coil runs wet.
+///
+/// The entry point behind "cool the air to 13 °C". Above the entering dew point
+/// it is the horizontal process [`apply_sensible`] gives; below it the coil runs
+/// wet, water comes out, and the result says how much rather than refusing the
+/// request. `bypass_factor` is the fraction of the airstream that never touches
+/// the surface — 0.1 for an ordinary coil, 0 for the saturated-leaving bound.
+#[wasm_bindgen]
+pub fn apply_cooling(
+    inlet: StatePointInput,
+    t_out: f64,
+    bypass_factor: f64,
+    mdot_da: f64,
+) -> Result<CoolingOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let target = if inlet.is_si {
+        t_out
+    } else {
+        units::f_to_c(t_out)
+    };
+    let r = process::cool_to(
+        &s,
+        target,
+        bypass_factor,
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(CoolingOutput {
+        process: present_process(&r.process, inlet.is_si),
+        dehumidified: r.dehumidified(),
+        condensate: if inlet.is_si {
+            r.condensate
+        } else {
+            units::kg_per_second_to_lb_per_hour(r.condensate)
+        },
+        frost_risk: r.frost_risk,
+        coil: r.coil.map(|c| present_coil(&c, inlet.is_si)),
+    })
+}
+
+/// A cooling process and, when the coil ran wet, the coil that did it.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct CoolingOutput {
+    /// Where the air ended up and what it cost.
+    pub process: ProcessOutput,
+    /// Whether the coil ran wet and took moisture out.
+    pub dehumidified: bool,
+    /// Water condensed out, kg/s or lb/h. Zero for a dry coil.
+    pub condensate: f64,
+    /// Whether the surface sits below freezing, so the coil frosts.
+    pub frost_risk: bool,
+    /// The coil construction, when the coil ran wet.
+    ///
+    /// Private with a getter so the absent case is `undefined` in TypeScript
+    /// rather than a struct full of zeroes. A dry coil has no apparatus dew
+    /// point — the process is horizontal, and there is nothing for a bypass
+    /// factor to act on — so reporting one would be inventing it.
+    coil: Option<CoilOutput>,
+}
+
+#[wasm_bindgen]
+impl CoolingOutput {
+    /// The coil construction — ADP, the three bypass factors, coil SHR — or
+    /// `undefined` when the coil ran dry.
+    #[wasm_bindgen(getter)]
+    #[must_use]
+    pub fn coil(&self) -> Option<CoilOutput> {
+        self.coil
+    }
+}
+
+/// Desiccant dehumidification: the air leaves warmer and drier.
+///
+/// The mirror image of evaporative cooling, along a line of constant enthalpy.
+/// `w_equilibrium` is the humidity ratio the airstream would reach at unlimited
+/// contact, a property of the wheel or the solution; `eps_latent` is
+/// `(W_in − W_out)/(W_in − W_eq)`.
+#[wasm_bindgen]
+pub fn apply_desiccant(
+    inlet: StatePointInput,
+    w_equilibrium: f64,
+    eps_latent: f64,
+    mdot_da: f64,
+) -> Result<ProcessOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let r = process::desiccant(
+        &s,
+        w_equilibrium,
+        eps_latent,
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_process(&r, inlet.is_si))
+}
+
+/// Which named process a pair of states turned out to be.
+///
+/// The discriminant only: the text a panel shows is the frontend's business, so
+/// that it goes through the i18n layer rather than arriving in English from the
+/// engine.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProcessFitKind {
+    /// Humidity ratio held, dry bulb up.
+    SensibleHeating,
+    /// Humidity ratio held, dry bulb down: a dry coil.
+    SensibleCooling,
+    /// Moisture injected as vapour, the slope in the steam band.
+    Isothermal,
+    /// Wet bulb held: adiabatic humidification.
+    Evaporative,
+    /// Cooled and dried: a wet coil.
+    CoolingDehumidification,
+    /// Dried and warmed: a desiccant.
+    Desiccant,
+    /// A chord that matches no named process. Not a failure.
+    General,
+}
+
+/// What the two states turned out to be, and the parameters that define it.
+///
+/// Every `has_*` flag guards the field beside it. A fit reports the parameters
+/// of *its own* kind and nothing else, because a steam enthalpy read off an
+/// evaporative process is a number with no meaning that a reader would still
+/// believe.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct ProcessFitOutput {
+    /// The identification.
+    pub kind: ProcessFitKind,
+    /// What the process moved.
+    pub load: LoadOutput,
+    /// Enthalpy per unit moisture, kJ/kg or Btu/lb — the protractor's scale.
+    pub slope: f64,
+    /// Whether `slope` carries a value. False when no moisture moved, where the
+    /// slope is infinite and the line is horizontal.
+    pub has_slope: bool,
+    /// Duty, kW or Btu/h, for the sensible family.
+    pub duty: f64,
+    /// Whether `duty` carries a value.
+    pub has_duty: bool,
+    /// Water added or removed, kg/s or lb/h.
+    pub water_flow: f64,
+    /// Whether `water_flow` carries a value.
+    pub has_water_flow: bool,
+    /// The enthalpy of the injected steam, kJ/kg or Btu/lb.
+    pub steam_enthalpy: f64,
+    /// Whether `steam_enthalpy` carries a value.
+    pub has_steam_enthalpy: bool,
+    /// Saturation effectiveness, for the evaporative fit.
+    pub effectiveness: f64,
+    /// Whether `effectiveness` carries a value.
+    pub has_effectiveness: bool,
+    /// Departure from constant enthalpy, kJ/kg or Btu/lb, for a desiccant.
+    pub enthalpy_rise: f64,
+    /// Whether `enthalpy_rise` carries a value.
+    pub has_enthalpy_rise: bool,
+}
+
+/// Identifies the process between two states and backs out what defines it.
+///
+/// The reverse of the `apply_*` family: given two points a user already has,
+/// name the process and recover its parameters, so "assign a process between
+/// these two points" fills its own fields in. A wet-coil fit reports its kind
+/// here; call [`solve_coil`] on the same pair for the ADP and bypass factors.
+#[wasm_bindgen]
+pub fn identify_process(
+    from: StatePointInput,
+    to: StatePointInput,
+    mdot_da: f64,
+) -> Result<ProcessFitOutput, JsValue> {
+    if from.is_si != to.is_si {
+        return Err(JsValue::from_str(
+            "both states must use the same unit system",
+        ));
+    }
+    let a = resolve(&from).map_err(|e| JsValue::from_str(&e))?;
+    let b = resolve(&to).map_err(|e| JsValue::from_str(&e))?;
+    let fit = identify::identify(
+        &a,
+        &b,
+        mass_flow_si(mdot_da, from.is_si),
+        &atmosphere_for(&from),
+    );
+
+    let is_si = from.is_si;
+    let power = |q: f64| {
+        if is_si {
+            q
+        } else {
+            units::kw_to_btu_per_hour(q)
+        }
+    };
+    let flow = |m: f64| {
+        if is_si {
+            m
+        } else {
+            units::kg_per_second_to_lb_per_hour(m)
+        }
+    };
+    let specific = |h: f64| {
+        if is_si {
+            h
+        } else {
+            units::kj_per_kg_to_btu_per_lb(h)
+        }
+    };
+
+    let mut out = ProcessFitOutput {
+        kind: ProcessFitKind::General,
+        load: present_load(&fit.load, is_si),
+        slope: fit.slope.map_or(f64::NAN, specific),
+        has_slope: fit.slope.is_some(),
+        duty: f64::NAN,
+        has_duty: false,
+        water_flow: f64::NAN,
+        has_water_flow: false,
+        steam_enthalpy: f64::NAN,
+        has_steam_enthalpy: false,
+        effectiveness: f64::NAN,
+        has_effectiveness: false,
+        enthalpy_rise: f64::NAN,
+        has_enthalpy_rise: false,
+    };
+
+    match fit.fit {
+        identify::Fit::SensibleHeating { duty } => {
+            out.kind = ProcessFitKind::SensibleHeating;
+            out.duty = power(duty);
+            out.has_duty = true;
+        }
+        identify::Fit::SensibleCooling { duty } => {
+            out.kind = ProcessFitKind::SensibleCooling;
+            out.duty = power(duty);
+            out.has_duty = true;
+        }
+        identify::Fit::Isothermal {
+            steam_flow,
+            steam_enthalpy,
+        } => {
+            out.kind = ProcessFitKind::Isothermal;
+            out.water_flow = flow(steam_flow);
+            out.has_water_flow = true;
+            out.steam_enthalpy = specific(steam_enthalpy);
+            out.has_steam_enthalpy = true;
+        }
+        identify::Fit::Evaporative {
+            effectiveness,
+            water_flow,
+        } => {
+            out.kind = ProcessFitKind::Evaporative;
+            out.effectiveness = effectiveness;
+            out.has_effectiveness = true;
+            out.water_flow = flow(water_flow);
+            out.has_water_flow = true;
+        }
+        identify::Fit::CoolingDehumidification { coil } => {
+            out.kind = ProcessFitKind::CoolingDehumidification;
+            out.water_flow = flow(-coil.condensate);
+            out.has_water_flow = true;
+            out.duty = power(coil.total_load);
+            out.has_duty = true;
+        }
+        identify::Fit::Desiccant {
+            water_removed,
+            enthalpy_rise,
+        } => {
+            out.kind = ProcessFitKind::Desiccant;
+            out.water_flow = flow(-water_removed);
+            out.has_water_flow = true;
+            out.enthalpy_rise = specific(enthalpy_rise);
+            out.has_enthalpy_rise = true;
+        }
+        identify::Fit::General => {}
+    }
+    Ok(out)
 }
 
 /// Steam (isothermal) humidification to a target humidity ratio.

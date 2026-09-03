@@ -126,6 +126,16 @@ A tool whose process vocabulary only goes down-and-left cannot represent it.
 and the process is no longer sensible-only. The engine flags this rather than extrapolating a
 horizontal line into the saturation curve.
 
+**Past the flag, the process turns rather than stopping.** A target below the entering dew
+point is not an error to report — it is a wet coil, which is what most cooling equipment
+actually is. The air follows the line toward the apparatus dew point instead of the horizontal,
+water leaves the airstream, and the tool says how much. The leaving state is set by the bypass
+factor: the surface a leaving temperature implies follows from
+`t_adp = (t_lvg − BF·t_ent)/(1 − BF)`, and the coil is dry exactly when that surface sits at or
+above the entering dew point. Refusing the request instead — which is what holding `W` into the
+saturation curve forces — makes the single most common process in the field the one the tool
+cannot draw.
+
 ### 4.2 Coils and heat-transfer devices
 *   **Cooling coil (chilled water or DX)** — apparatus dew point and bypass factor, in all
     three equivalent forms so results check against any textbook:
