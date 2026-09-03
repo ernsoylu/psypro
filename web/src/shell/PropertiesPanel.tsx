@@ -69,6 +69,13 @@ export interface PropertiesPanelProps {
   onAdd: () => void;
   /** Deletes the selected point. */
   onRemove: () => void;
+  /**
+   * The document outline, rendered above everything else.
+   *
+   * First because it is the table of contents: what is in the document, and
+   * what joins what. The inspector below it is a view of *one* row.
+   */
+  outline?: ReactNode;
   /** The process editor, rendered below the derived properties. */
   processSection?: ReactNode;
   /**
@@ -95,6 +102,7 @@ export function PropertiesPanel({
   onChange,
   onAdd,
   onRemove,
+  outline,
   processSection,
   producedBy = null,
   dragInvertible = false,
@@ -115,6 +123,7 @@ export function PropertiesPanel({
             {t('panel.addPoint')}
           </button>
         </div>
+        {outline}
         {processSection}
       </aside>
     );
@@ -143,6 +152,8 @@ export function PropertiesPanel({
           <Icon name="trash" />
         </button>
       </div>
+
+      {outline}
 
       <h2 className="panel__section">{t('panel.sectionInputs')}</h2>
 

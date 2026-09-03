@@ -990,3 +990,96 @@
   gap: var(--space-4);
   margin-top: var(--space-3);
 }
+
+/* ── Document outline ───────────────────────────────────────────────────── */
+
+/*
+ * The document's table of contents. Every colour and radius is a variable, per
+ * the theming rule: a fork rebrands by editing `theme.css` and nothing else.
+ */
+.outline {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.outline__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-6);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.outline__row:hover {
+  background: var(--color-hover);
+}
+
+.outline__row.is-selected {
+  /* An inset marker rather than a border, so selecting a row does not shift
+     the two beside it by a pixel. */
+  box-shadow: inset 2px 0 0 var(--color-accent);
+  background: var(--color-hover);
+}
+
+.outline__row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.outline__label {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.outline__detail {
+  /* Takes the slack and truncates, so a long process name cannot push the
+     badge off the end of a 280-pixel rail. */
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline__badge {
+  flex: 0 0 auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+}
+
+.outline__badge--error {
+  color: var(--color-danger);
+}
+
+/* ── A link-styled button, for a cross-reference inside prose ───────────── */
+
+.btn--link {
+  margin-left: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A hint under a field, quieter than the label above it. */
+.field__hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+  line-height: 1.4;
+}

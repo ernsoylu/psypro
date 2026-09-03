@@ -138,6 +138,10 @@ vi.mock('./psychro', async () => {
 // testing rather than an accident of ordering.
 beforeEach(() => {
   usePsychStore.setState({ points: [], selectedId: null });
+  // The processes too, now that a point can be the outlet of one: a process
+  // left behind by an earlier test resolves against a document that no longer
+  // contains its inlet, and shows up as a row in the next test's outline.
+  useProcessStore.setState({ processes: [], selectedId: null });
   useProjectStore.setState({ isSi: true, altitude: '0', realGas: true, name: '' });
 });
 
@@ -260,8 +264,10 @@ describe('application shell', () => {
     await user.selectOptions(panel.getByLabelText('Add process…'), 'sensible');
 
     // The endpoint exists and is named, which is what makes the next process
-    // able to start from it.
-    expect(panel.getByText('OA → RA')).toBeInTheDocument();
+    // able to start from it. The outline row is the selectable one; the process
+    // editor names the same pair in prose beside its fields.
+    expect(panel.getByRole('button', { name: /OA → RA/ })).toBeInTheDocument();
+    expect(panel.getAllByText('OA → RA')).toHaveLength(2);
     expect(usePsychStore.getState().points).toHaveLength(2);
 
     await user.click(panel.getByRole('button', { name: 'Select outlet' }));
@@ -269,6 +275,29 @@ describe('application shell', () => {
     // silently do nothing.
     expect(panel.getByText(/Placed by/)).toBeInTheDocument();
     expect(panel.queryByLabelText('Dry-bulb temperature')).not.toBeInTheDocument();
+  });
+
+  it('lists the document, so the chain is visible without reading the chart', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
+    await user.selectOptions(panel.getByLabelText('Add process…'), 'sensible');
+
+    // Three rows: the point that was typed, the point the process placed, and
+    // the process joining them. A chart shows positions and cannot show that
+    // the second point is the outlet of the first.
+    const outline = within(panel.getByRole('list'));
+    expect(outline.getAllByRole('listitem')).toHaveLength(3);
+    expect(outline.getByText('derived')).toBeInTheDocument();
+
+    // And each row is a way in: selecting the process from here is the only
+    // route to it that does not involve finding its line on the chart.
+    await user.click(panel.getByRole('button', { name: /OA → RA/ }));
+    expect(panel.getByRole('button', { name: /OA → RA/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
   });
 
   it('offers the bypass factor on a process that can run wet', async () => {
@@ -298,3 +327,4 @@ describe('application shell', () => {
 const { App } = await import('./App');
 const { usePsychStore } = await import('./store/usePsychStore');
 const { useProjectStore } = await import('./store/useProjectStore');
+const { useProcessStore } = await import('./store/useProcessStore');

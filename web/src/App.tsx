@@ -27,6 +27,7 @@ import { LayerOptions } from './shell/LayerOptions';
 import { StyleModal } from './shell/StyleModal';
 import { PageTabs, type PageId } from './shell/PageTabs';
 import { TeachingPanel } from './shell/TeachingPanel';
+import { DocumentOutline } from './shell/DocumentOutline';
 import { PROCESS_KINDS, ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type PanelId, type ToolId, type ViewActionId } from './shell/Toolbox';
@@ -827,6 +828,23 @@ export function App() {
               resolved={selectedResolved}
               isSi={project.isSi}
               realGas={project.realGas}
+              outline={
+                <DocumentOutline
+                  points={psych.points}
+                  processes={proc.processes}
+                  resolvedPoints={document.pointsById}
+                  resolvedProcesses={document.processesById}
+                  kindLabel={(process) => {
+                    const key = PROCESS_KINDS.find(([k]) => k === process.kind)?.[1];
+                    return key ? t(key) : process.kind;
+                  }}
+                  selectedPointId={psych.selectedId}
+                  selectedProcessId={proc.selectedId}
+                  isSi={project.isSi}
+                  onSelectPoint={selectPoint}
+                  onSelectProcess={proc.selectProcess}
+                />
+              }
               producedBy={selectedProducer}
               dragInvertible={selectedDragInvertible}
               onDetach={onDetachPoint}

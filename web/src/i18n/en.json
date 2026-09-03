@@ -272,5 +272,11 @@
   "fit.steamEnthalpy": "Implied steam enthalpy",
   "fit.effectiveness": "Saturation effectiveness",
   "fit.enthalpyRise": "Departure from constant enthalpy",
-  "fit.slope": "Slope Δh/ΔW"
+  "fit.slope": "Slope Δh/ΔW",
+  "outline.section": "DOCUMENT",
+  "outline.derived": "derived",
+  "outline.wet": "wet",
+  "outline.failed": "failed",
+  "outline.unresolved": "not a state",
+  "outline.gone": "—"
 }
