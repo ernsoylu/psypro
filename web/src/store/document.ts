@@ -23,7 +23,7 @@ import {
   type Process,
   type ProcessKind,
 } from './useProcessStore';
-import { nextLabel, producerOf, usePsychStore } from './usePsychStore';
+import { nextLabel, producerOf, usePsychStore, TYPED } from './usePsychStore';
 
 /** What a document edit needs to know beyond the stores themselves. */
 export interface DocumentActionContext {
@@ -250,4 +250,107 @@ export function downstreamOf(
     }
   }
   return reached;
+}
+
+/**
+ * Materialises a solved cycle as real points and processes.
+ *
+ * The Process Design page was an island: eight numbers in, a read-only results
+ * strip out, and nothing crossing in either direction. Its OA/RA/MA/CL states
+ * never became points, so the chart never drew the cycle the page had just
+ * solved and no part of it could be edited.
+ *
+ * This is the crossing. The macro's answer becomes an ordinary document — five
+ * points and three processes — which is then draggable, editable, exportable and
+ * drawn on the chart like anything else. Nothing about it is special afterwards,
+ * which is the point: the page becomes a *way to start* a document rather than a
+ * separate calculator.
+ *
+ * The cycle is expressed as **parametric processes rather than fitted lines**,
+ * so it stays alive: change the outdoor-air fraction on the mixing process and
+ * the mixed state moves, and the coil follows it. Laying it down as three
+ * `link` lines would reproduce the same picture and freeze it.
+ *
+ * Replaces the document rather than adding to it. Merging would need a rule for
+ * what to do about an existing point labelled OA that means something else, and
+ * every rule for that is a surprise; "this replaces your document" is at least
+ * a sentence a confirmation dialog can say.
+ */
+export function materialiseCycle(cycle: CycleSnapshot, ctx: DocumentActionContext): void {
+  const points = usePsychStore.getState();
+  const processes = useProcessStore.getState();
+  points.replaceAll([]);
+  processes.replaceAll([]);
+
+  const anchored = (label: string, inputs: BoundaryInputs) =>
+    usePsychStore.getState().addPoint({ label, ...inputs, source: TYPED });
+
+  // The two boundary conditions go in as **the inputs the design case states**,
+  // not as states resolved from them. That is the same rule the rest of the
+  // document follows, and here it has teeth: the case is typed as dry bulb and
+  // relative humidity, so re-deriving a humidity ratio to store instead would
+  // put a stale reading in the document the first time the elevation changed.
+  const oa = anchored(cycle.outdoorLabel, cycle.outdoor);
+  const ra = anchored(cycle.roomLabel, cycle.room);
+
+  // Mixing: outdoor air against return air, at the flows the macro solved.
+  const mix = addProcessFrom(oa, 'mix', ctx);
+  useProcessStore.getState().updateProcess(mix, {
+    secondId: ra,
+    mdot: cycle.mdotOutdoor,
+    mdotSecond: cycle.mdotSupply - cycle.mdotOutdoor,
+  });
+  const mixOutlet = useProcessStore.getState().processes.find((p) => p.id === mix)?.toId;
+  if (mixOutlet)
+    usePsychStore.getState().updatePoint(mixOutlet, { label: cycle.mixedLabel });
+
+  // The coil, stated as the apparatus dew point and bypass factor the macro
+  // found — the form a designer selects equipment in, and the form that keeps
+  // the leaving state derived rather than stored.
+  if (!mixOutlet) return;
+  const coil = addProcessFrom(mixOutlet, 'cooling', ctx);
+  useProcessStore.getState().updateProcess(coil, {
+    mdot: cycle.mdotSupply,
+    tAdp: cycle.adp,
+    bypassFactor: cycle.bypassFactor,
+  });
+  const coilOutlet = useProcessStore
+    .getState()
+    .processes.find((p) => p.id === coil)?.toId;
+  if (coilOutlet) {
+    usePsychStore.getState().updatePoint(coilOutlet, { label: cycle.supplyLabel });
+  }
+
+  usePsychStore.getState().selectPoint(oa);
+}
+
+/** One boundary condition, as the design case states it. */
+export interface BoundaryInputs {
+  /** Dry-bulb temperature, in the document's units. */
+  dryBulb: number;
+  /** Which second property is given. */
+  mode: InputState;
+  /** The second property's value. */
+  secondValue: number;
+}
+
+/** The cycle, reduced to what a document needs from it. */
+export interface CycleSnapshot {
+  /** The design outdoor condition, as typed. */
+  outdoor: BoundaryInputs;
+  /** The design room condition, as typed. */
+  room: BoundaryInputs;
+  /** The coil's apparatus dew point, in the document's units. */
+  adp: number;
+  /** The coil's bypass factor, read on humidity ratio. */
+  bypassFactor: number;
+  /** Outdoor-air dry-air mass flow. */
+  mdotOutdoor: number;
+  /** Total supply dry-air mass flow. */
+  mdotSupply: number;
+  /** The labels, translated by the caller so no English reaches the store. */
+  outdoorLabel: string;
+  roomLabel: string;
+  mixedLabel: string;
+  supplyLabel: string;
 }

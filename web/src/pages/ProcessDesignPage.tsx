@@ -71,6 +71,16 @@ export interface ProcessDesignPageProps {
   error: string | null;
   /** Whether the document is in SI. */
   isSi: boolean;
+  /**
+   * Puts the solved cycle into the document as points and processes.
+   *
+   * The one crossing this page has ever had. Without it the macro's answer
+   * lives and dies in the results strip: the chart never draws it and no part
+   * of it can be edited.
+   */
+  onSendToChart: () => void;
+  /** Whether the cycle has been sent, so the page can say so. */
+  sent: boolean;
 }
 
 /** A short state summary for a block's subtitle. */
@@ -85,6 +95,8 @@ export function ProcessDesignPage({
   cycle,
   error,
   isSi,
+  onSendToChart,
+  sent,
 }: ProcessDesignPageProps) {
   const t = useT();
   const power = t(isSi ? 'unit.kilowatt' : 'unit.btuPerHour');
@@ -192,6 +204,17 @@ export function ProcessDesignPage({
 
           {cycle?.mixing_fogged ? (
             <p className="panel__warning">{t('design.mixingFogged')}</p>
+          ) : null}
+
+          {cycle ? (
+            <>
+              <button type="button" className="btn btn--block" onClick={onSendToChart}>
+                {t('design.sendToChart')}
+              </button>
+              <p className="panel__note">
+                {sent ? t('design.sentToChart') : t('design.sendToChartHint')}
+              </p>
+            </>
           ) : null}
         </section>
       </div>

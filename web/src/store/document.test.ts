@@ -92,12 +92,35 @@ vi.mock('../psychro', () => {
         coil: undefined,
       };
     },
-    apply_mixing: (i: StatePointInput, _a: number, j: StatePointInput) => {
+    // Leaves the air at the surface plus the bypass share of the entering
+    // spread, which is enough for the outlet to move when the mix feeding it
+    // does — the property the cycle test is actually about.
+    solve_coil_from_adp: (i: StatePointInput, tAdp: number, bf: number) => {
+      const t = take(i);
+      const leaving = tAdp + bf * (t.dbt - tAdp);
+      return {
+        leaving: state(leaving, 0.008),
+        adp: state(tAdp, 0.0076),
+        bf_temperature: bf,
+        bf_humidity_ratio: bf,
+        bf_enthalpy: bf,
+        shr: 0.72,
+        total_load: -30,
+        air_side_load: -30.2,
+        condensate: 0.0011,
+        dry: false,
+      };
+    },
+    // Flow-weighted, because that is what mixing *is* — and because a mock
+    // that ignored the flows could not tell whether changing one moved the
+    // train, which is the property the cycle test asserts.
+    apply_mixing: (i: StatePointInput, ma: number, j: StatePointInput, mb: number) => {
       const a = take(i);
       const b = take(j);
+      const total = ma + mb;
       return {
-        outlet: state((a.dbt + b.dbt) / 2, a.val2),
-        mdot_da: 2,
+        outlet: state((ma * a.dbt + mb * b.dbt) / total, a.val2),
+        mdot_da: total,
         fogged: false,
         condensate: 0,
       };
@@ -130,8 +153,14 @@ vi.mock('../psychro', () => {
   };
 });
 
-const { addProcessFrom, adoptFit, linkPoints, removePoint, removeProcess } =
-  await import('./document');
+const {
+  addProcessFrom,
+  adoptFit,
+  linkPoints,
+  materialiseCycle,
+  removePoint,
+  removeProcess,
+} = await import('./document');
 const { resolveDocument } = await import('./useResolvedDocument');
 const { usePsychStore, isDerived, producerOf, resetIdCounter } =
   await import('./usePsychStore');
@@ -316,6 +345,7 @@ describe('resolving a chain', () => {
     useProcessStore.getState().updateProcess(id, { secondId: ra });
 
     const document = resolve();
+    // Equal flows by default, so the mix sits midway between 30 and 20.
     expect(document.processesById.get(id)?.outlet?.dbt).toBeCloseTo(25, 6);
   });
 });
@@ -400,5 +430,69 @@ describe('adopting a fit', () => {
     // Adopting would give one point two producers, and the second would silently
     // win on every resolution.
     expect(adoptFit(link, 'sensible', { targetT: 30 })).toBe(false);
+  });
+});
+
+describe('putting a solved cycle on the chart', () => {
+  const CYCLE = {
+    outdoor: { dryBulb: 35, mode: InputState.DbtRh, secondValue: 40 },
+    room: { dryBulb: 24, mode: InputState.DbtRh, secondValue: 50 },
+    adp: 10.2,
+    bypassFactor: 0.1739,
+    mdotOutdoor: 0.354,
+    mdotSupply: 1.772,
+    outdoorLabel: 'Outdoor air',
+    roomLabel: 'Room',
+    mixedLabel: 'Mixing',
+    supplyLabel: 'Supply fan',
+  };
+
+  it('lands as an ordinary document: five states, two processes, all editable', () => {
+    seed('stale');
+    materialiseCycle(CYCLE, actions());
+
+    const points = usePsychStore.getState().points;
+    const processes = useProcessStore.getState().processes;
+    // Two typed boundary conditions and two derived outlets. The stale point is
+    // gone: this replaces the document rather than merging into it, because
+    // every merge rule for an existing point labelled OA is a surprise.
+    expect(points.map((p) => p.label)).toEqual([
+      'Outdoor air',
+      'Room',
+      'Mixing',
+      'Supply fan',
+    ]);
+    expect(points.filter(isDerived)).toHaveLength(2);
+    expect(processes.map((p) => p.kind)).toEqual(['mix', 'cooling']);
+  });
+
+  it('stores the boundary conditions as the case states them', () => {
+    materialiseCycle(CYCLE, actions());
+    const oa = usePsychStore.getState().points[0]!;
+    // Dry bulb and relative humidity, which is what was typed. Storing a
+    // humidity ratio derived from them would put a stale reading in the
+    // document the first time the elevation changed.
+    expect(oa.mode).toBe(InputState.DbtRh);
+    expect(oa.dryBulb).toBe(35);
+    expect(oa.secondValue).toBe(40);
+  });
+
+  it('keeps the cycle alive: the coil follows the mix it is fed', () => {
+    materialiseCycle(CYCLE, actions());
+    const [mix, coil] = useProcessStore.getState().processes;
+
+    // The coil's inlet is the mix's outlet, not a copy of the mixed state. That
+    // is what makes changing the outdoor-air flow move the whole train, and it
+    // is what three frozen `link` lines could not do.
+    expect(coil!.fromId).toBe(mix!.toId);
+    expect(coil!.tAdp).toBeCloseTo(10.2, 6);
+    expect(coil!.bypassFactor).toBeCloseTo(0.1739, 6);
+    expect(mix!.mdot).toBeCloseTo(0.354, 6);
+    expect(mix!.mdotSecond).toBeCloseTo(1.772 - 0.354, 6);
+
+    const before = resolve().processesById.get(coil!.id)?.outlet?.dbt;
+    useProcessStore.getState().updateProcess(mix!.id, { mdot: 1.6, mdotSecond: 0.17 });
+    const after = resolve().processesById.get(coil!.id)?.outlet?.dbt;
+    expect(after).not.toBe(before);
   });
 });

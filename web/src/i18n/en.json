@@ -278,5 +278,8 @@
   "outline.wet": "wet",
   "outline.failed": "failed",
   "outline.unresolved": "not a state",
-  "outline.gone": "—"
+  "outline.gone": "—",
+  "design.sendToChart": "Put this cycle on the chart",
+  "design.sendToChartHint": "Replaces the document with the five states and three processes this cycle solved, as an ordinary editable document.",
+  "design.sentToChart": "The cycle is on the chart. Change a process there and its outlet follows."
 }

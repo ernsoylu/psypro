@@ -49,6 +49,7 @@ import {
   addProcessFrom,
   adoptFit,
   linkPoints,
+  materialiseCycle,
   removePoint as removePointAndDependents,
   removeProcess as removeProcessAndOutlet,
 } from './store/document';
@@ -112,6 +113,7 @@ export function App() {
   const [exampleId, setExampleId] = useState<string | null>(null);
   const [fileHandle, setFileHandle] = useState<FileHandle>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [cycleSent, setCycleSent] = useState(false);
 
   /**
    * The last state the canvas drew, kept for export.
@@ -550,6 +552,46 @@ export function App() {
     );
   }, [selectedProducer, proc.processes]);
 
+  /**
+   * Puts the solved cycle into the document.
+   *
+   * The states go in as the (dry bulb, humidity ratio) pairs the macro produced
+   * — exact, and the one pair every resolved state carries — and the coil goes
+   * in as its apparatus dew point and bypass factor, which is what keeps the
+   * cycle *alive*: change the outdoor fraction on the mixing process and the
+   * mixed state moves, and the coil follows it.
+   */
+  const onSendCycleToChart = useCallback(() => {
+    if (!cycle) return;
+    materialiseCycle(
+      {
+        // As the case states them — dry bulb and relative humidity — rather
+        // than as states resolved from them.
+        outdoor: {
+          dryBulb: design.outdoorT,
+          mode: InputState.DbtRh,
+          secondValue: design.outdoorRh,
+        },
+        room: {
+          dryBulb: design.roomT,
+          mode: InputState.DbtRh,
+          secondValue: design.roomRh,
+        },
+        adp: cycle.coil.adp.dbt,
+        bypassFactor: cycle.coil.bf_humidity_ratio,
+        mdotOutdoor: cycle.mdot_outdoor,
+        mdotSupply: cycle.mdot_supply,
+        outdoorLabel: t('design.blockOutdoor'),
+        roomLabel: t('design.blockRoom'),
+        mixedLabel: t('design.blockMixing'),
+        supplyLabel: t('design.blockFan'),
+      },
+      actions,
+    );
+    setCycleSent(true);
+    setPage('chart');
+  }, [cycle, design, t, actions]);
+
   /** Breaks a derived point's link to its process, keeping it where it is. */
   const onDetachPoint = useCallback(() => {
     if (!selected) return;
@@ -748,6 +790,8 @@ export function App() {
           cycle={cycle}
           error={cycleError}
           isSi={project.isSi}
+          onSendToChart={onSendCycleToChart}
+          sent={cycleSent}
         />
       ) : page === 'weather' ? (
         <WeatherPage
