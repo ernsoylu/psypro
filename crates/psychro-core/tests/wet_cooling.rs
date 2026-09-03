@@ -237,6 +237,62 @@ fn an_impossible_bypass_factor_is_refused() {
     }
 }
 
+/// A duty is the same coil stated the other way round, so the two forms have to
+/// land in the same place.
+///
+/// Solve for the leaving temperature at a given duty, hand that temperature back
+/// as a target, and the same state must come out. Nothing else asserts that the
+/// closed-form enthalpy inversion and the secant on temperature agree.
+#[test]
+fn a_duty_and_a_target_temperature_describe_the_same_wet_coil() {
+    let atm = sea_level();
+    let inlet = at(26.0, 0.50);
+    let bf = process::DEFAULT_BYPASS_FACTOR;
+    let mdot = 1.5;
+
+    let by_duty = process::cool_by_duty(&inlet, -30.0, bf, mdot, &atm).expect("a rated coil");
+    assert!(
+        by_duty.dehumidified(),
+        "30 kW off 1.5 kg/s runs the coil wet"
+    );
+    assert!(
+        (by_duty.process.load.total + 30.0).abs() < 1e-9,
+        "the duty asked for is the duty delivered: {:.6}",
+        by_duty.process.load.total
+    );
+
+    let by_target = process::cool_to(&inlet, by_duty.process.outlet.t_db, bf, mdot, &atm)
+        .expect("the same coil");
+    assert!(
+        (by_target.process.outlet.w - by_duty.process.outlet.w).abs() < 1e-7,
+        "the two forms disagree on moisture: {:.9} against {:.9}",
+        by_target.process.outlet.w,
+        by_duty.process.outlet.w
+    );
+    assert!(
+        (by_target.condensate - by_duty.condensate).abs() < 1e-7,
+        "the two forms disagree on condensate: {:.9} against {:.9}",
+        by_target.condensate,
+        by_duty.condensate
+    );
+}
+
+/// A duty too small to reach the dew point is the dry process, and agrees with
+/// the sensible entry point that has always handled it.
+#[test]
+fn a_small_duty_stays_dry_and_matches_the_sensible_form() {
+    let atm = sea_level();
+    let inlet = at(26.0, 0.50);
+    let mdot = 2.0;
+    let r = process::cool_by_duty(&inlet, -10.0, process::DEFAULT_BYPASS_FACTOR, mdot, &atm)
+        .expect("a dry coil");
+    let sensible = process::sensible_duty(&inlet, -10.0, mdot, &atm).expect("sensible");
+
+    assert!(!r.dehumidified());
+    assert!((r.process.outlet.t_db - sensible.outlet.t_db).abs() < 1e-9);
+    assert!((r.process.outlet.w - inlet.w).abs() < 1e-12);
+}
+
 // ── The desiccant direction ─────────────────────────────────────────────────
 
 /// The mirror image of evaporative cooling: the air leaves warmer and drier,

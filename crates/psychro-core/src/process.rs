@@ -569,6 +569,66 @@ fn refine_adp(
     Ok(b)
 }
 
+/// Cooling by a duty rather than to a temperature, condensing when wet.
+///
+/// The [`cool_to`] of a coil specified by its rating. `q` is in kilowatts and
+/// negative for cooling, matching [`sensible_duty`].
+///
+/// This is the *closed-form* half of the pair, and pleasingly so: the coil's
+/// balances interpolate enthalpy exactly, so the surface enthalpy inverts
+/// directly and nothing has to be iterated.
+///
+/// ```text
+/// h_lvg = h_ent + q/ṁ                          [the duty]
+/// h_adp = (h_lvg − BF·h_ent)/(1 − BF)          [the energy balance, inverted]
+/// W_lvg = W_adp + BF·(W_ent − W_adp)           [the mass balance]
+/// ```
+///
+/// The surface decides the branch here too, by the same argument as in
+/// [`cool_to`]: with the saturated state at `h_adp` sitting at or above the
+/// entering dew point, nothing on the coil is cold enough to condense and the
+/// air cools at constant `W`.
+///
+/// # Errors
+/// Returns the backend's message when the bypass factor is not a fraction, or
+/// when the duty asks for a state the backend will not resolve — a duty large
+/// enough to drive the surface off the bottom of the chart, say.
+pub fn cool_by_duty(
+    inlet: &StatePoint,
+    q: f64,
+    bypass_factor: f64,
+    mdot_da: f64,
+    atm: &Atmosphere,
+) -> Result<CoolResult, PropertyError> {
+    if !(0.0..1.0).contains(&bypass_factor) {
+        return Err(PropertyError::supersaturated(format!(
+            "a bypass factor lies in [0, 1); {bypass_factor} would put the leaving air on the \
+             wrong side of the coil"
+        )));
+    }
+    let h_out = inlet.h + q / mdot_da;
+    let h_adp = (h_out - bypass_factor * inlet.h) / (1.0 - bypass_factor);
+    let adp = StatePoint::from_h_rh(h_adp, 1.0, atm)?;
+
+    if adp.t_db >= inlet.t_dp {
+        let outlet = StatePoint::from_h_w(h_out, inlet.w, atm)?;
+        return Ok(CoolResult {
+            process: finish(inlet, outlet, mdot_da),
+            condensate: 0.0,
+            coil: None,
+            frost_risk: false,
+        });
+    }
+
+    let coil = crate::coil::from_adp(inlet, adp.t_db, bypass_factor, mdot_da, atm)?;
+    Ok(CoolResult {
+        process: finish(inlet, coil.leaving, mdot_da),
+        condensate: coil.condensate,
+        coil: Some(coil),
+        frost_risk: adp.t_db < FROST_LIMIT_C,
+    })
+}
+
 /// Desiccant dehumidification: the mirror image of evaporative cooling.
 ///
 /// The air leaves **warmer and drier**, which is the half of §4.1's vocabulary a

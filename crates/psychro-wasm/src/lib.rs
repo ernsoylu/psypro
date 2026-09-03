@@ -480,17 +480,52 @@ pub fn apply_cooling(
         &atmosphere_for(&inlet),
     )
     .map_err(|e| JsValue::from_str(e.message()))?;
-    Ok(CoolingOutput {
-        process: present_process(&r.process, inlet.is_si),
+    Ok(present_cooling(&r, inlet.is_si))
+}
+
+/// A cooling process specified by its duty rather than by a target temperature.
+///
+/// `q` is in kW or Btu/h and negative for cooling, matching
+/// [`apply_sensible_duty`]. Wet-capable for the same reason [`apply_cooling`]
+/// is: a rated coil that happens to reach below the entering dew point is a
+/// coil, not an error.
+#[wasm_bindgen]
+pub fn apply_cooling_duty(
+    inlet: StatePointInput,
+    q: f64,
+    bypass_factor: f64,
+    mdot_da: f64,
+) -> Result<CoolingOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let q_kw = if inlet.is_si {
+        q
+    } else {
+        units::btu_per_hour_to_kw(q)
+    };
+    let r = process::cool_by_duty(
+        &s,
+        q_kw,
+        bypass_factor,
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_cooling(&r, inlet.is_si))
+}
+
+/// Wraps a cooling result for the boundary.
+fn present_cooling(r: &process::CoolResult, is_si: bool) -> CoolingOutput {
+    CoolingOutput {
+        process: present_process(&r.process, is_si),
         dehumidified: r.dehumidified(),
-        condensate: if inlet.is_si {
+        condensate: if is_si {
             r.condensate
         } else {
             units::kg_per_second_to_lb_per_hour(r.condensate)
         },
         frost_risk: r.frost_risk,
-        coil: r.coil.map(|c| present_coil(&c, inlet.is_si)),
-    })
+        coil: r.coil.map(|c| present_coil(&c, is_si)),
+    }
 }
 
 /// A cooling process and, when the coil ran wet, the coil that did it.
