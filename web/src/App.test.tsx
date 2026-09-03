@@ -76,6 +76,60 @@ vi.mock('./psychro', async () => {
     mix_air: () => {
       throw new Error('not used in this test');
     },
+    // Ten degrees on, so an outlet is distinguishable from its inlet: a train
+    // that silently restarted from the wrong state would otherwise pass.
+    apply_cooling: (i: { dbt: number }, tOut: number) => ({
+      process: {
+        outlet: {
+          dbt: tOut,
+          wbt: 17.07,
+          dew_point: 12.99,
+          humidity_ratio: 0.0093,
+          humidity_ratio_grains: 65.1,
+          rh: 42,
+          degree_of_saturation: 41.2,
+          enthalpy: 47.8,
+          specific_volume: 0.8544,
+          density: 1.1813,
+          vapor_pressure: 1.4948,
+          barometric_pressure: 101.325,
+          is_sub_freezing: false,
+        },
+        load: { total: 10, sensible: 10, latent: 0, moisture: 0, shr: 1, has_shr: true },
+        near_saturation: false,
+      },
+      dehumidified: false,
+      condensate: 0,
+      frost_risk: false,
+      coil: undefined,
+    }),
+    // SHR = 1 has no finite slope, and the renderer takes that to mean the
+    // horizontal line it is.
+    protractor_slope: () => Number.POSITIVE_INFINITY,
+    process_load: () => ({
+      total: 10,
+      sensible: 10,
+      latent: 0,
+      moisture: 0,
+      shr: 1,
+      has_shr: true,
+    }),
+    identify_process: () => ({
+      kind: 0,
+      load: { total: 10, sensible: 10, latent: 0, moisture: 0, shr: 1, has_shr: true },
+      slope: Number.NaN,
+      has_slope: false,
+      duty: 10,
+      has_duty: true,
+      water_flow: Number.NaN,
+      has_water_flow: false,
+      steam_enthalpy: Number.NaN,
+      has_steam_enthalpy: false,
+      effectiveness: Number.NaN,
+      has_effectiveness: false,
+      enthalpy_rise: Number.NaN,
+      has_enthalpy_rise: false,
+    }),
   };
 });
 
@@ -182,6 +236,51 @@ describe('application shell', () => {
     // follow the toggle the reading is mislabelled rather than merely stale.
     expect(results().getAllByText('°F').length).toBeGreaterThan(0);
     expect(results().queryByText('°C')).not.toBeInTheDocument();
+  });
+
+  it('names the point a process would start from, rather than guessing one', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    // Before there is a point, adding a process is not offered at all: the old
+    // panel enabled it and bound the process to `points[0]`.
+    expect(panel.getByLabelText('Add process…')).toBeDisabled();
+
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
+    // And once there is one, the control says which point it will start from.
+    expect(panel.getByLabelText('Add process…')).toBeEnabled();
+    expect(panel.getByText('Add process from OA…')).toBeInTheDocument();
+  });
+
+  it('creates the outlet of a process as a point you can select', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
+    await user.selectOptions(panel.getByLabelText('Add process…'), 'sensible');
+
+    // The endpoint exists and is named, which is what makes the next process
+    // able to start from it.
+    expect(panel.getByText('OA → RA')).toBeInTheDocument();
+    expect(usePsychStore.getState().points).toHaveLength(2);
+
+    await user.click(panel.getByRole('button', { name: 'Select outlet' }));
+    // Selecting it shows where it came from rather than input fields that would
+    // silently do nothing.
+    expect(panel.getByText(/Placed by/)).toBeInTheDocument();
+    expect(panel.queryByLabelText('Dry-bulb temperature')).not.toBeInTheDocument();
+  });
+
+  it('offers the bypass factor on a process that can run wet', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    await user.click(panel.getByRole('button', { name: 'Add state point' }));
+    await user.selectOptions(panel.getByLabelText('Add process…'), 'sensible');
+    // The field that decides what a coil does once the target crosses the
+    // entering dew point. Its absence is what made the old panel report an
+    // error there instead of a coil.
+    expect(panel.getByLabelText(/Bypass factor/)).toBeInTheDocument();
   });
 
   it('toggles the theme on the document root, where the palette is keyed', async () => {

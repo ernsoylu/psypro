@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ChartCanvas } from './chart/ChartCanvas';
+import { ChartCanvas, type DrawEndpoint } from './chart/ChartCanvas';
 import type { GridCurve } from './chart/useBaseGrid';
 import type { Viewport as ChartViewport } from './chart/geometry';
 import type { ChartTokens } from './chart/useChartTokens';
@@ -623,6 +623,46 @@ export function App() {
     [updatePoint],
   );
 
+  /**
+   * A process drawn on the chart, from one end to the other.
+   *
+   * The gesture the toolbox offered and nothing implemented. Either end may be
+   * a point that already exists or open chart; open chart becomes a new point,
+   * because a process has to join two *states* and an unnamed one cannot be
+   * edited afterwards.
+   *
+   * The result is a fitted process: the engine names it and backs out its
+   * parameters, and the panel offers to adopt them. Guessing a parametric kind
+   * from the direction of a drag would be the tool deciding what the user meant.
+   */
+  const onDrawProcess = useCallback(
+    (from: DrawEndpoint, to: DrawEndpoint) => {
+      const materialise = (end: DrawEndpoint) =>
+        end.pointId ??
+        addPoint({
+          label: nextLabel(usePsychStore.getState().points),
+          dryBulb: end.dryBulb,
+          mode: InputState.DbtHumidityRatio,
+          secondValue: end.humidityRatio,
+        });
+
+      const fromId = materialise(from);
+      const toId = materialise(to);
+      const id = linkPoints(fromId, toId, {
+        isSi: project.isSi,
+        // The points may have just been created, so the resolution in hand
+        // predates them; the engine's own defaults do not depend on the inlet
+        // for a fitted line.
+        stateOf: () => null,
+      });
+      proc.selectProcess(id);
+      // One gesture, one process: drop back to Select so the next drag pans the
+      // view rather than scattering lines across the chart.
+      setTool('select');
+    },
+    [addPoint, project.isSi, proc],
+  );
+
   const onPlacePoint = useCallback(
     (dryBulb: number, humidityRatio: number) => {
       addPoint({
@@ -761,6 +801,8 @@ export function App() {
                   showLabels={style.showLabels}
                   showCrosshair={style.showCrosshair && tool === 'crosshair'}
                   placing={tool === 'addPoint'}
+                  drawing={tool === 'drawProcess'}
+                  onDrawProcess={onDrawProcess}
                   onMovePoint={onMovePoint}
                   onSelectPoint={selectPoint}
                   onPlacePoint={onPlacePoint}
