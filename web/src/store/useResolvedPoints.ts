@@ -23,6 +23,18 @@ import {
 } from '../psychro';
 import type { StatePoint } from './usePsychStore';
 
+/**
+ * A position in chart space.
+ *
+ * A plain pair, not the engine's `Point2D`: that is a `wasm-bindgen` handle
+ * carrying `free()` and a disposal symbol, and holding one across renders would
+ * leak a Rust allocation per point per frame.
+ */
+export interface ChartPosition {
+  x: number;
+  y: number;
+}
+
 /** A point with everything the chart and the panel need. */
 export interface ResolvedPoint {
   /** The stored point this came from. */
@@ -30,7 +42,7 @@ export interface ResolvedPoint {
   /** All twelve properties, or null if the inputs are not a physical state. */
   state: StatePointOutput | null;
   /** Chart-space position, or null if the state could not be resolved. */
-  position: { x: number; y: number } | null;
+  position: ChartPosition | null;
   /** Why it could not be resolved, if it could not. */
   error: string | null;
 }

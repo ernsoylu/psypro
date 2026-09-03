@@ -86,7 +86,12 @@ export function StyleModal({
         aria-label={t('styleModal.closeBackdrop')}
         onClick={onClose}
       />
-      <div className="modal" role="dialog" aria-modal="true" aria-label={t('styleModal.title')}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('styleModal.title')}
+      >
         <div className="panel__header">
           <span className="panel__title">{t('styleModal.title')}</span>
         </div>
@@ -115,7 +120,9 @@ export function StyleModal({
                       className="style-matrix__color"
                       value={swatch}
                       disabled={!tokens || swatch === ''}
-                      onChange={(event) => onSetStyle(family, { color: event.target.value })}
+                      onChange={(event) =>
+                        onSetStyle(family, { color: event.target.value })
+                      }
                     />
                   </td>
                   <td>

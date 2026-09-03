@@ -60,6 +60,7 @@ const POINT = {
   dryBulb: 24,
   mode: InputState.DbtRh,
   secondValue: 50,
+  source: { kind: 'input' } as const,
 };
 
 const SEA_LEVEL = {

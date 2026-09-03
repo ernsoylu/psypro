@@ -179,7 +179,13 @@ export const DIMENSIONS: Record<DimensionId, Dimension> = {
     si: 'kg/s',
     ip: 'lb/h',
     units: [
-      { id: 'kg/s', key: 'unit.kgPerSecond', decimals: 3, toBase: (v) => v, fromBase: (v) => v },
+      {
+        id: 'kg/s',
+        key: 'unit.kgPerSecond',
+        decimals: 3,
+        toBase: (v) => v,
+        fromBase: (v) => v,
+      },
       scaled('kg/h', 'unit.kgPerHour', 1 / 3600, 1),
       scaled('lb/h', 'unit.lbPerHour', 0.45359237 / 3600, 1),
       volumetric('m3/h', 'unit.m3PerHour', 1 / 3600, 1),
@@ -192,7 +198,13 @@ export const DIMENSIONS: Record<DimensionId, Dimension> = {
     si: 'kW',
     ip: 'Btu/h',
     units: [
-      { id: 'kW', key: 'unit.kilowatt', decimals: 2, toBase: (v) => v, fromBase: (v) => v },
+      {
+        id: 'kW',
+        key: 'unit.kilowatt',
+        decimals: 2,
+        toBase: (v) => v,
+        fromBase: (v) => v,
+      },
       scaled('W', 'unit.watt', 0.001, 0),
       // 1 W = 3.412141633 Btu/h exactly, from the thermochemical Btu.
       scaled('Btu/h', 'unit.btuPerHour', 1 / 3412.141633, 0),

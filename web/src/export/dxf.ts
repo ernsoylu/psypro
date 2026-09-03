@@ -107,12 +107,7 @@ function layerTable(): string[] {
 }
 
 /** A LWPOLYLINE from a flat chart-space run. */
-function polyline(
-  coords: Float64Array,
-  layer: string,
-  sx: number,
-  sy: number,
-): string[] {
+function polyline(coords: Float64Array, layer: string, sx: number, sy: number): string[] {
   const vertices = coords.length / 2;
   if (vertices < 2) return [];
   const out = [

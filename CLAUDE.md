@@ -116,6 +116,13 @@ at −20 °C, because it has no ice branch. `crates/psychro-core/tests/ashrae_co
 pins all of this against published reference values and is the acceptance gate for any change
 to the calculation layer; it stays valid whichever library does the arithmetic.
 
+**A cooling process turns rather than stopping.** A target below the entering dew point is a wet
+coil, not an error: `process::cool_to` and `cool_by_duty` follow the line toward the apparatus
+dew point and report the condensate. The dry/wet branch is decided on the **surface** the bypass
+factor implies, never on the target temperature — the surface test is continuous at the boundary
+and the other is not. At a fixed leaving temperature, zero bypass removes the *least* water
+(the air leaves saturated); the opposite intuition holds only at a fixed ADP.
+
 Three distinctions the code and UI must preserve (they are the field's most common errors,
 per Gatley's *Understanding Psychrometrics*): relative humidity `p_wv/p_ws` is not degree of
 saturation `W/W_s`; thermodynamic wet-bulb is not psychrometer wet-bulb; and mass balances use
@@ -141,8 +148,44 @@ without mounting components. Three stores, split by lifetime rather than by scre
 
 - `useProjectStore` — units, altitude, chart layout. Changing any of these invalidates every
   derived value, so treat it as a global recompute trigger.
-- `usePsychStore` — points and processes (the document being edited).
+- `usePsychStore` — the state points.
+- `useProcessStore` — the processes joining them.
 - `useStyleStore` — the line-styling matrix and theme variables.
+- `useSchematicStore` — where the circuit's blocks sit, and the §4.7 components that are
+  drawn but condition nothing. Position is presentation, so it is deliberately *not* on
+  `Process`.
+
+**The document is a graph, and it resolves in one pass.** A point is either *typed* — its two
+stored numbers — or *placed by a process*, which is what lets a train be built: the outlet of
+one process is a real point with an id, so the next process can start from it. A derived point's
+stored numbers are a **dormant anchor**, ignored while the process places it and promoted back
+to inputs if that process is removed, so the file still carries only inputs.
+
+Two consequences to keep intact:
+
+- `useResolvedDocument` resolves points and processes *together*, in dependency order, because
+  neither can be resolved before what it depends on. Do not resolve a process against stored
+  inputs — a derived inlet has none. A leftover process after the walk is a cycle, reported on
+  the process rather than thrown.
+- Edits that touch both stores live in `store/document.ts`, not in a component. Deleting a
+  process detaches its outlet when something downstream consumes it, and deleting a point walks
+  the graph forward; both have outcomes no component test would catch.
+
+### The circuit designer is the same graph, drawn the other way round
+
+**A process is a block and a point is a wire.** The Process Design page's editor derives its
+nodes and edges from the document on every render and turns every gesture back into a document
+edit, so the schematic has no graph of its own to keep in step with the chart's. React Flow is
+used in its *controlled* mode for exactly this reason; letting it own the nodes would create the
+second graph this design exists to avoid.
+
+**A recirculating circuit is a loop, and the resolver walks the document once.** Loops are cut
+with a **tear**: one point is specified rather than computed (`PointSource` kind `tear`), the
+resolver ignores the edge into it, and the gap between the specified state and what the upstream
+process actually produced is reported as `tearMismatch`. That gap is the convergence error an
+iterative solver would hide. Do not "fix" it by iterating — the room condition is a design input,
+which is why the tear falls there. Tear edges are also excluded from the auto-layout walk, since
+following them is precisely what would not terminate.
 
 Rendering is a strict Z-index pipeline (`REQUIREMENTS.md` §7), Layer 0 → 4, each layer an
 independent React component so a new visual layer can be added without touching the others.

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   fitViewport,
+  nearestWithin,
   panBy,
   projectFlat,
   toChart,
@@ -171,5 +172,62 @@ describe('zoom and pan', () => {
     const v = fitViewport(EXTENT, SIZE);
     expect(panBy(v, 100, 100).scaleX).toBe(v.scaleX);
     expect(panBy(v, 100, 100).scaleY).toBe(v.scaleY);
+  });
+});
+
+describe('snapping a drawn process to a point', () => {
+  const v = fitViewport(EXTENT, SIZE);
+  const points = [
+    { id: 'a', position: { x: 20, y: 0.008 } },
+    { id: 'b', position: { x: 30, y: 0.012 } },
+    { id: 'gone', position: null },
+  ];
+  const at = (id: string) => {
+    const point = points.find((p) => p.id === id)!.position!;
+    return toScreen(v, point.x, point.y);
+  };
+
+  it('snaps to a marker the pointer is on', () => {
+    const target = at('b');
+    const hit = nearestWithin(
+      points,
+      (p) => p.position,
+      v,
+      target.x + 3,
+      target.y - 2,
+      12,
+    );
+    expect(hit?.id).toBe('b');
+  });
+
+  it('snaps to nothing outside the radius, however empty the chart is', () => {
+    // A preference rather than a limit is the bug this guards: with only two
+    // points on the chart, "nearest" would otherwise reach halfway across it and
+    // silently join a process to the wrong state.
+    const target = at('a');
+    expect(
+      nearestWithin(points, (p) => p.position, v, target.x + 40, target.y, 12),
+    ).toBeNull();
+  });
+
+  it('takes the closer of two markers within the radius', () => {
+    const a = at('a');
+    const b = at('b');
+    const between = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const hit = nearestWithin(
+      points,
+      (p) => p.position,
+      v,
+      between.x + (a.x - b.x) * 0.02,
+      between.y,
+      Math.hypot(a.x - b.x, a.y - b.y),
+    );
+    expect(hit?.id).toBe('a');
+  });
+
+  it('ignores a point that did not resolve', () => {
+    // A supersaturated point has no position, and snapping to it would join a
+    // process to a state that does not exist.
+    expect(nearestWithin([points[2]!], (p) => p.position, v, 100, 100, 1000)).toBeNull();
   });
 });

@@ -170,3 +170,39 @@ export function zoomAbout(
 export function zoomLevel(v: Viewport, fitted: Viewport): number {
   return fitted.scaleX > 0 ? v.scaleX / fitted.scaleX : 1;
 }
+
+/**
+ * The nearest item to a screen position, within a pixel radius.
+ *
+ * What makes a drawn process join up *exactly* rather than nearly. Without a
+ * snap, releasing a drag a pixel from a marker creates a second point on top of
+ * the first, and a train that looks connected but is two documents.
+ *
+ * Generic over anything carrying a chart-space position so it can be tested
+ * without a resolved document, and returns the item rather than an index so a
+ * caller does not have to hold the array still.
+ */
+export function nearestWithin<T>(
+  items: readonly T[],
+  positionOf: (item: T) => { x: number; y: number } | null,
+  v: Viewport,
+  px: number,
+  py: number,
+  radius: number,
+): T | null {
+  let best: T | null = null;
+  // Starting the search at the radius is what makes it a *limit* rather than a
+  // preference: nothing outside it can win, however empty the chart is.
+  let bestDistance = radius;
+  for (const item of items) {
+    const chart = positionOf(item);
+    if (!chart) continue;
+    const at = toScreen(v, chart.x, chart.y);
+    const distance = Math.hypot(at.x - px, at.y - py);
+    if (distance <= bestDistance) {
+      best = item;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}

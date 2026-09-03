@@ -18,7 +18,7 @@
  */
 
 import { useCallback, useRef, useState, type WheelEvent } from 'react';
-import { Layer, Stage } from 'react-konva';
+import { Layer, Line, Stage } from 'react-konva';
 import type Konva from 'konva';
 
 import { ChartAxes } from './ChartAxes';
@@ -29,7 +29,7 @@ import { PsychGrid } from './PsychGrid';
 import { WeatherLayer } from './WeatherLayer';
 import { ZoneLayer } from './ZoneLayer';
 import { formatHud } from './format';
-import { toChart, ZOOM_STEP, type Viewport } from './geometry';
+import { nearestWithin, toChart, ZOOM_STEP, type Viewport } from './geometry';
 import { useBaseGrid, type BaseGridParams, type GridCurve } from './useBaseGrid';
 import { useChartTokens, type ChartTokens } from './useChartTokens';
 import { useChartTransform, type ChartTransform } from './useChartTransform';
@@ -41,6 +41,25 @@ import type { ResolvedPoint } from '../store/useResolvedPoints';
 import type { ResolvedProcess } from '../store/useResolvedProcesses';
 import type { Envelope } from '../data';
 import type { BinGrid } from '../weather/epw.worker';
+
+/**
+ * One end of a drawn process.
+ *
+ * Either a point that already exists, or a bare state where the pointer landed
+ * — the shell decides whether that becomes a new point. The canvas resolves the
+ * gesture and takes no view on the document.
+ */
+export interface DrawEndpoint {
+  /** The point the gesture snapped to, or null for open chart. */
+  pointId: string | null;
+  /** Dry-bulb temperature in the document's units. */
+  dryBulb: number;
+  /** Humidity ratio. */
+  humidityRatio: number;
+}
+
+/** How close, in pixels, the pointer has to be to snap to a marker. */
+const SNAP_RADIUS = 12;
 
 /** What the canvas needs, and what it hands back to the shell. */
 export interface ChartCanvasProps extends BaseGridParams {
@@ -85,6 +104,16 @@ export interface ChartCanvasProps extends BaseGridParams {
   onPlacePoint: (dryBulb: number, humidityRatio: number) => void;
   /** Whether a click on empty chart places a point. */
   placing: boolean;
+  /**
+   * Whether a press-and-drag draws a process rather than panning the view.
+   *
+   * The gesture the toolbox has always offered and nothing implemented: press
+   * on a point, drag, release on another. It is the most direct statement of
+   * "a process joins two states", and it was the one gesture missing.
+   */
+  drawing: boolean;
+  /** Commits a drawn process between two endpoints. */
+  onDrawProcess: (from: DrawEndpoint, to: DrawEndpoint) => void;
   /** Receives the transform so the toolbox can drive zoom and fit. */
   onTransformReady?: (transform: ChartTransform) => void;
   /**
@@ -123,6 +152,8 @@ export function ChartCanvas({
   onSelectPoint,
   onPlacePoint,
   placing,
+  drawing,
+  onDrawProcess,
   onTransformReady,
   onDrawn,
   ...params
@@ -142,10 +173,32 @@ export function ChartCanvas({
     state: StatePointOutput | null;
   } | null>(null);
 
+  /**
+   * The draw gesture in flight: where it started, and where the pointer is.
+   *
+   * State rather than a ref, because the rubber band has to be *drawn* — and a
+   * ref read during render is exactly what the React compiler refuses, for the
+   * good reason that the paint would then lag the pointer by one event. The
+   * update costs one re-render per pointer move for the duration of one drag,
+   * which is what the crosshair already does.
+   */
+  const [draw, setDraw] = useState<{
+    from: DrawEndpoint;
+    at: { x: number; y: number };
+    to: { x: number; y: number };
+  } | null>(null);
+
   const curves = grid.curves.filter((c) => isCurveVisible(visible, c.family, c.value));
 
   if (tokens && size.width > 0) {
-    onDrawn?.({ curves, viewport, tokens, styles, width: size.width, height: size.height });
+    onDrawn?.({
+      curves,
+      viewport,
+      tokens,
+      styles,
+      width: size.width,
+      height: size.height,
+    });
   }
 
   /** Chart-space position and resolved state under a screen point. */
@@ -172,6 +225,35 @@ export function ChartCanvas({
     [viewport, params.layout, params.realGas, altitude, isSi],
   );
 
+  /** The resolved point nearest a screen position, within the snap radius. */
+  const snap = useCallback(
+    (px: number, py: number): ResolvedPoint | null =>
+      nearestWithin(points, (p) => p.position, viewport, px, py, SNAP_RADIUS),
+    [points, viewport],
+  );
+
+  /** Turns a screen position into one end of a process. */
+  const endpointAt = useCallback(
+    (px: number, py: number): DrawEndpoint | null => {
+      const snapped = snap(px, py);
+      if (snapped?.state) {
+        return {
+          pointId: snapped.point.id,
+          dryBulb: snapped.state.dbt,
+          humidityRatio: snapped.state.humidity_ratio,
+        };
+      }
+      const { state } = probe(px, py);
+      if (!state) return null;
+      return {
+        pointId: null,
+        dryBulb: state.dbt,
+        humidityRatio: state.humidity_ratio,
+      };
+    },
+    [snap, probe],
+  );
+
   const handleWheel = useCallback(
     (e: Konva.KonvaEventObject<globalThis.WheelEvent>) => {
       e.evt.preventDefault();
@@ -185,6 +267,13 @@ export function ChartCanvas({
 
   const handleMove = useCallback(
     (e: Konva.KonvaEventObject<globalThis.MouseEvent>) => {
+      const pointer = e.target.getStage()?.getPointerPosition();
+      // The rubber band, in screen coordinates: no re-resolution of the
+      // document, just a line following the pointer.
+      if (draw && pointer) {
+        setDraw({ ...draw, to: { x: pointer.x, y: pointer.y } });
+        return;
+      }
       // Panning reads the raw movement deltas rather than tracking a start
       // point: no per-move allocation, and no state update on the 60 FPS path
       // beyond the one the HUD needs.
@@ -192,11 +281,10 @@ export function ChartCanvas({
         pan(e.evt.movementX, e.evt.movementY);
         return;
       }
-      const pointer = e.target.getStage()?.getPointerPosition();
       if (!pointer) return;
       setHover(showCrosshair ? probe(pointer.x, pointer.y) : null);
     },
-    [pan, probe, showCrosshair],
+    [pan, probe, showCrosshair, draw],
   );
 
   const handleClick = useCallback(
@@ -216,7 +304,9 @@ export function ChartCanvas({
   return (
     <div
       ref={host}
-      className={placing ? 'chart-canvas chart-canvas--placing' : 'chart-canvas'}
+      className={
+        placing || drawing ? 'chart-canvas chart-canvas--placing' : 'chart-canvas'
+      }
       onWheelCapture={(e: WheelEvent) => e.preventDefault()}
     >
       {size.width > 0 && size.height > 0 && tokens ? (
@@ -226,12 +316,36 @@ export function ChartCanvas({
           onWheel={handleWheel}
           onClick={handleClick}
           onMouseDown={(e: Konva.KonvaEventObject<globalThis.MouseEvent>) => {
+            const pointer = e.target.getStage()?.getPointerPosition();
+            if (drawing && pointer) {
+              const from = endpointAt(pointer.x, pointer.y);
+              const at = { x: pointer.x, y: pointer.y };
+              if (from) setDraw({ from, at, to: at });
+              return;
+            }
             // Dragging the view, not a point: a marker handles its own drag.
             if (e.target === e.target.getStage()) dragging.current = true;
           }}
-          onMouseUp={() => (dragging.current = false)}
+          onMouseUp={(e: Konva.KonvaEventObject<globalThis.MouseEvent>) => {
+            dragging.current = false;
+            if (!draw) return;
+            const pointer = e.target.getStage()?.getPointerPosition();
+            setDraw(null);
+            if (!pointer) return;
+            // A press and release in the same spot is a click, not a process.
+            // Without this, every stray click in the mode draws a zero-length
+            // arrow between a point and itself.
+            if (Math.hypot(pointer.x - draw.at.x, pointer.y - draw.at.y) < SNAP_RADIUS) {
+              return;
+            }
+            const to = endpointAt(pointer.x, pointer.y);
+            if (to && to.pointId !== draw.from.pointId) onDrawProcess(draw.from, to);
+          }}
           onMouseLeave={() => {
             dragging.current = false;
+            // Leaving the canvas abandons the gesture rather than committing it
+            // to wherever the pointer happened to exit.
+            setDraw(null);
             setHover(null);
           }}
           onMouseMove={handleMove}
@@ -278,6 +392,7 @@ export function ChartCanvas({
           />
           <PointLayer
             points={points}
+            draggable={!drawing}
             selectedId={selectedId}
             viewport={viewport}
             tokens={tokens}
@@ -288,6 +403,19 @@ export function ChartCanvas({
             onMove={onMovePoint}
             onSelect={onSelectPoint}
           />
+          {/* The rubber band. Drawn above everything and listening to nothing:
+              it is feedback for a gesture in flight, not an object. */}
+          {draw ? (
+            <Layer listening={false}>
+              <Line
+                points={[draw.at.x, draw.at.y, draw.to.x, draw.to.y]}
+                stroke={tokens.process}
+                strokeWidth={1.5}
+                dash={[6, 4]}
+                perfectDrawEnabled={false}
+              />
+            </Layer>
+          ) : null}
           {protractor ? (
             <Layer listening={false}>
               <ProtractorLine

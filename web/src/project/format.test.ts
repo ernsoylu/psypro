@@ -14,6 +14,7 @@ import { deserialise, serialise, ProjectFormatError, FORMAT_VERSION } from './fo
 import { ChartLayout, InputState } from '../psychro';
 import type { ProjectSnapshot } from './format';
 import { defaultProcess } from '../store/useProcessStore';
+import { TYPED } from '../store/usePsychStore';
 
 /** A project with one of everything the format has to carry. */
 function project(): ProjectSnapshot {
@@ -24,16 +25,44 @@ function project(): ProjectSnapshot {
     layout: ChartLayout.MollierIx,
     realGas: false,
     points: [
-      { id: 'pt-1', label: 'OA', dryBulb: 95.3, mode: InputState.DbtRh, secondValue: 22 },
+      {
+        id: 'pt-1',
+        label: 'OA',
+        dryBulb: 95.3,
+        mode: InputState.DbtRh,
+        secondValue: 22,
+        source: TYPED,
+      },
       {
         id: 'pt-2',
         label: 'RA',
         dryBulb: 75.2,
         mode: InputState.DbtHumidityRatio,
         secondValue: 0.0093401,
+        source: TYPED,
       },
-      { id: 'pt-3', label: 'SA', dryBulb: 55, mode: InputState.DbtWbt, secondValue: 54 },
+      {
+        id: 'pt-3',
+        label: 'SA',
+        dryBulb: 55,
+        mode: InputState.DbtWbt,
+        secondValue: 54,
+        source: TYPED,
+      },
     ],
+    schematic: {
+      // A hand-placed block and a filter on a wire: the two things the
+      // schematic section carries that nothing else does.
+      positions: { 'pr-1': { x: 260, y: 0 } },
+      passThroughs: [
+        {
+          id: 'pt-through-1',
+          kind: 'filter' as const,
+          onPointId: 'pt-1',
+          label: 'MERV 13',
+        },
+      ],
+    },
     processes: [
       { ...defaultProcess('mix', 'pt-1'), id: 'pr-1', secondId: 'pt-2' },
       { ...defaultProcess('sensible', 'pt-2'), id: 'pr-2' },
@@ -90,6 +119,10 @@ describe('the project round trip', () => {
         'label',
         'mode',
         'secondValue',
+        // `source` says which of the two places a point's inputs come from —
+        // these fields, or the process that places it — so it is an input
+        // itself. Nothing on this list is a resolved property.
+        'source',
       ]);
     }
   });

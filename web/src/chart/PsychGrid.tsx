@@ -38,7 +38,14 @@ export interface PsychGridProps {
   height: number;
 }
 
-export function PsychGrid({ curves, viewport, tokens, styles, width, height }: PsychGridProps) {
+export function PsychGrid({
+  curves,
+  viewport,
+  tokens,
+  styles,
+  width,
+  height,
+}: PsychGridProps) {
   const layer = useRef<Konva.Layer>(null);
 
   useEffect(() => {

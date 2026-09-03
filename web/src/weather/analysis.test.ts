@@ -82,14 +82,12 @@ const EPW = [
 /** Posts one request into the worker and waits for its reply. */
 function analyse(request: Record<string, unknown>): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const post = vi
-      .spyOn(self, 'postMessage')
-      .mockImplementation(((message: unknown) => {
-        post.mockRestore();
-        const reply = message as { ok: boolean; error?: string };
-        if (reply.ok) resolve(reply);
-        else reject(new Error(reply.error));
-      }) as typeof self.postMessage);
+    const post = vi.spyOn(self, 'postMessage').mockImplementation(((message: unknown) => {
+      post.mockRestore();
+      const reply = message as { ok: boolean; error?: string };
+      if (reply.ok) resolve(reply);
+      else reject(new Error(reply.error));
+    }) as typeof self.postMessage);
 
     self.onmessage?.(new MessageEvent('message', { data: request }));
   });

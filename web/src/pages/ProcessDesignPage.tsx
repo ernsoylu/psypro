@@ -1,54 +1,26 @@
 /**
- * The Process Design page: the AHU train, the cycle results, and the coil
- * inspector.
+ * The Process Design page: the circuit, and the load case that starts one.
  *
- * Built from HTML rather than canvas. A schematic is boxes with text in them —
- * the browser already lays that out, makes it selectable, and reads it to a
- * screen reader, and reimplementing those three things on a canvas to draw
- * eight rectangles is the wrong trade.
+ * It used to draw seven fixed blocks in a row and grey out the ones the macro
+ * did not run — a picture of *one* cycle, and read-only. It is now an editor:
+ * blocks are placed and wired into whatever circuit the plant actually is, and
+ * every block is a process on the chart while every wire is a state point. The
+ * two pages are two views of one document, so editing either edits both.
  *
- * **Blocks not in the active cycle render as inactive rather than disappearing**
- * (`DEVELOPMENT_PLAN.md` Phase 8). A palette that hides what is not running
- * teaches that the tool cannot do it; one that greys it out teaches that this
- * design does not use it, which is the true statement.
+ * The eight-field design case stays, and stays first, because it is the fastest
+ * path there is from a room load to a sized system — and it now *materialises a
+ * circuit* rather than printing a strip of numbers. Retiring it would have cost
+ * the one-action route from loads to a design and the §4.9 derivation with it.
  */
 
-import { Icon, type IconName } from '../shell/Icon';
-import { useT, type Translator } from '../i18n/useT';
+import type { ReactNode } from 'react';
+
+import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n';
-import type { CycleOutput, StatePointOutput } from '../psychro';
+import type { CycleOutput } from '../psychro';
 import { UnitField } from '../shell/UnitField';
 import { specificVolumeSi } from '../units';
 import type { DimensionId } from '../units';
-
-/** One block in the air-handling train. */
-interface Block {
-  key: string;
-  icon: IconName;
-  title: TranslationKey;
-  /** The state-point label the air carries when it leaves this block. */
-  node?: string;
-}
-
-/** The train, in the order the air takes. */
-const TRAIN: Block[] = [
-  { key: 'outdoor', icon: 'open', title: 'design.blockOutdoor', node: 'OA' },
-  { key: 'recovery', icon: 'process', title: 'design.blockRecovery' },
-  { key: 'mixing', icon: 'shape', title: 'design.blockMixing', node: 'MA' },
-  { key: 'preheat', icon: 'sun', title: 'design.blockPreheat' },
-  { key: 'cooling', icon: 'point', title: 'design.blockCooling', node: 'CL' },
-  { key: 'reheat', icon: 'sun', title: 'design.blockReheat' },
-  { key: 'fan', icon: 'fit', title: 'design.blockFan', node: 'SA' },
-];
-
-/**
- * Which blocks the primary return-air cycle actually runs.
- *
- * The supply fan is *not* one of them. It is a real sensible heating process —
- * §4.7 is explicit that fan heat is not zero — but this macro does not model it,
- * and showing it active with no temperature rise would claim otherwise.
- */
-const ACTIVE = new Set(['outdoor', 'mixing', 'cooling']);
 
 /** What the page needs. */
 export interface ProcessDesignPageProps {
@@ -71,12 +43,20 @@ export interface ProcessDesignPageProps {
   error: string | null;
   /** Whether the document is in SI. */
   isSi: boolean;
-}
-
-/** A short state summary for a block's subtitle. */
-function summarise(state: StatePointOutput | null, isSi: boolean, t: Translator): string {
-  if (!state) return t('design.notInCycle');
-  return `${state.dbt.toFixed(1)} ${t(isSi ? 'unit.celsius' : 'unit.fahrenheit')} · ${state.rh.toFixed(0)}%`;
+  /**
+   * Puts the solved cycle into the document as points and processes.
+   *
+   * The one crossing this page has ever had. Without it the macro's answer
+   * lives and dies in the results strip: the chart never draws it and no part
+   * of it can be edited.
+   */
+  onSendToChart: () => void;
+  /** Whether the cycle has been sent, so the page can say so. */
+  sent: boolean;
+  /** The circuit editor itself. */
+  canvas: ReactNode;
+  /** The block palette, above the case. */
+  palette: ReactNode;
 }
 
 export function ProcessDesignPage({
@@ -85,23 +65,16 @@ export function ProcessDesignPage({
   cycle,
   error,
   isSi,
+  onSendToChart,
+  sent,
+  canvas,
+  palette,
 }: ProcessDesignPageProps) {
   const t = useT();
   const power = t(isSi ? 'unit.kilowatt' : 'unit.btuPerHour');
   const temp = t(isSi ? 'unit.celsius' : 'unit.fahrenheit');
   const flow = t(isSi ? 'unit.kgPerSecond' : 'unit.lbPerHour');
   const volume = t(isSi ? 'unit.m3PerSecond' : 'unit.cfm');
-
-  /** The state each block leaves the air in, once the cycle is solved. */
-  const stateFor: Record<string, StatePointOutput | null> = {
-    // The outdoor block's state is the design case itself, not something the
-    // cycle produces — it is the boundary condition everything else follows
-    // from, and showing it as "not in cycle" was simply wrong.
-    outdoor: null,
-    mixing: cycle?.mixed ?? null,
-    cooling: cycle?.coil.leaving ?? null,
-    fan: cycle?.supply ?? null,
-  };
 
   const inputs: {
     key: keyof ProcessDesignPageProps['design'];
@@ -122,42 +95,7 @@ export function ProcessDesignPage({
     <main className="page" aria-label={t('page.processDesign')}>
       <div className="page__main">
         <section className="schematic" aria-label={t('design.schematic')}>
-          <ol className="train">
-            {TRAIN.map((block) => {
-              const active = ACTIVE.has(block.key);
-              return (
-                <li
-                  key={block.key}
-                  className={active ? 'block' : 'block block--inactive'}
-                  aria-disabled={!active}
-                >
-                  <Icon name={block.icon} size={20} />
-                  <span className="block__title">{t(block.title)}</span>
-                  <span className="block__sub">
-                    {!active
-                      ? t('design.notInCycle')
-                      : block.key === 'outdoor'
-                        ? `${design.outdoorT.toFixed(1)} ${temp} · ${design.outdoorRh.toFixed(0)}%`
-                        : summarise(stateFor[block.key] ?? null, isSi, t)}
-                  </span>
-                  {/* Only a block the cycle runs carries a state-point badge:
-                      an SA tag on an inactive supply fan claims a state that
-                      does not exist. */}
-                  {active && block.node ? (
-                    <span className="block__node">{block.node}</span>
-                  ) : null}
-                </li>
-              );
-            })}
-            <li className="block block--room">
-              <Icon name="shape" size={20} />
-              <span className="block__title">{t('design.blockRoom')}</span>
-              <span className="block__sub">
-                {design.roomT.toFixed(1)} {temp} · {design.roomRh.toFixed(0)}%
-              </span>
-              <span className="block__node">RA</span>
-            </li>
-          </ol>
+          {canvas}
 
           {error ? (
             <p className="panel__error" role="alert">
@@ -193,6 +131,17 @@ export function ProcessDesignPage({
           {cycle?.mixing_fogged ? (
             <p className="panel__warning">{t('design.mixingFogged')}</p>
           ) : null}
+
+          {cycle ? (
+            <>
+              <button type="button" className="btn btn--block" onClick={onSendToChart}>
+                {t('design.sendToChart')}
+              </button>
+              <p className="panel__note">
+                {sent ? t('design.sentToChart') : t('design.sendToChartHint')}
+              </p>
+            </>
+          ) : null}
         </section>
       </div>
 
@@ -200,6 +149,8 @@ export function ProcessDesignPage({
         <div className="panel__header">
           <span className="panel__title">{t('design.inspector')}</span>
         </div>
+
+        {palette}
 
         <h2 className="panel__section">{t('design.sectionCase')}</h2>
         <div className="panel__fields">

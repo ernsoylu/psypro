@@ -38,6 +38,14 @@ const LABEL_DY = -16;
 export interface PointLayerProps {
   /** The document's points, already resolved. */
   points: ResolvedPoint[];
+  /**
+   * Whether a marker may be dragged.
+   *
+   * False while the draw-process tool is active: there, a press on a marker
+   * starts a *process* from it, and a marker that also moved under the same
+   * gesture would make the two indistinguishable.
+   */
+  draggable?: boolean;
   /** Which one is selected. */
   selectedId: string | null;
   /** The chart-space → screen mapping. */
@@ -57,6 +65,7 @@ export interface PointLayerProps {
 
 export function PointLayer({
   points,
+  draggable = true,
   selectedId,
   viewport,
   tokens,
@@ -108,7 +117,7 @@ export function PointLayer({
               fill={tokens.point}
               stroke={tokens.background}
               strokeWidth={selected ? 3 : 1.5}
-              draggable
+              draggable={draggable}
               onDragMove={handleDrag(resolved.point.id)}
               onDragStart={() => onSelect(resolved.point.id)}
               onMouseDown={() => onSelect(resolved.point.id)}

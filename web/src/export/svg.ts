@@ -39,10 +39,7 @@ export interface SvgExportInput {
 
 /** Escapes text for an XML text node. */
 function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** Rounds to a tenth of a pixel: below that is noise, and it doubles the size. */

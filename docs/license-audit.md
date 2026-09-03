@@ -1,6 +1,6 @@
 # Dependency license audit
 
-**Date:** 2026-09-02 · **Audited:** `web/package-lock.json` (npm) and the Cargo workspace
+**Date:** 2026-09-03 (re-run on adding `@xyflow/react`) · **Audited:** `web/package-lock.json` (npm) and the Cargo workspace
 lockfile (`crates/` + `vendor/frees-wasm` submodule).
 
 ## The rule
@@ -38,10 +38,22 @@ cd web && npm ls --omit=dev --all --parseable   # runtime tree
 
 ### Runtime tree (what ships in the bundle)
 
-**12 packages, all MIT.** The runtime dependencies are `konva`, `react`, `react-dom`,
-`react-konva`, and `zustand`, plus their transitive closure (`loose-envify`,
-`js-tokens`, `scheduler`, …). Nothing copyleft, nothing ambiguous, reaches the served
-JavaScript or the WASM it calls.
+**All MIT, ISC or BSD-3-Clause.** The runtime dependencies are `konva`, `react`,
+`react-dom`, `react-konva`, `zustand` and `@xyflow/react`, plus their transitive
+closure. Nothing copyleft, nothing ambiguous, reaches the served JavaScript or the
+WASM it calls.
+
+**`@xyflow/react` 12.11.6 — MIT** (added for the circuit designer). Its own tree is
+`classcat` (MIT), `@xyflow/system` (MIT), the `d3-drag` / `d3-zoom` / `d3-selection` /
+`d3-interpolate` / `d3-color` / `d3-transition` / `d3-dispatch` / `d3-timer` family
+(ISC), `d3-ease` (BSD-3-Clause), and the `@types/d3-*` declarations (MIT, dev-only at
+runtime). ISC and BSD-3-Clause are permissive and the rule above admits them; both
+require only that the notice travel with the source, which npm's own tree satisfies.
+It reuses the `zustand` already in the tree rather than adding a second state library.
+
+Worth recording alongside the licence: it costs **191 kB raw / 61 kB gzipped**, the
+largest single dependency after the engine itself. That was a deliberate trade against
+hand-rolling a node canvas — see `docs/schematic-designer-plan.md` §5.
 
 ### The three non-permissive-by-name findings, adjudicated
 
@@ -82,6 +94,6 @@ Every disjunctive expression in the tree offers a MIT path.
 ## Verdict
 
 **Clean.** The shipped artifact (static bundle + WASM + nginx image) contains only
-MIT code. The sole file-scoped copyleft (`lightningcss`, MPL-2.0) is build tooling
+MIT, ISC and BSD-3-Clause code, all permissive. The sole file-scoped copyleft (`lightningcss`, MPL-2.0) is build tooling
 whose output is not a derivative work, and it is documented above. Re-run this audit
 whenever `package-lock.json` or `Cargo.lock` gains a dependency.

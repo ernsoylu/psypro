@@ -16,11 +16,7 @@
  */
 
 import { CurveFamilyId } from '../psychro';
-import {
-  DEFAULT_STYLES,
-  type FamilyStyle,
-  type LineStyle,
-} from '../store/useStyleStore';
+import { DEFAULT_STYLES, type FamilyStyle, type LineStyle } from '../store/useStyleStore';
 import type { ChartTokens } from './useChartTokens';
 
 /** The computed stroke properties of one curve. */

@@ -116,7 +116,7 @@ describe('chart labels', () => {
    * conversion here a reader saw a line labelled `25` under a caption saying
    * it was Fahrenheit, which is not a rounding difference: it is 48 °F out.
    */
-  it('writes the numerals in the document\'s units', () => {
+  it("writes the numerals in the document's units", () => {
     const ip = chartLabels(GRID, ChartLayout.Ashrae, false);
     const text = (key: string) => ip.find((l) => l.key === key)?.text;
 

@@ -93,13 +93,10 @@ function formatW(value: number): string {
  * lattice, so an IP chart is drawn at round SI intervals rather than round IP
  * ones — that needs an IP `GridSpec` in the engine, not a change here.
  */
-function inDocumentUnits(
-  family: CurveFamilyId,
-  value: number,
-  isSi: boolean,
-): number {
+function inDocumentUnits(family: CurveFamilyId, value: number, isSi: boolean): number {
   if (isSi) return value;
-  if (family === CurveFamilyId.DryBulb) return convertForUnits('temperature', value, false);
+  if (family === CurveFamilyId.DryBulb)
+    return convertForUnits('temperature', value, false);
   if (family === CurveFamilyId.Enthalpy) return convertForUnits('enthalpy', value, false);
   return value;
 }

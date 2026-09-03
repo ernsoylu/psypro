@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -18,6 +18,8 @@ import { App } from '../App';
 import { initEngine } from '../psychro';
 import { useProjectStore } from '../store/useProjectStore';
 import { usePsychStore } from '../store/usePsychStore';
+import { useProcessStore } from '../store/useProcessStore';
+import { InputState } from '../psychro';
 
 beforeAll(async () => {
   // The real engine, not a mock. The generated loader fetches the module over
@@ -29,8 +31,26 @@ beforeAll(async () => {
 
 beforeEach(() => {
   usePsychStore.setState({ points: [], selectedId: null });
+  useProcessStore.setState({ processes: [], selectedId: null });
   useProjectStore.setState({ isSi: true, altitude: '0', realGas: true, name: '' });
 });
+
+/**
+ * A `DataTransfer` jsdom does not provide.
+ *
+ * Only the members the gesture actually uses. A fuller fake would be a more
+ * elaborate way of asserting the same thing: that the kind the palette puts on
+ * the drag is the kind the canvas reads off it.
+ */
+function fakeDataTransfer() {
+  const store = new Map<string, string>();
+  return {
+    dropEffect: 'none',
+    effectAllowed: 'all',
+    setData: (format: string, value: string) => store.set(format, value),
+    getData: (format: string) => store.get(format) ?? '',
+  };
+}
 
 describe('page tabs', () => {
   it('shows the pages that are not built yet as disabled rather than hidden', () => {
@@ -50,7 +70,9 @@ describe('the process design page', () => {
     await user.click(screen.getByRole('tab', { name: 'Process design' }));
 
     const panel = within(
-      await waitFor(() => screen.getByRole('complementary', { name: 'Component inspector' })),
+      await waitFor(() =>
+        screen.getByRole('complementary', { name: 'Component inspector' }),
+      ),
     );
     const read = (label: string) =>
       Number(
@@ -75,7 +97,9 @@ describe('the process design page', () => {
     await user.click(screen.getByRole('tab', { name: 'Process design' }));
 
     const panel = within(
-      await waitFor(() => screen.getByRole('complementary', { name: 'Component inspector' })),
+      await waitFor(() =>
+        screen.getByRole('complementary', { name: 'Component inspector' }),
+      ),
     );
     const read = (label: string) =>
       Number(
@@ -98,7 +122,9 @@ describe('the process design page', () => {
 
     const strip = await waitFor(() => screen.getByLabelText('Cycle results'));
     const load = Number(
-      within(strip).getByText('Coil total load').parentElement?.querySelector('dd')
+      within(strip)
+        .getByText('Coil total load')
+        .parentElement?.querySelector('dd')
         ?.textContent?.replace(/[^\d.]/g, ''),
     );
     // The room asks for 25 kW; the coil also has to cool the outdoor air down
@@ -107,16 +133,108 @@ describe('the process design page', () => {
     expect(load).toBeGreaterThan(25);
   });
 
-  it('marks the blocks this cycle does not run as inactive', async () => {
+  it('carries a selection from the circuit to the chart, because it is one document', async () => {
+    const user = userEvent.setup();
+    usePsychStore.getState().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    });
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Process design' }));
+
+    const inspector = within(
+      screen.getByRole('complementary', { name: 'Component inspector' }),
+    );
+    await user.click(inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' }));
+    const placed = useProcessStore.getState().processes[0]!.id;
+
+    // Back on the chart, the same process is selected — the block and the vector
+    // are the same object, so there is no synchronisation to get wrong.
+    await user.click(screen.getByRole('tab', { name: 'Chart' }));
+    expect(useProcessStore.getState().selectedId).toBe(placed);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    expect(panel.getByRole('button', { name: /→/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  it('offers the circuit editor, and a palette that needs air to start from', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('tab', { name: 'Process design' }));
 
-    const train = await waitFor(() => screen.getByLabelText('Air-handling train'));
-    const items = within(train).getAllByRole('listitem');
-    const inactive = items.filter((li) => li.getAttribute('aria-disabled') === 'true');
-    // Recovery, preheat, reheat and the supply fan are not in the primary
-    // return-air cycle. They are shown, greyed, rather than hidden.
-    expect(inactive).toHaveLength(4);
+    // The page used to draw seven fixed blocks in a row and grey out the ones
+    // the macro did not run. It is an editor now: the blocks are whatever the
+    // plant is.
+    expect(await waitFor(() => screen.getByLabelText('Circuit'))).toBeInTheDocument();
+
+    // A circuit has to start with air coming from somewhere, so the palette is
+    // inert until the document has a state point — the same rule the process
+    // panel follows, and for the same reason.
+    const inspector = within(
+      screen.getByRole('complementary', { name: 'Component inspector' }),
+    );
+    expect(
+      inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' }),
+    ).toBeDisabled();
+  });
+
+  it('drops a block onto the circuit, and it becomes a process on the chart', async () => {
+    const user = userEvent.setup();
+    const oa = usePsychStore.getState().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    });
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Process design' }));
+
+    const inspector = within(
+      screen.getByRole('complementary', { name: 'Component inspector' }),
+    );
+    const coil = inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' });
+    expect(coil).toHaveAttribute('draggable', 'true');
+
+    // The palette item carries the kind on the drag and the canvas takes it.
+    // jsdom has no layout, so the drop lands at the origin — what is under test
+    // is that the gesture reaches the document, not where React Flow puts it.
+    const data = fakeDataTransfer();
+    fireEvent.dragStart(coil, { dataTransfer: data });
+    fireEvent.dragOver(screen.getByLabelText('Circuit'), { dataTransfer: data });
+    fireEvent.drop(screen.getByLabelText('Circuit'), { dataTransfer: data });
+
+    await waitFor(() => expect(useProcessStore.getState().processes).toHaveLength(1));
+    // And it starts from the air that was already there, because a block with
+    // no inlet is not a process.
+    expect(useProcessStore.getState().processes[0]!.fromId).toBe(oa);
+  });
+
+  it('adds a block to the circuit, which is a process on the chart', async () => {
+    const user = userEvent.setup();
+    usePsychStore.getState().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    });
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Process design' }));
+
+    const inspector = within(
+      screen.getByRole('complementary', { name: 'Component inspector' }),
+    );
+    await user.click(
+      inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' }),
+    );
+
+    // One block placed, one process in the document, one outlet point to draw
+    // on the chart. The schematic has no graph of its own to keep in step.
+    expect(useProcessStore.getState().processes).toHaveLength(1);
+    expect(useProcessStore.getState().processes[0]!.kind).toBe('cooling');
+    expect(usePsychStore.getState().points).toHaveLength(2);
   });
 });
