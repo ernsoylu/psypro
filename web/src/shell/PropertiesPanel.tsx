@@ -17,6 +17,11 @@
  * * **Specific volume says "dry-air basis"** and density says "reference only",
  *   because a mass balance run on moist-air density is wrong by about 1% and
  *   nothing in the number itself says so.
+ *
+ * A point placed by a process is shown differently, because it *is* different:
+ * its inputs live on the process, so the fields that would edit them are
+ * replaced by the process that owns it and a way to break that link. Showing
+ * editable fields that silently do nothing would be the worse lie.
  */
 
 import type { ReactNode } from 'react';
@@ -66,6 +71,19 @@ export interface PropertiesPanelProps {
   onRemove: () => void;
   /** The process editor, rendered below the derived properties. */
   processSection?: ReactNode;
+  /**
+   * The process that places this point, when one does.
+   *
+   * Present means the point is derived: its stored numbers are dormant and the
+   * inputs section says so rather than offering fields that do nothing.
+   */
+  producedBy?: { id: string; label: string } | null;
+  /** Whether dragging this point can move its process's parameter. */
+  dragInvertible?: boolean;
+  /** Breaks the link, keeping the point where it is. */
+  onDetach?: () => void;
+  /** Selects the process that places this point. */
+  onSelectProducer?: (id: string) => void;
 }
 
 export function PropertiesPanel({
@@ -78,6 +96,10 @@ export function PropertiesPanel({
   onAdd,
   onRemove,
   processSection,
+  producedBy = null,
+  dragInvertible = false,
+  onDetach,
+  onSelectProducer,
 }: PropertiesPanelProps) {
   const t = useT();
 
@@ -124,50 +146,75 @@ export function PropertiesPanel({
 
       <h2 className="panel__section">{t('panel.sectionInputs')}</h2>
 
-      <div className="panel__fields">
-        <UnitField
-          label={t('input.dryBulb')}
-          dimension="temperature"
-          isSi={isSi}
-          value={point.dryBulb}
-          onCommit={(dryBulb) => onChange({ dryBulb })}
-        />
-
-        <label className="field">
-          <span className="field__label">{t('input.secondProperty')}</span>
-          <select
-            className="field__input"
-            value={point.mode}
-            onChange={(e) => onChange({ mode: Number(e.target.value) as InputState })}
-          >
-            {INPUT_MODES.map((m) => (
-              <option key={m.key} value={m.state}>
-                {t(m.key)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <UnitField
-          label={t(active.key)}
-          dimension={SECOND_PROPERTY_DIMENSION[point.mode]}
-          isSi={isSi}
-          value={point.secondValue}
-          onCommit={(secondValue) => onChange({ secondValue })}
-        />
-
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={realGas}
-            onChange={(e) => onRealGasChange(e.target.checked)}
+      {producedBy ? (
+        <div className="panel__fields">
+          <p className="panel__note">
+            {t('point.derived', { process: producedBy.label })}
+            {onSelectProducer ? (
+              <button
+                type="button"
+                className="btn btn--link"
+                onClick={() => onSelectProducer(producedBy.id)}
+              >
+                {t('process.selectOutlet')}
+              </button>
+            ) : null}
+          </p>
+          <p className="panel__note">
+            {dragInvertible ? t('point.derivedHint') : t('point.dragLocked')}
+          </p>
+          {onDetach ? (
+            <button type="button" className="btn btn--block" onClick={onDetach}>
+              {t('point.detach')}
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="panel__fields">
+          <UnitField
+            label={t('input.dryBulb')}
+            dimension="temperature"
+            isSi={isSi}
+            value={point.dryBulb}
+            onCommit={(dryBulb) => onChange({ dryBulb })}
           />
-          <span>
-            {t('input.realGas')}
-            <span className="checkbox__hint">{t('input.realGasHint')}</span>
-          </span>
-        </label>
-      </div>
+
+          <label className="field">
+            <span className="field__label">{t('input.secondProperty')}</span>
+            <select
+              className="field__input"
+              value={point.mode}
+              onChange={(e) => onChange({ mode: Number(e.target.value) as InputState })}
+            >
+              {INPUT_MODES.map((m) => (
+                <option key={m.key} value={m.state}>
+                  {t(m.key)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <UnitField
+            label={t(active.key)}
+            dimension={SECOND_PROPERTY_DIMENSION[point.mode]}
+            isSi={isSi}
+            value={point.secondValue}
+            onCommit={(secondValue) => onChange({ secondValue })}
+          />
+
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={realGas}
+              onChange={(e) => onRealGasChange(e.target.checked)}
+            />
+            <span>
+              {t('input.realGas')}
+              <span className="checkbox__hint">{t('input.realGasHint')}</span>
+            </span>
+          </label>
+        </div>
+      )}
 
       {resolved?.error ? (
         <p className="panel__error" role="alert">

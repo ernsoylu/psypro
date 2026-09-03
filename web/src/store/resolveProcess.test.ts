@@ -47,6 +47,18 @@ vi.mock('../psychro', () => {
     humidity_ratio: w,
     enthalpy: 1.006 * dbt + w * (2499.86 + 1.84 * dbt),
   });
+  const coil = () => ({
+    leaving: state(12, 0.008),
+    adp: state(10, 0.0076),
+    bf_temperature: 0.1,
+    bf_humidity_ratio: 0.1,
+    bf_enthalpy: 0.1,
+    shr: 0.72,
+    total_load: -30,
+    air_side_load: -30.2,
+    condensate: 0.0011,
+    dry: false,
+  });
   const load = () => ({
     total: 10,
     sensible: 10,
@@ -71,6 +83,54 @@ vi.mock('../psychro', () => {
     apply_sensible_duty: (i: StatePointInput) => {
       take(i);
       return { outlet: state(30, 0.009), load: load(), near_saturation: false };
+    },
+    apply_cooling: (i: StatePointInput, tOut: number) => {
+      take(i);
+      return {
+        process: { outlet: state(tOut, 0.009), load: load(), near_saturation: false },
+        dehumidified: false,
+        condensate: 0,
+        frost_risk: false,
+        coil: undefined,
+      };
+    },
+    apply_cooling_duty: (i: StatePointInput) => {
+      take(i);
+      return {
+        process: { outlet: state(15, 0.008), load: load(), near_saturation: false },
+        dehumidified: true,
+        condensate: 0.0011,
+        frost_risk: false,
+        coil: coil(),
+      };
+    },
+    apply_desiccant: (i: StatePointInput) => {
+      take(i);
+      return { outlet: state(38, 0.004), load: load(), near_saturation: false };
+    },
+    solve_coil_from_adp: (i: StatePointInput) => {
+      take(i);
+      return coil();
+    },
+    identify_process: (i: StatePointInput, j: StatePointInput) => {
+      take(i);
+      take(j);
+      return {
+        kind: 0,
+        load: load(),
+        slope: Number.NaN,
+        has_slope: false,
+        duty: 10,
+        has_duty: true,
+        water_flow: Number.NaN,
+        has_water_flow: false,
+        steam_enthalpy: Number.NaN,
+        has_steam_enthalpy: false,
+        effectiveness: Number.NaN,
+        has_effectiveness: false,
+        enthalpy_rise: Number.NaN,
+        has_enthalpy_rise: false,
+      };
     },
     apply_steam_humidification: (i: StatePointInput, w: number) => {
       take(i);
@@ -103,18 +163,23 @@ vi.mock('../psychro', () => {
 
 const { resolveProcess } = await import('./useResolvedProcesses');
 const { defaultProcess } = await import('./useProcessStore');
-const { ChartLayout, InputState } = await import('../psychro');
+const { ChartLayout } = await import('../psychro');
+type StatePointOutput = import('../psychro').StatePointOutput;
 
-const POINTS = new Map([
-  [
-    'pt-1',
-    { id: 'pt-1', label: 'OA', dryBulb: 20, mode: InputState.DbtRh, secondValue: 50 },
-  ],
-  [
-    'pt-2',
-    { id: 'pt-2', label: 'RA', dryBulb: 24, mode: InputState.DbtRh, secondValue: 40 },
-  ],
-]);
+/**
+ * Resolved *states*, not stored points.
+ *
+ * The resolver takes what the document already worked out, because an inlet may
+ * itself be the outlet of an earlier process and then has no stored inputs to
+ * re-resolve.
+ */
+const STATES = new Map([
+  ['pt-1', { dbt: 20, humidity_ratio: 0.0073, enthalpy: 38.6 }],
+  ['pt-2', { dbt: 24, humidity_ratio: 0.0074, enthalpy: 43.0 }],
+  // Cast because the mocked module is typed as the real one: a full
+  // `StatePointOutput` carries twelve properties and a `free()`, and the
+  // resolver reads three of them.
+] as [string, unknown][]) as Map<string, StatePointOutput>;
 
 const CTX = {
   isSi: true,
@@ -122,7 +187,8 @@ const CTX = {
   altitudeM: 0,
   realGas: true,
   layout: ChartLayout.Ashrae,
-  points: POINTS,
+  stateOf: (id: string) => STATES.get(id) ?? null,
+  positionOf: (id: string) => (STATES.has(id) ? { x: 1, y: 2 } : null),
   missingPointMessage: 'a point is missing',
 };
 
@@ -134,8 +200,10 @@ describe('every process kind resolves without reusing a consumed input', () => {
   for (const kind of [
     'sensible',
     'sensibleDuty',
+    'cooling',
     'steam',
     'evaporative',
+    'desiccant',
     'recovery',
     'mix',
     'link',
@@ -186,5 +254,23 @@ describe('process resolution', () => {
     const r = resolveProcess(p, CTX);
     expect(r.outlet).toBeNull();
     expect(r.load).not.toBeNull();
+  });
+
+  it('identifies the line a link draws, rather than only costing it', () => {
+    // The reason the kind exists at all: a load alone does not say what the
+    // line *is*, and the parameters are what let it be adopted.
+    const p = { ...defaultProcess('link', 'pt-1'), id: 'pr-1', secondId: 'pt-2' };
+    expect(resolveProcess(p, CTX).fit?.has_duty).toBe(true);
+  });
+
+  it('carries a wet coil through as a result rather than an error', () => {
+    // The reported bug: a target below the entering dew point used to come back
+    // as the backend's supersaturation message.
+    const p = { ...defaultProcess('sensibleDuty', 'pt-1'), id: 'pr-1', secondId: null };
+    const r = resolveProcess(p, CTX);
+    expect(r.error).toBeNull();
+    expect(r.dehumidified).toBe(true);
+    expect(r.condensate).toBeCloseTo(0.0011, 9);
+    expect(r.coil?.adp.dbt).toBeCloseTo(10, 6);
   });
 });

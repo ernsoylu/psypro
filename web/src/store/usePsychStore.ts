@@ -14,6 +14,19 @@
  *   and "manual point" to keep in step.
  * * A saved file is small and stable: two numbers and a mode, not a snapshot of
  *   whatever the engine returned on the day it was written.
+ *
+ * # Derived points
+ *
+ * A point may also be *placed by a process* rather than typed. That is what
+ * makes a train of processes possible — OA → mix → coil → fan → room — because
+ * the outlet of one process is then a real point with an id, and the next
+ * process can start from it.
+ *
+ * It does not break the rule above. A derived point's stored numbers are a
+ * **dormant anchor**: ignored while the process places it, and promoted back to
+ * inputs if the process is ever taken away. So the file still carries only
+ * inputs, and reopening it recomputes every outlet rather than trusting a
+ * snapshot — which is the whole reason the rule exists.
  */
 
 import { create } from 'zustand';
@@ -36,6 +49,35 @@ export const SECOND_PROPERTY_DIMENSION: Record<InputState, DimensionId> = {
   [InputState.DbtEnthalpy]: 'enthalpy',
 };
 
+/**
+ * Where a point's position comes from.
+ *
+ * Two cases, and the distinction is load-bearing: an `input` point is what the
+ * user typed or dragged, an `outlet` point is placed by the process named here.
+ * The panel edits the first and links to the second, and the resolver reads the
+ * stored numbers only for the first.
+ */
+export type PointSource =
+  | { kind: 'input' }
+  | {
+      kind: 'outlet';
+      /** The process whose outlet this point is. */
+      processId: string;
+    };
+
+/** The source every point carries unless it is placed by a process. */
+export const TYPED: PointSource = { kind: 'input' };
+
+/** Whether a process places this point rather than the user. */
+export function isDerived(point: StatePoint): boolean {
+  return point.source.kind === 'outlet';
+}
+
+/** The process that places this point, or null when the user does. */
+export function producerOf(point: StatePoint): string | null {
+  return point.source.kind === 'outlet' ? point.source.processId : null;
+}
+
 /** A named state point, stored as its defining inputs. */
 export interface StatePoint {
   /** Stable identity, so a drag does not depend on list position. */
@@ -48,10 +90,22 @@ export interface StatePoint {
   mode: InputState;
   /** The second property's value, in the document's unit system. */
   secondValue: number;
+  /**
+   * Whether the three fields above place this point, or a process does.
+   *
+   * Optional in the type so every existing call site still reads as it did;
+   * absent means typed. The store fills it in on the way through, so a point in
+   * the store always carries one.
+   */
+  source: PointSource;
 }
 
+/** A point as a file or a test may hand it over: `source` may be absent. */
+export type StoredPoint = Omit<StatePoint, 'source'> & { source?: PointSource };
+
 /** A point being created, before it has an id. */
-export type NewStatePoint = Omit<StatePoint, 'id'>;
+export type NewStatePoint = Omit<StatePoint, 'id' | 'source'> &
+  Partial<Pick<StatePoint, 'source'>>;
 
 /** What the document store holds. */
 export interface PsychState {
@@ -61,11 +115,39 @@ export interface PsychState {
   selectedId: string | null;
 
   addPoint: (point: NewStatePoint) => string;
+  /**
+   * Adds a point that a process places.
+   *
+   * The seed is the dormant anchor described in this module's header: the
+   * numbers the point falls back to if the process is ever removed. Seeding it
+   * from the inlet rather than from zero means a detached outlet lands somewhere
+   * physical even before the first resolution.
+   */
+  addOutletPoint: (
+    processId: string,
+    label: string,
+    seed: Omit<NewStatePoint, 'label'>,
+  ) => string;
+  /**
+   * Promotes a derived point to a typed one, at the state it currently holds.
+   *
+   * Called when the process that placed it goes away but something downstream
+   * still consumes it. The snapshot is written *at that edit*, which is a user
+   * action rather than a cached derivation — the distinction the header draws.
+   */
+  detachPoint: (id: string, snapshot: Omit<NewStatePoint, 'label' | 'source'>) => void;
   updatePoint: (id: string, patch: Partial<NewStatePoint>) => void;
   removePoint: (id: string) => void;
+  /** Drops the outlet points a process placed, for when that process is deleted. */
+  removeOutletsOf: (processId: string) => void;
   selectPoint: (id: string | null) => void;
-  /** Replaces the whole document, for file open and for tests. */
-  replaceAll: (points: StatePoint[]) => void;
+  /**
+   * Replaces the whole document, for file open and for tests.
+   *
+   * `source` is optional on the way in — a version 1 project file has no such
+   * field, and a point without one is a typed point.
+   */
+  replaceAll: (points: StoredPoint[]) => void;
   /**
    * Rewrites every point for a new unit system.
    *
@@ -114,7 +196,7 @@ function nextId(): string {
  * adding a point mints a *second* `pt-1` — and every lookup in the store is by
  * id, so selecting one of them selects both and editing one edits both.
  */
-function adoptIds(points: readonly StatePoint[]): void {
+function adoptIds(points: readonly { id: string }[]): void {
   for (const p of points) {
     if (!p.id.startsWith(ID_PREFIX)) continue;
     const n = Number(p.id.slice(ID_PREFIX.length));
@@ -130,9 +212,42 @@ export const usePsychStore = create<PsychState>((set) => ({
     const id = nextId();
     // Selecting on add is what makes click-to-place feel like one gesture: the
     // panel is already showing the point you just dropped.
-    set((s) => ({ points: [...s.points, { ...point, id }], selectedId: id }));
+    set((s) => ({
+      points: [...s.points, { source: TYPED, ...point, id }],
+      selectedId: id,
+    }));
     return id;
   },
+
+  addOutletPoint: (processId, label, seed) => {
+    const id = nextId();
+    set((s) => ({
+      points: [
+        ...s.points,
+        { ...seed, label, id, source: { kind: 'outlet', processId } },
+      ],
+      // Deliberately *not* selected: the gesture that created this point was
+      // "add a process", and the thing the user then wants to edit is the
+      // process, not the point it happened to produce.
+    }));
+    return id;
+  },
+
+  detachPoint: (id, snapshot) =>
+    set((s) => ({
+      points: s.points.map((p) =>
+        p.id === id ? { ...p, ...snapshot, source: TYPED } : p,
+      ),
+    })),
+
+  removeOutletsOf: (processId) =>
+    set((s) => {
+      const kept = s.points.filter((p) => producerOf(p) !== processId);
+      return {
+        points: kept,
+        selectedId: kept.some((p) => p.id === s.selectedId) ? s.selectedId : null,
+      };
+    }),
 
   updatePoint: (id, patch) =>
     set((s) => ({
@@ -149,7 +264,10 @@ export const usePsychStore = create<PsychState>((set) => ({
 
   replaceAll: (points) => {
     adoptIds(points);
-    set({ points, selectedId: null });
+    set({
+      points: points.map((p) => ({ source: TYPED, ...p })),
+      selectedId: null,
+    });
   },
 
   setForUnits: (toSi) =>

@@ -27,7 +27,7 @@ import { LayerOptions } from './shell/LayerOptions';
 import { StyleModal } from './shell/StyleModal';
 import { PageTabs, type PageId } from './shell/PageTabs';
 import { TeachingPanel } from './shell/TeachingPanel';
-import { ProcessSection } from './shell/ProcessSection';
+import { PROCESS_KINDS, ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type PanelId, type ToolId, type ViewActionId } from './shell/Toolbox';
 import { TopNav, type FileActionId } from './shell/TopNav';
@@ -35,15 +35,22 @@ import { Viewport } from './shell/Viewport';
 import { useTheme } from './shell/useTheme';
 import { useT } from './i18n/useT';
 import { altitudeInMetres, useProjectStore } from './store/useProjectStore';
+import { useProcessStore, type Process, type ProcessKind } from './store/useProcessStore';
 import {
-  defaultProcess,
-  useProcessStore,
-  type ProcessKind,
-} from './store/useProcessStore';
-import { nextLabel, selectedPoint, usePsychStore } from './store/usePsychStore';
-import { useResolvedPoints } from './store/useResolvedPoints';
+  nextLabel,
+  producerOf,
+  selectedPoint,
+  usePsychStore,
+} from './store/usePsychStore';
 import { convertForUnits, specificVolumeSi } from './units';
-import { useResolvedProcesses } from './store/useResolvedProcesses';
+import { useResolvedDocument } from './store/useResolvedDocument';
+import {
+  addProcessFrom,
+  adoptFit,
+  linkPoints,
+  removePoint as removePointAndDependents,
+  removeProcess as removeProcessAndOutlet,
+} from './store/document';
 import { envelopeById, exampleById } from './data';
 import { chartToDxf } from './export/dxf';
 import { chartToSvg } from './export/svg';
@@ -71,6 +78,7 @@ import {
   StatePointInput,
   type CurveFamilyId,
   type CycleOutput,
+  type ProcessFitOutput,
 } from './psychro';
 
 /** The export formats on offer, in the order §12 lists them. */
@@ -187,31 +195,56 @@ export function App() {
     realGas: project.realGas,
     layout: project.layout,
   };
-  const resolved = useResolvedPoints(psych.points, resolveContext);
-  const selected = selectedPoint(psych);
-  const selectedResolved = resolved.find((r) => r.point.id === psych.selectedId) ?? null;
-
-  // A Map keyed by id, memoised so the process resolution's dependency list is
-  // stable across renders that did not touch the points.
-  const pointsById = useMemo(
-    () => new Map(psych.points.map((p) => [p.id, p])),
-    [psych.points],
+  // Memoised because it is in the resolution's dependency list: a fresh object
+  // literal every render would re-resolve the whole document every render.
+  const messages = useMemo(
+    () => ({
+      missingPoint: t('process.missingPoint'),
+      circular: t('process.circular'),
+      unresolvedProcess: t('process.unresolvedOutlet'),
+    }),
+    [t],
   );
-  const missingPointMessage = t('process.missingPoint');
-  const resolvedProcesses = useResolvedProcesses(proc.processes, {
+
+  // One resolution for the whole document, in dependency order. Points and
+  // processes cannot be resolved separately any more: a process may place a
+  // point, and that point may be the next process's inlet.
+  const document = useResolvedDocument(psych.points, proc.processes, {
     ...resolveContext,
-    points: pointsById,
-    missingPointMessage,
+    messages,
   });
+  const resolved = document.points;
+  const resolvedProcesses = document.processes;
+
+  const selected = selectedPoint(psych);
+  const selectedResolved = selected
+    ? (document.pointsById.get(selected.id) ?? null)
+    : null;
   const selectedProcess = proc.processes.find((p) => p.id === proc.selectedId) ?? null;
-  const selectedProcessResolved =
-    resolvedProcesses.find((r) => r.process.id === proc.selectedId) ?? null;
+  const selectedProcessResolved = proc.selectedId
+    ? (document.processesById.get(proc.selectedId) ?? null)
+    : null;
   // The inlet's specific volume, so a flow may be entered volumetrically:
   // ṁ = V̇ / v_da, on the inlet's own state rather than on a nominal density.
   const inletSpecificVolume = specificVolumeSi(
-    resolved.find((r) => r.point.id === selectedProcess?.fromId)?.state?.specific_volume ??
-      null,
+    (selectedProcess
+      ? document.pointsById.get(selectedProcess.fromId)?.state?.specific_volume
+      : null) ?? null,
     project.isSi,
+  );
+
+  /**
+   * The document edits that touch both stores, with the resolution they need.
+   *
+   * A detach has to know where the point currently *is*, and only the
+   * resolution knows that — so the actions take it rather than guessing.
+   */
+  const actions = useMemo(
+    () => ({
+      isSi: project.isSi,
+      stateOf: (id: string) => document.pointsById.get(id)?.state ?? null,
+    }),
+    [project.isSi, document],
   );
 
   /**
@@ -343,7 +376,7 @@ export function App() {
     }
   }, [engineReady, selected, altitude, project.isSi, project.realGas]);
 
-  const { addPoint, updatePoint, selectPoint, removePoint } = psych;
+  const { addPoint, updatePoint, selectPoint } = psych;
 
   /** Save, open, and the export menu. */
   const onFileAction = useCallback(
@@ -471,18 +504,116 @@ export function App() {
     },
     [project, psych],
   );
-  const { removeForPoint } = proc;
-
-  /** Deleting a point takes its processes with it. */
+  /**
+   * Deleting a point takes the train downstream of it.
+   *
+   * Nothing downstream had another source, so leaving it behind would draw a
+   * coil from a state that no longer exists. `document.ts` walks the graph
+   * forward and says so in one place.
+   */
   const onRemovePoint = useCallback(() => {
     if (!selected) return;
-    removeForPoint(selected.id);
-    removePoint(selected.id);
-  }, [selected, removeForPoint, removePoint]);
+    removePointAndDependents(selected.id);
+  }, [selected]);
 
-  /** A drag or a click writes the position as the two inputs that define it. */
+  /**
+   * The process that places the selected point, when one does.
+   *
+   * Named by its kind rather than by its id, because "placed by pr-3" tells a
+   * reader nothing and "placed by Cooling coil (ADP + bypass)" tells them where
+   * to go.
+   */
+  const selectedProducer = useMemo(() => {
+    const producer = selected ? producerOf(selected) : null;
+    if (!producer) return null;
+    const process = proc.processes.find((p) => p.id === producer);
+    if (!process) return null;
+    const key = PROCESS_KINDS.find(([k]) => k === process.kind)?.[1];
+    return { id: process.id, label: key ? t(key) : process.kind };
+  }, [selected, proc.processes, t]);
+
+  /**
+   * Whether dragging the selected point can be inverted into its process.
+   *
+   * The single-parameter kinds can: one position recovers one number. Mixing and
+   * recovery cannot, because their outlet is fixed by two, and a drag that
+   * silently moved one of them would be worse than a drag that does nothing.
+   */
+  const selectedDragInvertible = useMemo(() => {
+    if (!selectedProducer) return false;
+    const process = proc.processes.find((p) => p.id === selectedProducer.id);
+    return (
+      process?.kind === 'sensible' ||
+      process?.kind === 'steam' ||
+      process?.kind === 'cooling'
+    );
+  }, [selectedProducer, proc.processes]);
+
+  /** Breaks a derived point's link to its process, keeping it where it is. */
+  const onDetachPoint = useCallback(() => {
+    if (!selected) return;
+    const state = document.pointsById.get(selected.id)?.state;
+    if (!state) return;
+    usePsychStore.getState().detachPoint(selected.id, {
+      dryBulb: state.dbt,
+      mode: InputState.DbtHumidityRatio,
+      secondValue: state.humidity_ratio,
+    });
+  }, [selected, document]);
+
+  /**
+   * Turns an identified line into the parametric process it was identified as.
+   *
+   * The parameters come from the engine's own back-solve rather than from
+   * anything re-derived here, which is what makes the adopted process land
+   * exactly where the line already was.
+   */
+  const onAdoptFit = useCallback(
+    (kind: ProcessKind, fit: ProcessFitOutput) => {
+      if (!selectedProcess) return;
+      const endpoint = document.pointsById.get(selectedProcess.secondId ?? '')?.state;
+      const parameters: Partial<Process> =
+        kind === 'sensible'
+          ? { targetT: endpoint?.dbt ?? 0 }
+          : kind === 'steam'
+            ? {
+                targetW: endpoint?.humidity_ratio ?? 0,
+                steamEnthalpy: fit.steam_enthalpy,
+              }
+            : { effectiveness: fit.effectiveness };
+      adoptFit(selectedProcess.id, kind, parameters);
+    },
+    [selectedProcess, document],
+  );
+
+  /**
+   * A drag or a click writes the position as the two inputs that define it.
+   *
+   * A **derived** point has no inputs to write: it is placed by its process, so
+   * the drag is inverted into that process's own parameter instead. One
+   * position cannot recover two numbers, so the kinds fixed by two parameters —
+   * mixing, recovery — decline and say which field to edit.
+   */
   const onMovePoint = useCallback(
     (id: string, dryBulb: number, humidityRatio: number) => {
+      const point = usePsychStore.getState().points.find((p) => p.id === id);
+      const producer = point ? producerOf(point) : null;
+      if (producer) {
+        const process = useProcessStore
+          .getState()
+          .processes.find((p) => p.id === producer);
+        if (!process) return;
+        if (process.kind === 'sensible') {
+          useProcessStore.getState().updateProcess(producer, { targetT: dryBulb });
+        } else if (process.kind === 'steam') {
+          useProcessStore.getState().updateProcess(producer, { targetW: humidityRatio });
+        } else if (process.kind === 'cooling') {
+          useProcessStore.getState().updateProcess(producer, { tAdp: dryBulb });
+        }
+        // Every other kind keeps its outlet where the physics puts it. The
+        // panel explains; the marker simply does not follow the pointer.
+        return;
+      }
       updatePoint(id, {
         dryBulb,
         mode: InputState.DbtHumidityRatio,
@@ -654,6 +785,10 @@ export function App() {
               resolved={selectedResolved}
               isSi={project.isSi}
               realGas={project.realGas}
+              producedBy={selectedProducer}
+              dragInvertible={selectedDragInvertible}
+              onDetach={onDetachPoint}
+              onSelectProducer={proc.selectProcess}
               onRealGasChange={project.setRealGas}
               onChange={(patch) => selected && updatePoint(selected.id, patch)}
               onAdd={() =>
@@ -673,15 +808,25 @@ export function App() {
                   isSi={project.isSi}
                   inletSpecificVolume={inletSpecificVolume}
                   canAdd={psych.points.length > 0}
+                  fromLabel={(selected ?? psych.points[0])?.label ?? null}
+                  onAdopt={onAdoptFit}
+                  onSelectPoint={selectPoint}
                   onChange={(patch) =>
                     selectedProcess && proc.updateProcess(selectedProcess.id, patch)
                   }
                   onAdd={(kind: ProcessKind) => {
+                    // The inlet is the selected point, and the button is
+                    // disabled without one — no more guessing at `points[0]`
+                    // and giving the user a process bound to something they
+                    // cannot see.
                     const from = selected ?? psych.points[0];
-                    if (from) proc.addProcess(defaultProcess(kind, from.id));
+                    if (from) addProcessFrom(from.id, kind, actions);
+                  }}
+                  onLink={(secondId: string) => {
+                    if (selected) linkPoints(selected.id, secondId, actions);
                   }}
                   onRemove={() =>
-                    selectedProcess && proc.removeProcess(selectedProcess.id)
+                    selectedProcess && removeProcessAndOutlet(selectedProcess.id, actions)
                   }
                 />
               }

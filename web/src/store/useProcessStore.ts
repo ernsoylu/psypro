@@ -13,24 +13,56 @@
 
 import { create } from 'zustand';
 
+import type { StatePointOutput } from '../psychro';
 import { convertForUnits } from '../units';
+import type { DimensionId } from '../units';
 
 /** The elementary processes from `REQUIREMENTS.md` §4.1. */
 export type ProcessKind =
-  /** Humidity ratio held, dry bulb moved. Horizontal on the chart. */
+  /**
+   * Heating or cooling to a target dry-bulb temperature.
+   *
+   * Horizontal while the coil stays dry, and **not** horizontal when it does
+   * not: a target below the entering dew point makes the coil wet, water comes
+   * out, and the engine reports the coil rather than refusing the request.
+   */
   | 'sensible'
-  /** A duty in kW or Btu/h rather than a target temperature. */
+  /** The same, by a duty in kW or Btu/h rather than to a temperature. */
   | 'sensibleDuty'
+  /**
+   * A cooling coil stated the way equipment is selected: an apparatus dew point
+   * and a bypass factor, with the leaving state derived.
+   */
+  | 'cooling'
   /** Isothermal humidification by steam injection. */
   | 'steam'
   /** Adiabatic humidification along a constant wet-bulb line. */
   | 'evaporative'
+  /** Desiccant dehumidification: warmer and drier, the mirror of evaporative. */
+  | 'desiccant'
   /** Air-to-air recovery against a second stream, per Standard 84. */
   | 'recovery'
   /** Adiabatic mixing of two streams on a dry-air mass basis. */
   | 'mix'
   /** A straight line between two points that already exist. */
   | 'link';
+
+/**
+ * Whether this kind places its own outlet point.
+ *
+ * Everything except `link` does: `link` joins two points the user already has,
+ * so its endpoint is `secondId` and there is nothing to derive. This is the
+ * predicate the document actions branch on when they create or remove a
+ * process, and it lives here so the two cannot disagree.
+ */
+export function derivesOutlet(kind: ProcessKind): boolean {
+  return kind !== 'link';
+}
+
+/** Whether this kind consumes a second existing point. */
+export function needsSecondPoint(kind: ProcessKind): boolean {
+  return kind === 'mix' || kind === 'recovery' || kind === 'link';
+}
 
 /** A process in the document. */
 export interface Process {
@@ -40,6 +72,14 @@ export interface Process {
   kind: ProcessKind;
   /** The point the air enters at. */
   fromId: string;
+  /**
+   * The point this process *places*, for the kinds that derive their outlet.
+   *
+   * Null for `link`, whose endpoint is `secondId`. This is the field that makes
+   * a train of processes possible: the outlet is a real point with an id, so the
+   * next process can name it as its inlet.
+   */
+  toId: string | null;
   /**
    * The second point.
    *
@@ -63,8 +103,28 @@ export interface Process {
   effectiveness: number;
   /** Sensible effectiveness, for `recovery`. */
   epsSensible: number;
-  /** Latent effectiveness, for `recovery`. Zero for the sensible-only family. */
+  /**
+   * Latent effectiveness. `recovery`'s ε_L on humidity ratio, and the
+   * desiccant's `(W_in − W_out)/(W_in − W_eq)` — the same definition against a
+   * different reference, which is why it is one field.
+   *
+   * Zero for the sensible-only recovery family: fixed plate, heat wheel, heat
+   * pipe, run-around loop, thermosiphon.
+   */
   epsLatent: number;
+  /**
+   * The fraction of the airstream that never touches the coil surface.
+   *
+   * Acts on `sensible`, `sensibleDuty` and `cooling`. It does nothing at all
+   * while a coil is dry, which is most of the time — and everything the moment
+   * the target crosses the entering dew point, because it is what decides how
+   * much of the air leaves at the surface condition.
+   */
+  bypassFactor: number;
+  /** Apparatus dew point, for `cooling`. */
+  tAdp: number;
+  /** The desiccant's equilibrium humidity ratio, `W_eq`. */
+  wEquilibrium: number;
 }
 
 /** A process being created, before it has an id. */
@@ -76,24 +136,76 @@ export type NewProcess = Omit<Process, 'id'>;
  * A process that resolves to nothing teaches nothing, and "add a process, then
  * fill in six numbers before anything appears" is how a tool loses a student in
  * the first minute.
+ *
+ * The defaults are therefore read **off the inlet**, in the document's own
+ * units. The previous constants — `targetT: 30`, `targetW: 0.012` — were SI
+ * numbers applied unconverted to an IP document, so adding a heating process in
+ * IP asked to heat the air to 30 °F, and adding one to a 35 °C outdoor point
+ * asked to cool it by five degrees and called it heating.
  */
-export function defaultProcess(kind: ProcessKind, fromId: string): NewProcess {
+export function defaultProcess(
+  kind: ProcessKind,
+  fromId: string,
+  ctx: ProcessDefaults = {},
+): NewProcess {
+  const { inlet, isSi = true } = ctx;
+  const si = (dimension: DimensionId, value: number) =>
+    isSi ? value : convertForUnits(dimension, value, false);
+
+  // Ten kelvin, which is 18 °F of *difference* and not 50 °F of temperature.
+  const step = si('temperatureDelta', 10);
+  const t = inlet?.dbt;
+  const w = inlet?.humidity_ratio;
+  // Warm air wants cooling and cool air wants heating. Any rule here is a
+  // guess; this one is right for the two cases a reader arrives with, and it is
+  // visible and editable either way.
+  const warm = t !== undefined && t > si('temperature', 22);
+  const target = t === undefined ? si('temperature', 30) : warm ? t - step : t + step;
+
   return {
     kind,
     fromId,
+    toId: null,
     secondId: null,
-    mdot: 1,
-    mdotSecond: 1,
-    targetT: 30,
-    duty: 10,
-    targetW: 0.012,
+    mdot: si('flow', 1),
+    mdotSecond: si('flow', 1),
+    targetT: target,
+    duty: warm ? -si('power', 10) : si('power', 10),
+    // Two grams per kilogram of dry air: the smallest step a humidifier is
+    // worth drawing, and a visible one on the chart.
+    targetW: (w ?? si('humidityRatio', 0.008)) + si('humidityRatio', 0.002),
     // Dry saturated steam at 100 °C: h_g = 2676 kJ/kg.
-    steamEnthalpy: 2676,
+    steamEnthalpy: si('enthalpy', 2676),
     // 300 mm rigid media, from §4.3's table.
     effectiveness: 0.88,
     epsSensible: 0.75,
     epsLatent: 0.6,
+    bypassFactor: DEFAULT_BYPASS_FACTOR,
+    // Far enough below the inlet to condense, close enough to be a coil a
+    // chiller could actually feed.
+    tAdp: t === undefined ? si('temperature', 10) : t - 1.5 * step,
+    // A regenerated wheel's equilibrium, in the range §4.4's wheels reach.
+    wEquilibrium: si('humidityRatio', 0.002),
   };
+}
+
+/**
+ * The bypass factor a wet coil runs at unless the user says otherwise.
+ *
+ * Mirrors `psychro_core::process::DEFAULT_BYPASS_FACTOR`, and is the one number
+ * in this file that is a *physical* default rather than a starting point: at a
+ * fixed leaving temperature, zero bypass leaves the air saturated, which is
+ * wetter than any real coil delivers. Ten percent puts it near 90% RH, where
+ * coils are measured.
+ */
+export const DEFAULT_BYPASS_FACTOR = 0.1;
+
+/** What the defaults read from, when there is anything to read. */
+export interface ProcessDefaults {
+  /** The resolved inlet, when it has resolved. */
+  inlet?: StatePointOutput | null;
+  /** Whether the document is in SI. */
+  isSi?: boolean;
 }
 
 /** What the process store holds. */
@@ -168,7 +280,10 @@ export const useProcessStore = create<ProcessState>((set) => ({
   removeForPoint: (pointId) =>
     set((s) => {
       // A process whose inlet has been deleted is not a process; leaving it
-      // behind would draw a line from nowhere.
+      // behind would draw a line from nowhere. `toId` is deliberately not
+      // tested: a process's own outlet being deleted is handled by deleting the
+      // process, and treating it as an input here would make the two orders of
+      // that edit behave differently.
       const kept = s.processes.filter(
         (p) => p.fromId !== pointId && p.secondId !== pointId,
       );
@@ -193,6 +308,10 @@ export const useProcessStore = create<ProcessState>((set) => ({
         duty: convertForUnits('power', p.duty, toSi),
         targetW: convertForUnits('humidityRatio', p.targetW, toSi),
         steamEnthalpy: convertForUnits('enthalpy', p.steamEnthalpy, toSi),
+        tAdp: convertForUnits('temperature', p.tAdp, toSi),
+        wEquilibrium: convertForUnits('humidityRatio', p.wEquilibrium, toSi),
+        // The effectivenesses and the bypass factor are ratios, and a ratio
+        // carries across a unit switch untouched.
       })),
     })),
 }));

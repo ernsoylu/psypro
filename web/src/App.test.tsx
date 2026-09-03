@@ -15,6 +15,17 @@ vi.mock('./psychro', async () => {
     DbtEnthalpy: 4,
   } as const;
   const ChartLayout = { Ashrae: 0, MollierIx: 1 } as const;
+  // The identification's discriminant. Mirrors the generated enum's order,
+  // which is what the panel maps to its translated names.
+  const ProcessFitKind = {
+    SensibleHeating: 0,
+    SensibleCooling: 1,
+    Isothermal: 2,
+    Evaporative: 3,
+    CoolingDehumidification: 4,
+    Desiccant: 5,
+    General: 6,
+  } as const;
   const CurveFamilyId = {
     DryBulb: 0,
     HumidityRatio: 1,
@@ -26,6 +37,7 @@ vi.mock('./psychro', async () => {
   return {
     ChartLayout,
     CurveFamilyId,
+    ProcessFitKind,
     generate_base_grid: () => [{ family: 2, value: 1, coords: [0, 0, 30, 0.03] }],
     get_chart_extent: () => ({ x_min: -10, x_max: 52, y_min: 0, y_max: 0.03 }),
     InputState,

@@ -20,11 +20,19 @@
  */
 
 import { ChartLayout, InputState } from '../psychro';
-import type { Process } from '../store/useProcessStore';
-import type { StatePoint } from '../store/usePsychStore';
+import { derivesOutlet, type Process } from '../store/useProcessStore';
+import { nextLabel, TYPED, type StatePoint } from '../store/usePsychStore';
 
-/** The format this build writes and can read. */
-export const FORMAT_VERSION = 1;
+/**
+ * The format this build writes and can read.
+ *
+ * Version 2 admits **derived points**: a point may be placed by a process
+ * rather than typed, and a process names the point it places. A version 1 file
+ * has neither, so it is migrated on the way in — every point becomes typed, and
+ * every process is given a freshly minted outlet point so an old document gains
+ * the new behaviour instead of merely still opening.
+ */
+export const FORMAT_VERSION = 2;
 
 /** The file's own identifier, so a stray JSON is refused early. */
 export const FORMAT_MAGIC = 'psypro.project';
@@ -90,6 +98,40 @@ export function serialise(snapshot: ProjectSnapshot, engine: string): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
+/**
+ * Gives every version 1 process the outlet point it never had.
+ *
+ * A version 1 process derived its outlet on the fly and drew an arrowhead there;
+ * nothing in the document could refer to it. Minting the point on open is what
+ * turns an old file into one whose train can be extended — and it is safe,
+ * because the outlet's position is recomputed from the process either way. The
+ * seed values are the inlet's, and they are the *dormant anchor*
+ * `usePsychStore` describes: never read while the process places the point.
+ *
+ * Mutates both lists, which is why it is called once at the end of parsing
+ * rather than woven through it.
+ */
+function migrateOutlets(points: StatePoint[], processes: Process[]): void {
+  let minted = 0;
+  for (const process of processes) {
+    if (!derivesOutlet(process.kind) || process.toId) continue;
+    const inlet = points.find((p) => p.id === process.fromId);
+    if (!inlet) continue;
+
+    minted += 1;
+    const id = `pt-migrated-${minted}`;
+    process.toId = id;
+    points.push({
+      id,
+      label: nextLabel(points),
+      dryBulb: inlet.dryBulb,
+      mode: inlet.mode,
+      secondValue: inlet.secondValue,
+      source: { kind: 'outlet', processId: process.id },
+    });
+  }
+}
+
 /** Reads a number that must be present, or throws. */
 function requireNumber(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -133,20 +175,28 @@ export function deserialise(text: string): ProjectSnapshot {
   const document = file.document;
   if (!document) throw new ProjectFormatError('the file has no document settings');
 
-  const points = (file.points ?? []).map((p, i) => ({
+  const points: StatePoint[] = (file.points ?? []).map((p, i) => ({
     id: String(p.id ?? `pt-${i + 1}`),
     label: String(p.label ?? `P${i + 1}`),
     dryBulb: requireNumber(p.dryBulb, `point ${i + 1} dry bulb`),
     mode: requireNumber(p.mode, `point ${i + 1} input mode`) as InputState,
     secondValue: requireNumber(p.secondValue, `point ${i + 1} second value`),
+    // A file that predates derived points has only typed ones, which is what
+    // the fallback says rather than assumes.
+    source: p.source?.kind === 'outlet' ? p.source : TYPED,
   }));
 
   // A process whose endpoints are not in the file is not a process. Dropping it
   // is better than opening a project that draws a line from nowhere.
   const ids = new Set(points.map((p) => p.id));
-  const processes = (file.processes ?? []).filter(
-    (p) => ids.has(p.fromId) && (p.secondId === null || ids.has(p.secondId)),
-  );
+  const processes = (file.processes ?? [])
+    .filter((p) => ids.has(p.fromId) && (p.secondId === null || ids.has(p.secondId)))
+    .map((p) => ({ ...p, toId: p.toId ?? null }));
+
+  // Only on the way up from version 1. A version 2 file already names the
+  // point each process places, and re-running the migration on one would mint a
+  // second outlet for any process that legitimately has none.
+  if (file.version < FORMAT_VERSION) migrateOutlets(points, processes);
 
   return {
     name: String(file.name ?? ''),

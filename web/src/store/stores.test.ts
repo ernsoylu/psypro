@@ -10,7 +10,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ChartLayout, CurveFamilyId, InputState } from '../psychro';
 import { altitudeInMetres, useProjectStore } from './useProjectStore';
-import { nextLabel, resetIdCounter, selectedPoint, usePsychStore } from './usePsychStore';
+import {
+  nextLabel,
+  resetIdCounter,
+  selectedPoint,
+  usePsychStore,
+  TYPED,
+} from './usePsychStore';
 import {
   defaultProcess,
   resetProcessIdCounter,
@@ -86,12 +92,17 @@ describe('point store', () => {
     const stored = psych().points.find((p) => p.id === id);
     // Two numbers and a mode. Storing the twelve derived properties would leave
     // a document full of readings taken at a pressure it is no longer at.
+    // `source` is on this list and the twelve properties are not, which is the
+    // distinction that matters: it says *where the point's inputs come from* —
+    // these fields, or a process — and is itself an input. A resolved enthalpy
+    // would be a cached derivation, and that is what must never appear here.
     expect(Object.keys(stored ?? {}).sort()).toEqual([
       'dryBulb',
       'id',
       'label',
       'mode',
       'secondValue',
+      'source',
     ]);
   });
 
@@ -190,8 +201,22 @@ describe('point store', () => {
    */
   it('never mints an id a freshly opened document already uses', () => {
     psych().replaceAll([
-      { id: 'pt-1', label: 'OA', dryBulb: 32, mode: InputState.DbtRh, secondValue: 40 },
-      { id: 'pt-3', label: 'RA', dryBulb: 24, mode: InputState.DbtRh, secondValue: 50 },
+      {
+        id: 'pt-1',
+        label: 'OA',
+        dryBulb: 32,
+        mode: InputState.DbtRh,
+        secondValue: 40,
+        source: TYPED,
+      },
+      {
+        id: 'pt-3',
+        label: 'RA',
+        dryBulb: 24,
+        mode: InputState.DbtRh,
+        secondValue: 50,
+        source: TYPED,
+      },
     ]);
 
     const added = psych().addPoint({
@@ -205,9 +230,7 @@ describe('point store', () => {
   });
 
   it('does the same for processes, which are looked up the same way', () => {
-    processes().replaceAll([
-      { ...defaultProcess('sensible', 'pt-1'), id: 'pr-2' },
-    ]);
+    processes().replaceAll([{ ...defaultProcess('sensible', 'pt-1'), id: 'pr-2' }]);
     const added = processes().addProcess(defaultProcess('sensible', 'pt-1'));
     expect(added).toBe('pr-3');
     expect(new Set(processes().processes.map((p) => p.id)).size).toBe(2);
