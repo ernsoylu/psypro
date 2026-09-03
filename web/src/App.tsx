@@ -606,6 +606,37 @@ export function App() {
   }, [cycle, design, t, actions]);
 
   /**
+   * Places a block dragged out of the palette.
+   *
+   * Dropped onto a block, it takes that block's outlet as its inlet, which is
+   * how a train is built by dragging: drop a coil on the mixing box and the air
+   * runs through the box into the coil. Dropped on empty canvas it starts from
+   * whatever is selected, or from the last state in the document — a block with
+   * no inlet is not a process, so it has to start somewhere.
+   *
+   * The position is stored straight away, so the block stays where it was
+   * dropped rather than being swept into the automatic layout.
+   */
+  const onDropBlock = useCallback(
+    (kind: ProcessKind, at: { x: number; y: number }, afterId: string | null) => {
+      const processes = useProcessStore.getState().processes;
+      const dropped = processes.find((p) => p.id === afterId);
+      const fromId =
+        dropped?.toId ??
+        (afterId && usePsychStore.getState().points.some((p) => p.id === afterId)
+          ? afterId
+          : null) ??
+        selected?.id ??
+        usePsychStore.getState().points.at(-1)?.id;
+      if (!fromId) return;
+
+      const id = addProcessFrom(fromId, kind, actions);
+      useSchematicStore.getState().setPosition(id, at);
+    },
+    [selected, actions],
+  );
+
+  /**
    * Wires one block into another on the schematic.
    *
    * A connection that closes a loop is not refused: a loop is a *circuit*, which
@@ -858,6 +889,15 @@ export function App() {
                     type="button"
                     className="palette__item"
                     disabled={psych.points.length === 0}
+                    // Draggable *and* clickable. Dragging is the gesture the
+                    // canvas is for; a click still works, because a drag is a
+                    // poor thing to require of a keyboard or a trackpad, and
+                    // dropping onto empty canvas does the same thing anyway.
+                    draggable={psych.points.length > 0}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/psypro-block', kind);
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
                     onClick={() => {
                       const from = selected ?? psych.points[psych.points.length - 1];
                       if (from) addProcessFrom(from.id, kind as ProcessKind, actions);
@@ -892,6 +932,7 @@ export function App() {
               onSelectPoint={selectPoint}
               onMove={schematic.setPositions}
               onConnect={onConnectBlocks}
+              onDrop={onDropBlock}
               onDelete={(node) => {
                 if (node.kind === 'process') removeProcessAndOutlet(node.id, actions);
                 else if (node.kind === 'boundary') removePointAndDependents(node.id);

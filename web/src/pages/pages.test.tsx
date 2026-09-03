@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -34,6 +34,23 @@ beforeEach(() => {
   useProcessStore.setState({ processes: [], selectedId: null });
   useProjectStore.setState({ isSi: true, altitude: '0', realGas: true, name: '' });
 });
+
+/**
+ * A `DataTransfer` jsdom does not provide.
+ *
+ * Only the members the gesture actually uses. A fuller fake would be a more
+ * elaborate way of asserting the same thing: that the kind the palette puts on
+ * the drag is the kind the canvas reads off it.
+ */
+function fakeDataTransfer() {
+  const store = new Map<string, string>();
+  return {
+    dropEffect: 'none',
+    effectAllowed: 'all',
+    setData: (format: string, value: string) => store.set(format, value),
+    getData: (format: string) => store.get(format) ?? '',
+  };
+}
 
 describe('page tabs', () => {
   it('shows the pages that are not built yet as disabled rather than hidden', () => {
@@ -135,6 +152,37 @@ describe('the process design page', () => {
     expect(
       inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' }),
     ).toBeDisabled();
+  });
+
+  it('drops a block onto the circuit, and it becomes a process on the chart', async () => {
+    const user = userEvent.setup();
+    const oa = usePsychStore.getState().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    });
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Process design' }));
+
+    const inspector = within(
+      screen.getByRole('complementary', { name: 'Component inspector' }),
+    );
+    const coil = inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' });
+    expect(coil).toHaveAttribute('draggable', 'true');
+
+    // The palette item carries the kind on the drag and the canvas takes it.
+    // jsdom has no layout, so the drop lands at the origin — what is under test
+    // is that the gesture reaches the document, not where React Flow puts it.
+    const data = fakeDataTransfer();
+    fireEvent.dragStart(coil, { dataTransfer: data });
+    fireEvent.dragOver(screen.getByLabelText('Circuit'), { dataTransfer: data });
+    fireEvent.drop(screen.getByLabelText('Circuit'), { dataTransfer: data });
+
+    await waitFor(() => expect(useProcessStore.getState().processes).toHaveLength(1));
+    // And it starts from the air that was already there, because a block with
+    // no inlet is not a process.
+    expect(useProcessStore.getState().processes[0]!.fromId).toBe(oa);
   });
 
   it('adds a block to the circuit, which is a process on the chart', async () => {

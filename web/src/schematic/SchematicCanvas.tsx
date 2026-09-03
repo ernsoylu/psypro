@@ -21,7 +21,7 @@
  * comes from, and where it goes.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Background,
   Controls,
@@ -30,6 +30,7 @@ import {
   type Edge,
   type Node,
   type NodeChange,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
@@ -38,7 +39,11 @@ import { BlockNode, type BlockNodeData } from './BlockNode';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n';
 import type { StatePointOutput } from '../psychro';
-import { needsSecondPoint, type Process } from '../store/useProcessStore';
+import {
+  needsSecondPoint,
+  type Process,
+  type ProcessKind,
+} from '../store/useProcessStore';
 import { isTear, type StatePoint } from '../store/usePsychStore';
 import {
   layoutDocument,
@@ -51,6 +56,17 @@ import type { ResolvedPoint } from '../store/useResolvedPoints';
 
 /** The node types React Flow renders. One, because every block is one shape. */
 const NODE_TYPES = { block: BlockNode };
+
+/**
+ * A block's drawn size, for hit-testing a drop before React Flow has measured
+ * it.
+ *
+ * Mirrors `.block-node` in the stylesheet. Only used as a fallback: a node that
+ * has been rendered reports its real size, and a node that has not cannot be
+ * under the pointer anyway.
+ */
+const BLOCK_WIDTH = 168;
+const BLOCK_HEIGHT = 56;
 
 /** What the canvas needs. */
 export interface SchematicCanvasProps {
@@ -80,6 +96,15 @@ export interface SchematicCanvasProps {
   ) => void;
   /** Deletes a block. */
   onDelete: (node: SchematicNode) => void;
+  /**
+   * Places a block dragged from the palette.
+   *
+   * `afterId` is the block it was dropped on, or null for empty canvas. Dropping
+   * *onto* a block wires the new one to its outlet, which is the gesture that
+   * builds a train — drag a coil onto the mixing box and the air goes through
+   * the mixing box into the coil.
+   */
+  onDrop: (kind: ProcessKind, at: Position, afterId: string | null) => void;
 }
 
 /** A short state summary, for the wire label. */
@@ -103,8 +128,12 @@ export function SchematicCanvas({
   onMove,
   onConnect,
   onDelete,
+  onDrop,
 }: SchematicCanvasProps) {
   const t = useT();
+  const [flow, setFlow] = useState<ReactFlowInstance<Node<BlockNodeData>, Edge> | null>(
+    null,
+  );
   const temp = t(isSi ? 'unit.celsius' : 'unit.fahrenheit');
 
   const layout = useMemo(
@@ -277,9 +306,51 @@ export function SchematicCanvas({
     [processes, layout, onConnect],
   );
 
+  /**
+   * Where a drop landed, in the canvas's own coordinates.
+   *
+   * The pointer arrives in screen pixels and the document stores canvas
+   * positions, so a drop onto a panned or zoomed view has to be projected back
+   * — otherwise a block dropped on the right of a scrolled circuit lands
+   * somewhere near the origin.
+   */
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      const kind = event.dataTransfer.getData('application/psypro-block');
+      if (!kind || !flow) return;
+
+      const at = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      // What was under the pointer, if anything: dropping onto a block means
+      // "after this one", which is how a train gets built by dragging.
+      const under = flow
+        .getNodes()
+        .find(
+          (node) =>
+            at.x >= node.position.x &&
+            at.x <= node.position.x + (node.measured?.width ?? BLOCK_WIDTH) &&
+            at.y >= node.position.y &&
+            at.y <= node.position.y + (node.measured?.height ?? BLOCK_HEIGHT),
+        );
+      onDrop(kind as ProcessKind, at, under?.id ?? null);
+    },
+    [flow, onDrop],
+  );
+
   return (
-    <div className="schematic-canvas" aria-label={t('schematic.canvas')}>
+    <div
+      className="schematic-canvas"
+      aria-label={t('schematic.canvas')}
+      onDrop={handleDrop}
+      onDragOver={(event) => {
+        // Without this the browser refuses the drop outright, and the palette
+        // looks broken rather than unimplemented.
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+      }}
+    >
       <ReactFlow
+        onInit={setFlow}
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}
