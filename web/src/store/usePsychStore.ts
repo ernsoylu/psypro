@@ -63,6 +63,30 @@ export type PointSource =
       kind: 'outlet';
       /** The process whose outlet this point is. */
       processId: string;
+    }
+  | {
+      kind: 'tear';
+      /**
+       * The process whose outlet this point stands in for.
+       *
+       * A **tear stream**. A recirculating circuit is a loop — the mixing box
+       * consumes return air, and return air comes from the room the mixing box
+       * feeds — and the resolver walks the document once, so a loop has no
+       * starting point. Sequential-modular flowsheet solvers have cut loops
+       * this way for fifty years: one stream is *specified* rather than
+       * computed, and everything else resolves in order from it.
+       *
+       * In HVAC that stream is already the natural one. The room condition is a
+       * design input — you state 24 °C and 50%, you do not compute it — so the
+       * tear falls exactly where a designer would put it.
+       *
+       * The point resolves from its own two stored numbers, like any typed
+       * point. What this field adds is the *comparison*: the process upstream
+       * still produces a state, and the difference between the two is the
+       * convergence error a solver would iterate away. Here it is a number the
+       * designer reads, which is more honest than hiding it.
+       */
+      processId: string;
     };
 
 /** The source every point carries unless it is placed by a process. */
@@ -73,9 +97,24 @@ export function isDerived(point: StatePoint): boolean {
   return point.source.kind === 'outlet';
 }
 
-/** The process that places this point, or null when the user does. */
+/**
+ * The process that places this point, or null when the user does.
+ *
+ * A **tear** point is not placed by its process — that is the whole point of a
+ * tear — so it answers null here and resolves from its own stored numbers.
+ */
 export function producerOf(point: StatePoint): string | null {
   return point.source.kind === 'outlet' ? point.source.processId : null;
+}
+
+/** The process a tear point stands in for, or null when it is not a tear. */
+export function tearOf(point: StatePoint): string | null {
+  return point.source.kind === 'tear' ? point.source.processId : null;
+}
+
+/** Whether this point cuts a loop rather than being computed round it. */
+export function isTear(point: StatePoint): boolean {
+  return point.source.kind === 'tear';
 }
 
 /** A named state point, stored as its defining inputs. */

@@ -629,6 +629,83 @@ pub fn cool_by_duty(
     })
 }
 
+/// A load applied to an airstream: the room, and the block that closes a circuit.
+///
+/// The inverse of [`load`], and deliberately so. That function splits an
+/// enthalpy change into sensible and latent against `h_g,ref`; this one takes
+/// the two halves and puts the enthalpy change back together:
+///
+/// ```text
+/// W_out = W_in + q_l/(ṁ·h_g,ref)
+/// h_out = h_in + (q_s + q_l)/ṁ
+/// ```
+///
+/// Being the exact inverse is what matters. Apply a load and read it back and
+/// the same two numbers come out, so a room stated as 20 kW sensible and 5 kW
+/// latent reports 20 and 5 rather than 20.06 and 4.94 — which is what a `c_p,ma`
+/// formulation gives, because `Δh − h_g,ref·ΔW` carries a `c_p,wv·Δ(W·t)` term a
+/// single specific heat cannot. `DEVELOPMENT_PLAN.md` Phase 8 records the same
+/// trap on the supply-flow derivation.
+///
+/// Positive `q` is heat **into the air**, which is the direction a room gain
+/// runs: supply air enters cold, picks up the space's sensible and latent gains,
+/// and leaves as return air.
+///
+/// # Errors
+/// Returns the backend's message when the loaded state is not moist air — a
+/// latent gain large enough to drive the air past saturation, which is a real
+/// answer about an undersized supply flow rather than a failure to converge.
+pub fn apply_load(
+    inlet: &StatePoint,
+    q_sensible: f64,
+    q_latent: f64,
+    mdot_da: f64,
+    atm: &Atmosphere,
+) -> Result<ProcessResult, PropertyError> {
+    if mdot_da <= 0.0 {
+        return Err(PropertyError::supersaturated(
+            "a load needs an airstream to act on: the dry-air mass flow is zero".to_string(),
+        ));
+    }
+    let w_out = inlet.w + q_latent / (mdot_da * H_G_REF);
+    let h_out = inlet.h + (q_sensible + q_latent) / mdot_da;
+    let outlet = StatePoint::from_h_w(h_out, w_out, atm)?;
+    Ok(finish(inlet, outlet, mdot_da))
+}
+
+/// Splits an airstream in two.
+///
+/// There is no thermodynamics here at all, and that is the point: both branches
+/// leave at the *entering state*, and only the flow divides. A relief damper and
+/// a recirculation path carry the same air.
+///
+/// It earns a place in the process vocabulary anyway, because a circuit cannot
+/// be drawn without it — the return plenum of every recirculating system splits
+/// — and because the flow bookkeeping has to be somewhere a mass balance can
+/// check it.
+///
+/// `fraction` is the share leaving by the *first* branch.
+#[must_use]
+pub fn split(inlet: &StatePoint, fraction: f64, mdot_da: f64) -> SplitResult {
+    let first = mdot_da * fraction.clamp(0.0, 1.0);
+    SplitResult {
+        outlet: *inlet,
+        mdot_first: first,
+        mdot_second: mdot_da - first,
+    }
+}
+
+/// A divided airstream: one state, two flows.
+#[derive(Debug, Clone, Copy)]
+pub struct SplitResult {
+    /// The state both branches carry, which is the entering state.
+    pub outlet: StatePoint,
+    /// Dry-air mass flow down the first branch, kg/s.
+    pub mdot_first: f64,
+    /// Dry-air mass flow down the second branch, kg/s.
+    pub mdot_second: f64,
+}
+
 /// Desiccant dehumidification: the mirror image of evaporative cooling.
 ///
 /// The air leaves **warmer and drier**, which is the half of §4.1's vocabulary a

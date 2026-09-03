@@ -560,6 +560,76 @@ impl CoolingOutput {
     }
 }
 
+/// A load applied to an airstream: a room, a zone, or any space gain.
+///
+/// Positive `q` is heat into the air, the direction a space gain runs. The
+/// split is the exact inverse of the one every load readout uses, so a room
+/// stated as 20 kW sensible reports 20 kW sensible.
+#[wasm_bindgen]
+pub fn apply_room_load(
+    inlet: StatePointInput,
+    q_sensible: f64,
+    q_latent: f64,
+    mdot_da: f64,
+) -> Result<ProcessOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let convert = |q: f64| {
+        if inlet.is_si {
+            q
+        } else {
+            units::btu_per_hour_to_kw(q)
+        }
+    };
+    let r = process::apply_load(
+        &s,
+        convert(q_sensible),
+        convert(q_latent),
+        mass_flow_si(mdot_da, inlet.is_si),
+        &atmosphere_for(&inlet),
+    )
+    .map_err(|e| JsValue::from_str(e.message()))?;
+    Ok(present_process(&r, inlet.is_si))
+}
+
+/// A divided airstream: one state, two flows.
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug)]
+pub struct SplitOutput {
+    /// The state both branches carry — the entering state, unchanged.
+    pub outlet: StatePointOutput,
+    /// Dry-air mass flow down the first branch.
+    pub mdot_first: f64,
+    /// Dry-air mass flow down the second branch.
+    pub mdot_second: f64,
+}
+
+/// Splits an airstream in two at a flow fraction.
+///
+/// No thermodynamics: both branches leave at the entering state and only the
+/// flow divides. It is in the vocabulary because a recirculating circuit cannot
+/// be drawn without it.
+#[wasm_bindgen]
+pub fn apply_split(
+    inlet: StatePointInput,
+    fraction: f64,
+    mdot_da: f64,
+) -> Result<SplitOutput, JsValue> {
+    let s = resolve(&inlet).map_err(|e| JsValue::from_str(&e))?;
+    let r = process::split(&s, fraction, mass_flow_si(mdot_da, inlet.is_si));
+    let flow = |m: f64| {
+        if inlet.is_si {
+            m
+        } else {
+            units::kg_per_second_to_lb_per_hour(m)
+        }
+    };
+    Ok(SplitOutput {
+        outlet: present(&r.outlet, inlet.is_si),
+        mdot_first: flow(r.mdot_first),
+        mdot_second: flow(r.mdot_second),
+    })
+}
+
 /// Desiccant dehumidification: the air leaves warmer and drier.
 ///
 /// The mirror image of evaporative cooling, along a line of constant enthalpy.

@@ -10,13 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  DIMENSIONS,
-  convert,
-  documentUnit,
-  specificVolumeSi,
-  unitById,
-} from './units';
+import { DIMENSIONS, convert, documentUnit, specificVolumeSi, unitById } from './units';
 
 const NO_STATE = { vDaSi: null };
 

@@ -89,6 +89,17 @@ export interface PropertiesPanelProps {
   dragInvertible?: boolean;
   /** Breaks the link, keeping the point where it is. */
   onDetach?: () => void;
+  /**
+   * Whether this point is a **tear**: specified rather than computed.
+   *
+   * The stream that cuts a recirculating loop. It reads as a typed point
+   * everywhere else, and here it says why it is one.
+   */
+  torn?: boolean;
+  /** Specifies this stream, cutting the loop it sits in. */
+  onTear?: (() => void) | undefined;
+  /** Returns it to being computed by its process. */
+  onUntear?: (() => void) | undefined;
   /** Selects the process that places this point. */
   onSelectProducer?: (id: string) => void;
 }
@@ -108,6 +119,9 @@ export function PropertiesPanel({
   dragInvertible = false,
   onDetach,
   onSelectProducer,
+  torn = false,
+  onTear,
+  onUntear,
 }: PropertiesPanelProps) {
   const t = useT();
 
@@ -157,6 +171,17 @@ export function PropertiesPanel({
 
       <h2 className="panel__section">{t('panel.sectionInputs')}</h2>
 
+      {torn ? (
+        <div className="panel__fields">
+          <p className="panel__note">{t('point.torn')}</p>
+          {onUntear ? (
+            <button type="button" className="btn btn--block" onClick={onUntear}>
+              {t('schematic.untearAction')}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {producedBy ? (
         <div className="panel__fields">
           <p className="panel__note">
@@ -178,6 +203,14 @@ export function PropertiesPanel({
             <button type="button" className="btn btn--block" onClick={onDetach}>
               {t('point.detach')}
             </button>
+          ) : null}
+          {onTear ? (
+            <>
+              <p className="panel__note">{t('schematic.tearPrompt')}</p>
+              <button type="button" className="btn btn--block" onClick={onTear}>
+                {t('schematic.tearAction')}
+              </button>
+            </>
           ) : null}
         </div>
       ) : (

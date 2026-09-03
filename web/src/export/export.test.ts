@@ -53,7 +53,13 @@ const CURVES: GridCurve[] = [
 
 const POINTS = [
   {
-    point: { id: 'pt-1', label: 'OA', dryBulb: 35, mode: InputState.DbtRh, secondValue: 40 },
+    point: {
+      id: 'pt-1',
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    },
     state: null,
     position: { x: 35.5, y: 0.014 },
     error: null,
@@ -253,13 +259,10 @@ describe('DXF export', () => {
 
 describe('CSV export', () => {
   it('puts the unit in the header so a column can be summed', () => {
-    const csv = pointsToCsv(
-      [{ ...POINTS[0]!, state: {} as never }],
-      () => [
-        { key: 'dbt', label: 'Dry-bulb temperature', value: '24.00', unit: '°C' },
-        { key: 'w', label: 'Humidity ratio', value: '0.009340', unit: 'kg/kg' },
-      ],
-    );
+    const csv = pointsToCsv([{ ...POINTS[0]!, state: {} as never }], () => [
+      { key: 'dbt', label: 'Dry-bulb temperature', value: '24.00', unit: '°C' },
+      { key: 'w', label: 'Humidity ratio', value: '0.009340', unit: 'kg/kg' },
+    ]);
     const [header, row] = csv.trim().split('\n');
     expect(header).toBe('Point,Dry-bulb temperature (°C),Humidity ratio (kg/kg)');
     // A spreadsheet can sum a column of numbers; it cannot sum "24.00 °C".

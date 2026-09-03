@@ -19,11 +19,12 @@ import { InputState } from '../psychro';
 import {
   defaultProcess,
   derivesOutlet,
+  derivesSecondOutlet,
   useProcessStore,
   type Process,
   type ProcessKind,
 } from './useProcessStore';
-import { nextLabel, producerOf, usePsychStore, TYPED } from './usePsychStore';
+import { nextLabel, producerOf, tearOf, usePsychStore, TYPED } from './usePsychStore';
 
 /** What a document edit needs to know beyond the stores themselves. */
 export interface DocumentActionContext {
@@ -37,6 +38,26 @@ export interface DocumentActionContext {
    * knows that.
    */
   stateOf: (id: string) => StatePointOutput | null;
+}
+
+/**
+ * The dormant anchor a new outlet starts with.
+ *
+ * Seeded from the inlet, so a point detached before its process ever resolved
+ * still lands somewhere physical rather than at zero.
+ */
+function seedFor(
+  fromId: string,
+  inlet: StatePointOutput | null,
+  ctx: DocumentActionContext,
+) {
+  if (inlet) return anchorFrom(inlet);
+  const stored = usePsychStore.getState().points.find((p) => p.id === fromId);
+  return {
+    dryBulb: stored?.dryBulb ?? (ctx.isSi ? 24 : 75),
+    mode: stored?.mode ?? InputState.DbtRh,
+    secondValue: stored?.secondValue ?? 50,
+  };
 }
 
 /** The dormant anchor a point falls back to, taken from a resolved state. */
@@ -65,7 +86,6 @@ export function addProcessFrom(
   kind: ProcessKind,
   ctx: DocumentActionContext,
 ): string {
-  const points = usePsychStore.getState();
   const processes = useProcessStore.getState();
   const inlet = ctx.stateOf(fromId);
 
@@ -73,21 +93,27 @@ export function addProcessFrom(
     defaultProcess(kind, fromId, { inlet, isSi: ctx.isSi }),
   );
 
+  if (derivesSecondOutlet(kind)) {
+    // Both branches of a split carry the entering state, so the second outlet
+    // is seeded from the same place as the first.
+    const second = usePsychStore
+      .getState()
+      .addOutletPoint(
+        processId,
+        nextLabel(usePsychStore.getState().points),
+        seedFor(fromId, inlet, ctx),
+      );
+    useProcessStore.getState().updateProcess(processId, { toSecondId: second });
+  }
+
   if (derivesOutlet(kind)) {
-    const stored = points.points.find((p) => p.id === fromId);
-    const outletId = points.addOutletPoint(
-      processId,
-      nextLabel(usePsychStore.getState().points),
-      // Seeded from the inlet, so a detached outlet lands somewhere physical
-      // even if it is detached before the process has ever resolved.
-      inlet
-        ? anchorFrom(inlet)
-        : {
-            dryBulb: stored?.dryBulb ?? (ctx.isSi ? 24 : 75),
-            mode: stored?.mode ?? InputState.DbtRh,
-            secondValue: stored?.secondValue ?? 50,
-          },
-    );
+    const outletId = usePsychStore
+      .getState()
+      .addOutletPoint(
+        processId,
+        nextLabel(usePsychStore.getState().points),
+        seedFor(fromId, inlet, ctx),
+      );
     useProcessStore.getState().updateProcess(processId, { toId: outletId });
   }
 
@@ -117,8 +143,8 @@ export function removeProcess(id: string, ctx: DocumentActionContext): void {
   const process = processes.processes.find((p) => p.id === id);
   if (!process) return;
 
-  if (process.toId) {
-    const outletId = process.toId;
+  for (const outletId of [process.toId, process.toSecondId]) {
+    if (!outletId) continue;
     if (isConsumed(outletId, id, processes.processes)) {
       const state = ctx.stateOf(outletId);
       const points = usePsychStore.getState();
@@ -134,7 +160,7 @@ export function removeProcess(id: string, ctx: DocumentActionContext): void {
             },
       );
     } else {
-      usePsychStore.getState().removeOutletsOf(id);
+      usePsychStore.getState().removePoint(outletId);
     }
   }
 
@@ -164,9 +190,9 @@ export function removePoint(id: string): void {
       .processes.filter((p) => p.fromId === pointId || p.secondId === pointId);
 
     for (const process of consumers) {
-      const outletId = process.toId;
+      const outlets = [process.toId, process.toSecondId];
       useProcessStore.getState().removeProcess(process.id);
-      if (outletId) walk(outletId);
+      for (const outletId of outlets) if (outletId) walk(outletId);
     }
 
     usePsychStore.getState().removePoint(pointId);
@@ -353,4 +379,120 @@ export interface CycleSnapshot {
   roomLabel: string;
   mixedLabel: string;
   supplyLabel: string;
+}
+
+/**
+ * Whether wiring `fromId`'s stream into `intoProcess` would close a loop.
+ *
+ * A loop is a circuit, and a circuit is what the user is trying to draw — so
+ * this is not a validation that says no. It is the question that decides whether
+ * the connection needs a **tear**, and the answer is used to offer one rather
+ * than to refuse the wire.
+ *
+ * Walks forward from the process's own outlets: if the point being fed back in
+ * is reachable from them, the wire closes the loop.
+ */
+export function wouldCloseLoop(pointId: string, intoProcessId: string): boolean {
+  const processes = useProcessStore.getState().processes;
+  const process = processes.find((p) => p.id === intoProcessId);
+  if (!process) return false;
+
+  const reached = new Set<string>();
+  const frontier: string[] = [];
+  for (const outletId of [process.toId, process.toSecondId]) {
+    if (outletId) frontier.push(outletId);
+  }
+
+  while (frontier.length > 0) {
+    const current = frontier.pop()!;
+    if (current === pointId) return true;
+    if (reached.has(current)) continue;
+    reached.add(current);
+    for (const p of processes) {
+      if (p.fromId !== current && p.secondId !== current) continue;
+      for (const outletId of [p.toId, p.toSecondId]) {
+        if (outletId) frontier.push(outletId);
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Wires one block's outlet into another block's inlet.
+ *
+ * The schematic's fundamental edit, and it is a *rewire* rather than an
+ * insertion: the consuming process is pointed at the producing process's outlet
+ * point, and the inlet it used to have is dropped if nothing else wants it. Two
+ * blocks joined by a wire share one point, which is exactly what "the state
+ * between them" means.
+ *
+ * `slot` picks which inlet on a two-inlet block — a mixing box's outdoor and
+ * return sides are different wires and the user has to be able to say which.
+ */
+export function connect(
+  outletPointId: string,
+  intoProcessId: string,
+  slot: 'from' | 'second',
+): void {
+  const processes = useProcessStore.getState();
+  const target = processes.processes.find((p) => p.id === intoProcessId);
+  if (!target) return;
+
+  const previous = slot === 'from' ? target.fromId : target.secondId;
+  processes.updateProcess(
+    intoProcessId,
+    slot === 'from' ? { fromId: outletPointId } : { secondId: outletPointId },
+  );
+
+  // The point that used to feed this inlet is now dangling unless something
+  // else consumes it or it is a boundary the user typed. Leaving a stranded
+  // derived point behind would put a marker on the chart that no longer
+  // belongs to any stream.
+  if (!previous || previous === outletPointId) return;
+  const point = usePsychStore.getState().points.find((p) => p.id === previous);
+  if (!point || producerOf(point) === null) return;
+  const stillUsed = useProcessStore
+    .getState()
+    .processes.some((p) => p.fromId === previous || p.secondId === previous);
+  if (!stillUsed) usePsychStore.getState().removePoint(previous);
+}
+
+/**
+ * Cuts a loop at this point, so the circuit round it can resolve.
+ *
+ * The point keeps the state it currently holds and becomes *specified*: the
+ * process feeding it still runs, and the difference between what it produces and
+ * what was specified is reported as the mismatch. That is the convergence error
+ * an iterative solver would drive to zero, and showing it is more honest than
+ * hiding it behind an iteration the user cannot see.
+ *
+ * The natural place for this in an air system is the return-air condition, which
+ * a designer states rather than computes — so tearing there is not a workaround,
+ * it is the way the problem is actually posed.
+ */
+export function tearAt(
+  pointId: string,
+  processId: string,
+  ctx: DocumentActionContext,
+): void {
+  const state = ctx.stateOf(pointId);
+  const points = usePsychStore.getState();
+  const stored = points.points.find((p) => p.id === pointId);
+  if (!stored) return;
+
+  points.updatePoint(pointId, {
+    ...(state ? anchorFrom(state) : {}),
+    source: { kind: 'tear', processId },
+  });
+}
+
+/** Undoes a tear, returning the point to being computed by its process. */
+export function untear(pointId: string): void {
+  const point = usePsychStore.getState().points.find((p) => p.id === pointId);
+  const processId = point ? tearOf(point) : null;
+  if (!processId) return;
+  usePsychStore
+    .getState()
+    .updatePoint(pointId, { source: { kind: 'outlet', processId } });
 }

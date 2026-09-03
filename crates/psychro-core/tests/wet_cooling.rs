@@ -474,3 +474,74 @@ fn the_flow_scales_the_report_but_not_the_classification() {
     }
     assert!((ten.load.total - 10.0 * one.load.total).abs() < 1e-9);
 }
+
+// ── The circuit blocks ──────────────────────────────────────────────────────
+
+/// A room applies a load; reading that load back gives the same two numbers.
+///
+/// The inverse property is the whole reason `apply_load` splits the way it does.
+/// A `c_p,ma` formulation would come back a fraction of a percent out, and a
+/// designer who states 20 kW and reads 20.06 kW has no way to tell which of the
+/// two the equipment should be sized against.
+#[test]
+fn a_load_applied_and_read_back_is_the_load_that_was_applied() {
+    let atm = sea_level();
+    let supply = at(13.0, 0.90);
+    let mdot = 1.772;
+
+    let r = process::apply_load(&supply, 20.0, 5.0, mdot, &atm).expect("a room");
+
+    assert!(
+        (r.load.sensible - 20.0).abs() < 1e-9,
+        "sensible came back as {:.6}",
+        r.load.sensible
+    );
+    assert!(
+        (r.load.latent - 5.0).abs() < 1e-9,
+        "latent came back as {:.6}",
+        r.load.latent
+    );
+    assert!((r.load.total - 25.0).abs() < 1e-9);
+    // And the air left warmer and wetter, which is what a space gain does.
+    assert!(r.outlet.t_db > supply.t_db);
+    assert!(r.outlet.w > supply.w);
+    assert!((r.load.shr.expect("a ratio") - 0.8).abs() < 1e-9);
+}
+
+/// A purely sensible room is the data-centre case, and moves no moisture at all.
+#[test]
+fn a_sensible_only_load_holds_the_humidity_ratio() {
+    let atm = sea_level();
+    let supply = at(18.0, 0.45);
+    let r = process::apply_load(&supply, 40.0, 0.0, 3.0, &atm).expect("a server hall");
+    assert!((r.outlet.w - supply.w).abs() < 1e-12);
+    assert_eq!(r.load.shr.map(|s| (s - 1.0).abs() < 1e-9), Some(true));
+}
+
+/// A split divides the flow and moves nothing else.
+#[test]
+fn a_split_divides_the_flow_and_leaves_the_state_alone() {
+    let atm = sea_level();
+    let inlet = at(24.0, 0.50);
+    let r = process::split(&inlet, 0.3, 2.0);
+
+    assert!((r.mdot_first - 0.6).abs() < 1e-12);
+    assert!((r.mdot_second - 1.4).abs() < 1e-12);
+    // Same air down both branches: a relief damper does not condition anything.
+    assert!((r.outlet.h - inlet.h).abs() < 1e-12);
+    assert!((r.outlet.w - inlet.w).abs() < 1e-12);
+    // Mass is conserved, which is the only thing a split can get wrong.
+    assert!((r.mdot_first + r.mdot_second - 2.0).abs() < 1e-12);
+    let _ = atm;
+}
+
+/// A fraction outside [0, 1] is clamped rather than producing a negative flow.
+#[test]
+fn a_split_cannot_send_more_air_than_it_was_given() {
+    let inlet = at(24.0, 0.50);
+    for fraction in [-0.5, 1.5] {
+        let r = process::split(&inlet, fraction, 2.0);
+        assert!(r.mdot_first >= 0.0 && r.mdot_second >= 0.0, "negative flow");
+        assert!((r.mdot_first + r.mdot_second - 2.0).abs() < 1e-12);
+    }
+}

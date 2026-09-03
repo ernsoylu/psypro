@@ -45,12 +45,8 @@ describe('line styles modal', () => {
 
   it('states the two boundary rules in the footer', () => {
     renderModal();
-    expect(
-      screen.getByText(/boundary of the physical region/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/not saved in the project file/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/boundary of the physical region/)).toBeInTheDocument();
+    expect(screen.getByText(/not saved in the project file/)).toBeInTheDocument();
   });
 
   it('disables the swatches while the theme has not resolved', () => {

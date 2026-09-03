@@ -29,11 +29,14 @@ export type ViewActionId = 'zoomIn' | 'zoomOut' | 'fitToWindow';
  */
 export type PanelId = 'properties' | 'layers' | 'teaching';
 
-const PANELS: { id: Exclude<PanelId, 'properties'>; icon: IconName; key: TranslationKey }[] =
-  [
-    { id: 'layers', icon: 'layers', key: 'tool.layers' },
-    { id: 'teaching', icon: 'learn', key: 'tool.teaching' },
-  ];
+const PANELS: {
+  id: Exclude<PanelId, 'properties'>;
+  icon: IconName;
+  key: TranslationKey;
+}[] = [
+  { id: 'layers', icon: 'layers', key: 'tool.layers' },
+  { id: 'teaching', icon: 'learn', key: 'tool.teaching' },
+];
 
 const TOOLS: { id: ToolId; icon: IconName; key: TranslationKey }[] = [
   { id: 'select', icon: 'select', key: 'tool.select' },

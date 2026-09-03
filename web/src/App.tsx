@@ -28,6 +28,8 @@ import { StyleModal } from './shell/StyleModal';
 import { PageTabs, type PageId } from './shell/PageTabs';
 import { TeachingPanel } from './shell/TeachingPanel';
 import { DocumentOutline } from './shell/DocumentOutline';
+import { PALETTE, SchematicCanvas } from './schematic/SchematicCanvas';
+import { useSchematicStore } from './store/useSchematicStore';
 import { PROCESS_KINDS, ProcessSection } from './shell/ProcessSection';
 import { PropertiesPanel } from './shell/PropertiesPanel';
 import { Toolbox, type PanelId, type ToolId, type ViewActionId } from './shell/Toolbox';
@@ -41,6 +43,7 @@ import {
   nextLabel,
   producerOf,
   selectedPoint,
+  tearOf,
   usePsychStore,
 } from './store/usePsychStore';
 import { convertForUnits, specificVolumeSi } from './units';
@@ -48,10 +51,14 @@ import { useResolvedDocument } from './store/useResolvedDocument';
 import {
   addProcessFrom,
   adoptFit,
+  connect,
   linkPoints,
   materialiseCycle,
   removePoint as removePointAndDependents,
   removeProcess as removeProcessAndOutlet,
+  tearAt,
+  untear,
+  wouldCloseLoop,
 } from './store/document';
 import { envelopeById, exampleById } from './data';
 import { chartToDxf } from './export/dxf';
@@ -138,6 +145,7 @@ export function App() {
   const design = useCycleStore();
   const profile = useProfileStore();
   const weather = useWeatherStore();
+  const schematic = useSchematicStore();
 
   /** The envelopes the active profile and the layer toggles between them show. */
   const envelopes = profile.visibleEnvelopes.flatMap((id) => {
@@ -395,6 +403,10 @@ export function App() {
             realGas: project.realGas,
             points: usePsychStore.getState().points,
             processes: useProcessStore.getState().processes,
+            schematic: {
+              positions: useSchematicStore.getState().positions,
+              passThroughs: useSchematicStore.getState().passThroughs,
+            },
           },
           engineReady ? engine_version() : 'unknown',
         );
@@ -419,6 +431,7 @@ export function App() {
           project.setName(snapshot.name);
           usePsychStore.getState().replaceAll(snapshot.points);
           useProcessStore.getState().replaceAll(snapshot.processes);
+          useSchematicStore.getState().replaceAll(snapshot.schematic);
           setFileHandle(opened.handle);
         })
         .catch((e: unknown) => {
@@ -591,6 +604,49 @@ export function App() {
     setCycleSent(true);
     setPage('chart');
   }, [cycle, design, t, actions]);
+
+  /**
+   * Wires one block into another on the schematic.
+   *
+   * A connection that closes a loop is not refused: a loop is a *circuit*, which
+   * is what the user is drawing. It is torn instead — the stream becomes
+   * specified rather than computed — which is both what lets the document
+   * resolve in one pass and what a designer means when they state a return-air
+   * condition.
+   */
+  const onConnectBlocks = useCallback(
+    (outletPointId: string, intoProcessId: string, slot: 'from' | 'second') => {
+      const closes = wouldCloseLoop(outletPointId, intoProcessId);
+      connect(outletPointId, intoProcessId, slot);
+      if (!closes) return;
+      const producer = useProcessStore
+        .getState()
+        .processes.find(
+          (p) => p.toId === outletPointId || p.toSecondId === outletPointId,
+        );
+      if (producer) tearAt(outletPointId, producer.id, actions);
+    },
+    [actions],
+  );
+
+  /**
+   * Offers to specify the selected point, when doing so would cut a loop.
+   *
+   * Only offered where it would *do* something: a derived point that nothing
+   * feeds back into is already computed in order, and specifying it would trade
+   * a correct number for a typed one.
+   */
+  const selectedTearable = useMemo(() => {
+    const producer = selected ? producerOf(selected) : null;
+    if (!producer || !selected) return null;
+    const feedsUpstream = proc.processes.some(
+      (p) =>
+        (p.fromId === selected.id || p.secondId === selected.id) &&
+        wouldCloseLoop(selected.id, p.id),
+    );
+    if (!feedsUpstream) return null;
+    return () => tearAt(selected.id, producer, actions);
+  }, [selected, proc.processes, actions]);
 
   /** Breaks a derived point's link to its process, keeping it where it is. */
   const onDetachPoint = useCallback(() => {
@@ -792,6 +848,57 @@ export function App() {
           isSi={project.isSi}
           onSendToChart={onSendCycleToChart}
           sent={cycleSent}
+          palette={
+            <>
+              <h2 className="panel__section">{t('schematic.palette')}</h2>
+              <div className="palette">
+                {PALETTE.map(([kind, key]) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className="palette__item"
+                    disabled={psych.points.length === 0}
+                    onClick={() => {
+                      const from = selected ?? psych.points[psych.points.length - 1];
+                      if (from) addProcessFrom(from.id, kind as ProcessKind, actions);
+                    }}
+                  >
+                    {t(key)}
+                  </button>
+                ))}
+              </div>
+              <p className="panel__note">
+                {psych.points.length === 0
+                  ? t('schematic.empty')
+                  : t('schematic.paletteHint')}
+              </p>
+            </>
+          }
+          canvas={
+            <SchematicCanvas
+              points={psych.points}
+              processes={proc.processes}
+              passThroughs={schematic.passThroughs}
+              positions={schematic.positions}
+              resolvedPoints={document.pointsById}
+              resolvedProcesses={document.processesById}
+              kindLabel={(process) => {
+                const key = PROCESS_KINDS.find(([k]) => k === process.kind)?.[1];
+                return key ? t(key) : process.kind;
+              }}
+              selectedId={proc.selectedId ?? psych.selectedId}
+              isSi={project.isSi}
+              onSelectProcess={proc.selectProcess}
+              onSelectPoint={selectPoint}
+              onMove={schematic.setPositions}
+              onConnect={onConnectBlocks}
+              onDelete={(node) => {
+                if (node.kind === 'process') removeProcessAndOutlet(node.id, actions);
+                else if (node.kind === 'boundary') removePointAndDependents(node.id);
+                else schematic.removePassThrough(node.id);
+              }}
+            />
+          }
         />
       ) : page === 'weather' ? (
         <WeatherPage
@@ -891,6 +998,13 @@ export function App() {
               }
               producedBy={selectedProducer}
               dragInvertible={selectedDragInvertible}
+              torn={selected ? tearOf(selected) !== null : false}
+              onTear={selectedTearable ?? undefined}
+              onUntear={
+                selected && tearOf(selected) !== null
+                  ? () => untear(selected.id)
+                  : undefined
+              }
               onDetach={onDetachPoint}
               onSelectProducer={proc.selectProcess}
               onRealGasChange={project.setRealGas}

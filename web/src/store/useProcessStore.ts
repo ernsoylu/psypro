@@ -44,6 +44,21 @@ export type ProcessKind =
   | 'recovery'
   /** Adiabatic mixing of two streams on a dry-air mass basis. */
   | 'mix'
+  /**
+   * A load applied to the airstream: a room, a zone, any space gain.
+   *
+   * The block that closes a circuit. Everything else conditions air on its way
+   * somewhere; this is the somewhere.
+   */
+  | 'load'
+  /**
+   * One airstream divided in two at a flow ratio, both at the same state.
+   *
+   * No thermodynamics — a relief damper conditions nothing — but a
+   * recirculating circuit cannot be drawn without it, and the flow bookkeeping
+   * has to live where a mass balance can check it.
+   */
+  | 'split'
   /** A straight line between two points that already exist. */
   | 'link';
 
@@ -59,6 +74,11 @@ export function derivesOutlet(kind: ProcessKind): boolean {
   return kind !== 'link';
 }
 
+/** Whether this kind places a *second* outlet as well. */
+export function derivesSecondOutlet(kind: ProcessKind): boolean {
+  return kind === 'split';
+}
+
 /** Whether this kind consumes a second existing point. */
 export function needsSecondPoint(kind: ProcessKind): boolean {
   return kind === 'mix' || kind === 'recovery' || kind === 'link';
@@ -72,6 +92,13 @@ export interface Process {
   kind: ProcessKind;
   /** The point the air enters at. */
   fromId: string;
+  /**
+   * The second point this process places, for the kinds with two outlets.
+   *
+   * Only `split` has one. Both branches carry the entering state and differ
+   * only in flow, so this is a second *wire* rather than a second answer.
+   */
+  toSecondId: string | null;
   /**
    * The point this process *places*, for the kinds that derive their outlet.
    *
@@ -125,6 +152,12 @@ export interface Process {
   tAdp: number;
   /** The desiccant's equilibrium humidity ratio, `W_eq`. */
   wEquilibrium: number;
+  /** Room sensible gain, for `load`. Positive is heat into the air. */
+  qSensible: number;
+  /** Room latent gain, for `load`. */
+  qLatent: number;
+  /** The share of the flow leaving by the first branch, for `split`. */
+  splitFraction: number;
 }
 
 /** A process being created, before it has an id. */
@@ -166,6 +199,7 @@ export function defaultProcess(
     kind,
     fromId,
     toId: null,
+    toSecondId: null,
     secondId: null,
     mdot: si('flow', 1),
     mdotSecond: si('flow', 1),
@@ -186,6 +220,12 @@ export function defaultProcess(
     tAdp: t === undefined ? si('temperature', 10) : t - 1.5 * step,
     // A regenerated wheel's equilibrium, in the range §4.4's wheels reach.
     wEquilibrium: si('humidityRatio', 0.002),
+    // A moderate office space at the §4.9 split: RSHF 0.8.
+    qSensible: si('power', 20),
+    qLatent: si('power', 5),
+    // An even division, which is visible and obviously provisional. Any other
+    // default would look like a recommendation.
+    splitFraction: 0.5,
   };
 }
 
@@ -306,6 +346,8 @@ export const useProcessStore = create<ProcessState>((set) => ({
         mdotSecond: convertForUnits('flow', p.mdotSecond, toSi),
         targetT: convertForUnits('temperature', p.targetT, toSi),
         duty: convertForUnits('power', p.duty, toSi),
+        qSensible: convertForUnits('power', p.qSensible, toSi),
+        qLatent: convertForUnits('power', p.qLatent, toSi),
         targetW: convertForUnits('humidityRatio', p.targetW, toSi),
         steamEnthalpy: convertForUnits('enthalpy', p.steamEnthalpy, toSi),
         tAdp: convertForUnits('temperature', p.tAdp, toSi),

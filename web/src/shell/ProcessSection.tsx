@@ -46,6 +46,8 @@ export const PROCESS_KINDS = [
   ['desiccant', 'process.desiccant'],
   ['recovery', 'process.recovery'],
   ['mix', 'process.mix'],
+  ['load', 'process.load'],
+  ['split', 'process.split'],
   ['link', 'process.link'],
 ] as const satisfies readonly (readonly [ProcessKind, TranslationKey])[];
 
@@ -151,6 +153,17 @@ function fieldsFor(kind: ProcessKind): Field[] {
       return [
         { key: 'mdot', label: 'process.massFlowA', dimension: 'flow' },
         { key: 'mdotSecond', label: 'process.massFlowB', dimension: 'flow' },
+      ];
+    case 'load':
+      return [
+        mdot,
+        { key: 'qSensible', label: 'process.qSensible', dimension: 'power' },
+        { key: 'qLatent', label: 'process.qLatent', dimension: 'power' },
+      ];
+    case 'split':
+      return [
+        mdot,
+        { key: 'splitFraction', label: 'process.splitFraction', dimension: 'ratio' },
       ];
     case 'link':
       return [mdot];
@@ -402,6 +415,18 @@ export function ProcessSection({
 
           {resolved?.frostRisk ? (
             <p className="panel__warning">{t('process.frostRisk')}</p>
+          ) : null}
+
+          {/* The convergence error. A circuit that does not deliver the stream
+              the designer specified has a problem, and this is the size of it —
+              a number, rather than an iteration hidden behind the drawing. */}
+          {resolved?.tearMismatch ? (
+            <p className="panel__warning">
+              {t('schematic.tearMismatch', {
+                dryBulb: resolved.tearMismatch.dryBulb.toFixed(2),
+                unit: temp,
+              })}
+            </p>
           ) : null}
 
           {resolved?.fogged ? (

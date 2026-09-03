@@ -167,7 +167,12 @@ export function TopNav({
           <NumberField
             className="field-inline__input"
             aria-label={t('nav.elevationLabel')}
-            value={convert(Number(altitude) || 0, documentElevation, elevationUnit, NO_STATE)}
+            value={convert(
+              Number(altitude) || 0,
+              documentElevation,
+              elevationUnit,
+              NO_STATE,
+            )}
             format={(v) => String(Math.round(v))}
             onCommit={(entered) =>
               // Stored at full precision even though it is shown to the metre:

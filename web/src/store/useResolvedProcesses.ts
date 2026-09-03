@@ -26,6 +26,8 @@ import {
   apply_energy_recovery,
   apply_evaporative,
   apply_mixing,
+  apply_room_load,
+  apply_split,
   apply_steam_humidification,
   get_coordinate_mapping,
   identify_process,
@@ -79,8 +81,29 @@ export interface ResolvedProcess {
    * with more than a load.
    */
   fit: ProcessFitOutput | null;
+  /** Dry-air mass flow down a `split`'s first branch. */
+  mdotFirst: number;
+  /** Dry-air mass flow down a `split`'s second branch. */
+  mdotSecond: number;
+  /**
+   * How far a tear point's specified state is from what this process produced.
+   *
+   * The convergence error a flowsheet solver would iterate away. Null when the
+   * outlet is not a tear. Reported rather than hidden: a designer who has
+   * specified a return-air condition the circuit does not actually deliver has
+   * a design problem, and it is this number.
+   */
+  tearMismatch: TearMismatch | null;
   /** Why it could not be resolved, if it could not. */
   error: string | null;
+}
+
+/** The gap between a specified tear state and the computed one. */
+export interface TearMismatch {
+  /** Specified minus computed dry-bulb, in the document's units. */
+  dryBulb: number;
+  /** Specified minus computed humidity ratio. */
+  humidityRatio: number;
 }
 
 /** The context a process resolution needs: the document plus its resolved points. */
@@ -110,6 +133,9 @@ export function failedProcess(process: Process, error: string): ResolvedProcess 
     frostRisk: false,
     coil: null,
     fit: null,
+    mdotFirst: 0,
+    mdotSecond: 0,
+    tearMismatch: null,
     error,
   };
 }
@@ -179,6 +205,9 @@ export function resolveProcess(process: Process, ctx: ProcessContext): ResolvedP
     frostRisk: false,
     coil: null,
     fit: null,
+    mdotFirst: 0,
+    mdotSecond: 0,
+    tearMismatch: null,
     error: null,
     ...extra,
   });
@@ -276,6 +305,27 @@ export function resolveProcess(process: Process, ctx: ProcessContext): ResolvedP
         );
         return present(r.outlet, r.load, r.near_saturation);
       }
+      case 'load': {
+        const r = apply_room_load(
+          input(),
+          process.qSensible,
+          process.qLatent,
+          process.mdot,
+        );
+        return present(r.outlet, r.load, r.near_saturation);
+      }
+      case 'split': {
+        const r = apply_split(input(), process.splitFraction, process.mdot);
+        // Both branches carry the entering state, so the "process" moves
+        // nothing at all: its load is zero by construction rather than by
+        // arithmetic, and reporting one would invite a reader to believe a
+        // relief damper conditioned something.
+        const load = process_load(input(), inputForState(r.outlet, ctx)(), process.mdot);
+        return present(r.outlet, load, false, {
+          mdotFirst: r.mdot_first,
+          mdotSecond: r.mdot_second,
+        });
+      }
       case 'mix': {
         const r = apply_mixing(
           input(),
@@ -311,6 +361,9 @@ export function resolveProcess(process: Process, ctx: ProcessContext): ResolvedP
           frostRisk: false,
           coil: null,
           fit,
+          mdotFirst: 0,
+          mdotSecond: 0,
+          tearMismatch: null,
           error: null,
         };
       }

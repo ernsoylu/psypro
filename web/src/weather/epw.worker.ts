@@ -148,12 +148,7 @@ function analyse(request: WeatherRequest): WeatherResult {
 
   // Resolved once. Every question below is then a scan over plain numbers,
   // which is what took the main-thread block from 39 seconds to nothing.
-  const year = resolve_weather(
-    parsed.dryBulb,
-    parsed.dewPoint,
-    request.altitudeM,
-    true,
-  );
+  const year = resolve_weather(parsed.dryBulb, parsed.dewPoint, request.altitudeM, true);
   try {
     // A bin width is a temperature *difference*: 1 °F of width is 5/9 K, not
     // −17 K. `temperatureDelta` scales rather than offsets, which is the whole

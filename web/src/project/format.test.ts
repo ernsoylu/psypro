@@ -50,6 +50,19 @@ function project(): ProjectSnapshot {
         source: TYPED,
       },
     ],
+    schematic: {
+      // A hand-placed block and a filter on a wire: the two things the
+      // schematic section carries that nothing else does.
+      positions: { 'pr-1': { x: 260, y: 0 } },
+      passThroughs: [
+        {
+          id: 'pt-through-1',
+          kind: 'filter' as const,
+          onPointId: 'pt-1',
+          label: 'MERV 13',
+        },
+      ],
+    },
     processes: [
       { ...defaultProcess('mix', 'pt-1'), id: 'pr-1', secondId: 'pt-2' },
       { ...defaultProcess('sensible', 'pt-2'), id: 'pr-2' },

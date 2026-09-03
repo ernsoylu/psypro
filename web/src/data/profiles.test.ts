@@ -112,7 +112,10 @@ describe('industry profiles', () => {
   it('names only envelopes that exist', () => {
     for (const profile of PROFILES) {
       for (const id of profile.envelopes) {
-        expect(envelopeById(id), `${profile.id} names a missing envelope ${id}`).toBeDefined();
+        expect(
+          envelopeById(id),
+          `${profile.id} names a missing envelope ${id}`,
+        ).toBeDefined();
       }
     }
   });

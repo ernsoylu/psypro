@@ -11,6 +11,23 @@
  * resolve as their inputs become available, each filling in the point it places;
  * and what is left over at the end is a cycle, reported as one.
  *
+ * # Tear streams, and why a circuit resolves at all
+ *
+ * A recirculating air system *is* a loop: the mixing box consumes return air,
+ * and return air comes from the room the mixing box feeds. One pass over a loop
+ * has no starting point, so a schematic of any real air handler would resolve to
+ * nothing.
+ *
+ * A **tear** cuts it. One point in the loop is specified rather than computed —
+ * in HVAC, always the room condition, because that is a design input and not a
+ * result — and the walk starts there. The resolver treats a tear exactly like a
+ * typed point and *ignores the edge into it*, which is what keeps the graph
+ * acyclic; the process upstream still runs, and the gap between what it produced
+ * and what was specified is reported on that process rather than swallowed. That
+ * gap is the convergence error an iterative solver would drive to zero, and a
+ * designer whose circuit does not deliver the condition they specified needs to
+ * see it.
+ *
  * # Why a graph rather than a list with an order field
  *
  * Because mixing has two inlets. A document with an outdoor-air stream and a
@@ -28,7 +45,7 @@
 import { useMemo } from 'react';
 
 import type { StatePointOutput } from '../psychro';
-import { producerOf, type StatePoint } from './usePsychStore';
+import { producerOf, tearOf, type StatePoint } from './usePsychStore';
 import { needsSecondPoint, type Process } from './useProcessStore';
 import {
   resolvePoint,
@@ -107,8 +124,9 @@ export function resolveDocument(
     if (point.position) position.set(point.point.id, point.position);
   };
 
-  // 1. The points the user typed. Independent of everything, so they go first
-  //    and they are the only place a document can begin.
+  // 1. The points the user typed, and the tears. Independent of everything, so
+  //    they go first — and a tear is exactly a typed point that also sits
+  //    downstream of something, which is what lets a loop begin anywhere.
   for (const point of points) {
     if (producerOf(point) === null) record(resolvePoint(point, ctx));
   }
@@ -151,22 +169,35 @@ export function resolveDocument(
       pending.delete(process.id);
       progressed = true;
 
-      // The point this process places, filled in from what came back. A
-      // process that failed hands its outlet the same failure, so the panel
-      // says why the point is missing rather than showing an empty marker.
-      if (process.toId) {
-        if (resolved.outlet && resolved.to) {
-          const point = byId.get(process.toId);
-          if (point) {
-            record({
-              point,
-              state: resolved.outlet,
-              position: resolved.to,
-              error: null,
+      // The points this process places, filled in from what came back. A
+      // process that failed hands its outlets the same failure, so the panel
+      // says why a point is missing rather than showing an empty marker.
+      for (const outletId of [process.toId, process.toSecondId]) {
+        if (!outletId) continue;
+        const point = byId.get(outletId);
+        if (!point) continue;
+
+        // A tear keeps its own specified state, and what the process produced is
+        // compared against it rather than replacing it. Overwriting would close
+        // the loop the tear exists to cut.
+        if (tearOf(point) !== null) {
+          const specified = resolvedPoints.get(outletId)?.state;
+          if (specified && resolved.outlet) {
+            resolvedProcesses.set(process.id, {
+              ...resolvedProcesses.get(process.id)!,
+              tearMismatch: {
+                dryBulb: specified.dbt - resolved.outlet.dbt,
+                humidityRatio: specified.humidity_ratio - resolved.outlet.humidity_ratio,
+              },
             });
           }
+          continue;
+        }
+
+        if (resolved.outlet && resolved.to) {
+          record({ point, state: resolved.outlet, position: resolved.to, error: null });
         } else {
-          failPoint(process.toId, resolved.error ?? ctx.messages.unresolvedProcess);
+          failPoint(outletId, resolved.error ?? ctx.messages.unresolvedProcess);
         }
       }
     }
@@ -179,7 +210,9 @@ export function resolveDocument(
     const process = processes.find((p) => p.id === id);
     if (!process) continue;
     resolvedProcesses.set(id, failedProcess(process, ctx.messages.circular));
-    if (process.toId) failPoint(process.toId, ctx.messages.circular);
+    for (const outletId of [process.toId, process.toSecondId]) {
+      if (outletId) failPoint(outletId, ctx.messages.circular);
+    }
   }
 
   // 4. A derived point whose process was deleted outright has nothing to place

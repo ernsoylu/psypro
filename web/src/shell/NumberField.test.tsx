@@ -192,10 +192,7 @@ describe('a field with a unit dropdown', () => {
       />,
     );
 
-    await user.selectOptions(
-      screen.getByLabelText('Unit for Dry-air mass flow'),
-      'm3/h',
-    );
+    await user.selectOptions(screen.getByLabelText('Unit for Dry-air mass flow'), 'm3/h');
     const input = screen.getByLabelText('Dry-air mass flow');
     await user.clear(input);
     await user.type(input, '3600');

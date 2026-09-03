@@ -1083,3 +1083,145 @@
   font-size: var(--font-size-section);
   line-height: 1.4;
 }
+
+/* ── The circuit designer ───────────────────────────────────────────────── */
+
+/*
+ * React Flow ships its own stylesheet for the mechanics — the viewport
+ * transform, the handles' hit areas, the edge paths. Everything below is the
+ * *appearance*, and it goes through the palette variables like every other
+ * surface here, so a fork rebrands the schematic by editing `theme.css` alone.
+ */
+.schematic-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--color-surface);
+}
+
+.react-flow__attribution {
+  /* Kept, because the licence asks for it and the licence is why the library is
+     here. Quietened so it does not compete with the drawing. */
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  opacity: 0.5;
+}
+
+.block-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 168px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-label);
+}
+
+.block-node.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.block-node.has-error {
+  border-color: var(--color-danger);
+}
+
+/*
+ * A block that carries no psychrometric process is drawn as one: dashed and
+ * quieter. §4.7 is explicit that a filter is not a process vector, and a block
+ * that looked like a coil would imply one.
+ */
+.block-node--inert {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+/* A boundary is where air enters or leaves the drawing, not equipment. */
+.block-node--boundary {
+  border-style: solid;
+  border-width: 2px;
+}
+
+.block-node__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.block-node__title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-node__badge {
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+}
+
+.block-node__detail {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-section);
+}
+
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--color-surface-raised);
+  background: var(--color-accent);
+}
+
+.react-flow__edge-path {
+  stroke: var(--color-text-muted);
+}
+
+/*
+ * A torn wire is drawn differently because it *is* different: the stream is
+ * specified rather than computed, and the drawing would be a lie about the
+ * system if the two looked the same.
+ */
+.wire--tear .react-flow__edge-path {
+  stroke: var(--color-accent);
+  stroke-dasharray: 6 4;
+}
+
+.react-flow__edge-text {
+  fill: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-6) var(--space-4);
+}
+
+.palette__item {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-section);
+  cursor: pointer;
+}
+
+.palette__item:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.palette__item:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}

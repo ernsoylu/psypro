@@ -114,6 +114,25 @@ vi.mock('../psychro', () => {
     // Flow-weighted, because that is what mixing *is* — and because a mock
     // that ignored the flows could not tell whether changing one moved the
     // train, which is the property the cycle test asserts.
+    // Adds the sensible gain as ten degrees a kilowatt, which is nonsense as
+    // physics and exactly right as a mock: what is under test is whether the
+    // room's outlet moves when its inlet does.
+    apply_room_load: (i: StatePointInput, qs: number) => {
+      const t = take(i);
+      return {
+        outlet: state(t.dbt + qs / 2, t.val2),
+        load: load(),
+        near_saturation: false,
+      };
+    },
+    apply_split: (i: StatePointInput, fraction: number, mdot: number) => {
+      const t = take(i);
+      return {
+        outlet: state(t.dbt, t.val2),
+        mdot_first: mdot * fraction,
+        mdot_second: mdot * (1 - fraction),
+      };
+    },
     apply_mixing: (i: StatePointInput, ma: number, j: StatePointInput, mb: number) => {
       const a = take(i);
       const b = take(j);
@@ -156,15 +175,19 @@ vi.mock('../psychro', () => {
 const {
   addProcessFrom,
   adoptFit,
+  connect,
   linkPoints,
   materialiseCycle,
   removePoint,
   removeProcess,
+  tearAt,
+  wouldCloseLoop,
 } = await import('./document');
 const { resolveDocument } = await import('./useResolvedDocument');
-const { usePsychStore, isDerived, producerOf, resetIdCounter } =
+const { usePsychStore, isDerived, isTear, producerOf, resetIdCounter } =
   await import('./usePsychStore');
 const { useProcessStore, resetProcessIdCounter } = await import('./useProcessStore');
+const { layoutDocument, COLUMN } = await import('./useSchematicStore');
 const { ChartLayout, InputState } = await import('../psychro');
 
 const MESSAGES = {
@@ -494,5 +517,197 @@ describe('putting a solved cycle on the chart', () => {
     useProcessStore.getState().updateProcess(mix!.id, { mdot: 1.6, mdotSecond: 0.17 });
     const after = resolve().processesById.get(coil!.id)?.outlet?.dbt;
     expect(after).not.toBe(before);
+  });
+});
+
+describe('building a circuit', () => {
+  it('splits one stream into two wires carrying the same state', () => {
+    const from = seed('RA', 24);
+    const id = addProcessFrom(from, 'split', actions());
+    const process = useProcessStore.getState().processes.find((p) => p.id === id)!;
+
+    // Two outlets, both real points: a relief damper and a recirculation path
+    // are different wires even though they carry identical air.
+    expect(process.toId).toBeTruthy();
+    expect(process.toSecondId).toBeTruthy();
+    expect(process.toId).not.toBe(process.toSecondId);
+
+    const document = resolve();
+    expect(document.pointsById.get(process.toId!)?.state?.dbt).toBeCloseTo(24, 6);
+    expect(document.processesById.get(id)?.mdotFirst).toBeCloseTo(0.5, 6);
+    expect(document.processesById.get(id)?.mdotSecond).toBeCloseTo(0.5, 6);
+  });
+
+  it('rewires an inlet, dropping the wire it replaced', () => {
+    const oa = seed('OA', 30);
+    const other = seed('RA', 20);
+    const coil = addProcessFrom(oa, 'sensible', actions());
+    const stray = addProcessFrom(other, 'sensible', actions());
+    const strayOutlet = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === stray)!.toId!;
+    const before = usePsychStore.getState().points.length;
+
+    connect(strayOutlet, coil, 'from');
+
+    expect(useProcessStore.getState().processes.find((p) => p.id === coil)!.fromId).toBe(
+      strayOutlet,
+    );
+    // OA was typed, so it stays: only a *derived* point left dangling by a
+    // rewire is dropped, and OA is a boundary the user stated.
+    expect(usePsychStore.getState().points).toHaveLength(before);
+    expect(usePsychStore.getState().points.some((p) => p.id === oa)).toBe(true);
+  });
+
+  it('sees that feeding a stream back into its own upstream closes a loop', () => {
+    const oa = seed('OA', 20);
+    const mix = addProcessFrom(oa, 'mix', actions());
+    const mixOutlet = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === mix)!.toId!;
+    const room = addProcessFrom(mixOutlet, 'load', actions());
+    const returnAir = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === room)!.toId!;
+
+    // Return air into the mixing box is the shape of every recirculating air
+    // system, and it is a loop.
+    expect(wouldCloseLoop(returnAir, mix)).toBe(true);
+    // While a stream that is not downstream of the mixing box is not.
+    expect(wouldCloseLoop(oa, mix)).toBe(false);
+  });
+
+  it('resolves a recirculating circuit once the loop is torn', () => {
+    const oa = seed('OA', 30);
+    const mix = addProcessFrom(oa, 'mix', actions());
+    const mixOutlet = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === mix)!.toId!;
+    const room = addProcessFrom(mixOutlet, 'load', actions());
+    const returnAir = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === room)!.toId!;
+
+    // Close the loop, and nothing resolves: the mixing box waits on return air
+    // that waits on the room that waits on the mixing box.
+    connect(returnAir, mix, 'second');
+    expect(resolve().processesById.get(mix)?.error).toBe(MESSAGES.circular);
+
+    // Tear it at the return-air condition — which is what a designer states
+    // rather than computes — and the whole circuit resolves in one pass.
+    tearAt(returnAir, room, actions());
+    const point = usePsychStore.getState().points.find((p) => p.id === returnAir)!;
+    expect(isTear(point)).toBe(true);
+    expect(isDerived(point)).toBe(false);
+
+    const document = resolve();
+    expect(document.processesById.get(mix)?.error).toBeNull();
+    expect(document.processesById.get(room)?.error).toBeNull();
+    expect(document.pointsById.get(mixOutlet)?.state).not.toBeNull();
+  });
+
+  it('reports how far the torn stream is from what the circuit delivers', () => {
+    const oa = seed('OA', 30);
+    const mix = addProcessFrom(oa, 'mix', actions());
+    const mixOutlet = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === mix)!.toId!;
+    const room = addProcessFrom(mixOutlet, 'load', actions());
+    const returnAir = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === room)!.toId!;
+    connect(returnAir, mix, 'second');
+    tearAt(returnAir, room, actions());
+
+    // The convergence error an iterative solver would drive to zero. A designer
+    // whose circuit does not deliver the return condition they specified has a
+    // design problem, and this is it — a number, not a hidden iteration.
+    const mismatch = resolve().processesById.get(room)?.tearMismatch;
+    expect(mismatch).not.toBeNull();
+    expect(typeof mismatch!.dryBulb).toBe('number');
+  });
+});
+
+describe('laying out a circuit nobody has placed', () => {
+  /** The layout of whatever is in the stores, with nothing hand-placed. */
+  function layout(stored: Record<string, { x: number; y: number }> = {}) {
+    return layoutDocument(
+      usePsychStore.getState().points,
+      useProcessStore.getState().processes,
+      [],
+      stored,
+    );
+  }
+
+  it('gives a chart-built document a readable circuit with no placement work', () => {
+    const oa = seed('OA', 30);
+    const coil = addProcessFrom(oa, 'sensible', actions());
+    const supply = useProcessStore.getState().processes.find((p) => p.id === coil)!.toId!;
+    const room = addProcessFrom(supply, 'load', actions());
+
+    const { nodes, positions } = layout();
+
+    // Air runs left to right: the source, then each block one column on. This
+    // is what stops "bidirectional" meaning "editable from either view, but
+    // only one of them is readable".
+    expect(positions[oa]!.x).toBe(0);
+    expect(positions[coil]!.x).toBe(COLUMN);
+    expect(positions[room]!.x).toBe(2 * COLUMN);
+    // Two blocks for the two processes, one for the source, one for the state
+    // the train ends at. The state *between* the two coils is a wire, not a
+    // block — which is the mapping the whole designer rests on.
+    expect(nodes).toHaveLength(4);
+    expect(nodes.filter((n) => n.kind === 'process')).toHaveLength(2);
+  });
+
+  it('puts a mixing box downstream of both its inlets, not the first declared', () => {
+    const oa = seed('OA', 30);
+    const ra = seed('RA', 24);
+    // A recovery unit on the outdoor side, so the two inlets arrive at
+    // different depths.
+    const recovery = addProcessFrom(oa, 'recovery', actions());
+    useProcessStore.getState().updateProcess(recovery, { secondId: ra });
+    const preconditioned = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === recovery)!.toId!;
+    const mix = addProcessFrom(preconditioned, 'mix', actions());
+    useProcessStore.getState().updateProcess(mix, { secondId: ra });
+
+    // Longest path, not first-inlet: the mixing box sits past the recovery
+    // unit, even though its second inlet is a source at column zero.
+    const { positions } = layout();
+    expect(positions[mix]!.x).toBeGreaterThan(positions[recovery]!.x);
+  });
+
+  it('keeps a hand-placed block where it was put', () => {
+    const oa = seed('OA', 30);
+    const coil = addProcessFrom(oa, 'sensible', actions());
+    const { positions } = layout({ [coil]: { x: 999, y: 42 } });
+    expect(positions[coil]).toEqual({ x: 999, y: 42 });
+    // And everything else is still laid out around it.
+    expect(positions[oa]).toEqual({ x: 0, y: 0 });
+  });
+
+  it('lays out a torn circuit rather than looping forever on it', () => {
+    const oa = seed('OA', 30);
+    const mix = addProcessFrom(oa, 'mix', actions());
+    const mixOutlet = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === mix)!.toId!;
+    const room = addProcessFrom(mixOutlet, 'load', actions());
+    const returnAir = useProcessStore
+      .getState()
+      .processes.find((p) => p.id === room)!.toId!;
+    connect(returnAir, mix, 'second');
+    tearAt(returnAir, room, actions());
+
+    // Following the return duct is what would never terminate, so the layout
+    // does not follow it. The wire is still drawn; it just does not decide
+    // where anything sits.
+    // The outdoor-air source decides where the mixing box goes; the return
+    // duct, which is the edge that would never terminate, decides nothing.
+    const { positions } = layout();
+    expect(positions[mix]!.x).toBe(COLUMN);
+    expect(positions[room]!.x).toBe(2 * COLUMN);
   });
 });

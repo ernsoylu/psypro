@@ -21,6 +21,7 @@
 
 import { ChartLayout, InputState } from '../psychro';
 import { derivesOutlet, type Process } from '../store/useProcessStore';
+import type { PassThrough, Position } from '../store/useSchematicStore';
 import { nextLabel, TYPED, type StatePoint } from '../store/usePsychStore';
 
 /**
@@ -31,8 +32,14 @@ import { nextLabel, TYPED, type StatePoint } from '../store/usePsychStore';
  * has neither, so it is migrated on the way in — every point becomes typed, and
  * every process is given a freshly minted outlet point so an old document gains
  * the new behaviour instead of merely still opening.
+ *
+ * Version 3 adds the **schematic**: where each block sits on the circuit
+ * diagram, and the §4.7 components that are drawn but condition nothing. It is
+ * kept in its own section rather than folded into the points and processes,
+ * because it is presentation: a file without one still opens, and the diagram is
+ * laid out automatically.
  */
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 
 /** The file's own identifier, so a stray JSON is refused early. */
 export const FORMAT_MAGIC = 'psypro.project';
@@ -60,6 +67,20 @@ export interface ProjectFile {
   points: StatePoint[];
   /** Processes, as what they do. */
   processes: Process[];
+  /**
+   * The circuit diagram's layout, if the document has one.
+   *
+   * Optional, and it must stay optional: a document built entirely on the chart
+   * has never had a diagram, and refusing to open one would make the chart the
+   * junior view of a document that has two equal ones.
+   */
+  schematic?: SchematicSnapshot;
+}
+
+/** The schematic's own state: presentation, kept apart from the physics. */
+export interface SchematicSnapshot {
+  positions: Record<string, Position>;
+  passThroughs: PassThrough[];
 }
 
 /** Everything a save needs from the application. */
@@ -71,6 +92,7 @@ export interface ProjectSnapshot {
   realGas: boolean;
   points: StatePoint[];
   processes: Process[];
+  schematic: SchematicSnapshot;
 }
 
 /** Why a file could not be read as a project. */
@@ -92,6 +114,7 @@ export function serialise(snapshot: ProjectSnapshot, engine: string): string {
     },
     points: snapshot.points,
     processes: snapshot.processes,
+    schematic: snapshot.schematic,
   };
   // Two-space indent: a project file is a text file a user may reasonably open,
   // diff, or check into version control alongside their drawings.
@@ -198,7 +221,17 @@ export function deserialise(text: string): ProjectSnapshot {
   // second outlet for any process that legitimately has none.
   if (file.version < FORMAT_VERSION) migrateOutlets(points, processes);
 
+  // A pass-through whose wire is not in the file is not on the diagram. Same
+  // rule as a process with a missing endpoint, and for the same reason.
+  const schematic: SchematicSnapshot = {
+    positions: file.schematic?.positions ?? {},
+    passThroughs: (file.schematic?.passThroughs ?? []).filter((p) =>
+      ids.has(p.onPointId),
+    ),
+  };
+
   return {
+    schematic,
     name: String(file.name ?? ''),
     isSi: document.isSi !== false,
     altitude: String(document.altitude ?? '0'),

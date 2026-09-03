@@ -31,10 +31,7 @@ export function pointsToCsv(
 
   const columns = format(resolved[0]!);
   const header = ['Point', ...columns.map((c) => `${c.label} (${c.unit})`)];
-  const rows = resolved.map((p) => [
-    p.point.label,
-    ...format(p).map((c) => c.value),
-  ]);
+  const rows = resolved.map((p) => [p.point.label, ...format(p).map((c) => c.value)]);
 
   return [header, ...rows].map((r) => r.map(cell).join(',')).join('\n') + '\n';
 }
