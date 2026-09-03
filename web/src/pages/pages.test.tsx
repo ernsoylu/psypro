@@ -133,6 +133,34 @@ describe('the process design page', () => {
     expect(load).toBeGreaterThan(25);
   });
 
+  it('carries a selection from the circuit to the chart, because it is one document', async () => {
+    const user = userEvent.setup();
+    usePsychStore.getState().addPoint({
+      label: 'OA',
+      dryBulb: 35,
+      mode: InputState.DbtRh,
+      secondValue: 40,
+    });
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Process design' }));
+
+    const inspector = within(
+      screen.getByRole('complementary', { name: 'Component inspector' }),
+    );
+    await user.click(inspector.getByRole('button', { name: 'Cooling coil (ADP + bypass)' }));
+    const placed = useProcessStore.getState().processes[0]!.id;
+
+    // Back on the chart, the same process is selected — the block and the vector
+    // are the same object, so there is no synchronisation to get wrong.
+    await user.click(screen.getByRole('tab', { name: 'Chart' }));
+    expect(useProcessStore.getState().selectedId).toBe(placed);
+    const panel = within(screen.getByRole('complementary', { name: 'Properties' }));
+    expect(panel.getByRole('button', { name: /→/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
   it('offers the circuit editor, and a palette that needs air to start from', async () => {
     const user = userEvent.setup();
     render(<App />);

@@ -151,6 +151,9 @@ without mounting components. Three stores, split by lifetime rather than by scre
 - `usePsychStore` — the state points.
 - `useProcessStore` — the processes joining them.
 - `useStyleStore` — the line-styling matrix and theme variables.
+- `useSchematicStore` — where the circuit's blocks sit, and the §4.7 components that are
+  drawn but condition nothing. Position is presentation, so it is deliberately *not* on
+  `Process`.
 
 **The document is a graph, and it resolves in one pass.** A point is either *typed* — its two
 stored numbers — or *placed by a process*, which is what lets a train be built: the outlet of
@@ -167,6 +170,22 @@ Two consequences to keep intact:
 - Edits that touch both stores live in `store/document.ts`, not in a component. Deleting a
   process detaches its outlet when something downstream consumes it, and deleting a point walks
   the graph forward; both have outcomes no component test would catch.
+
+### The circuit designer is the same graph, drawn the other way round
+
+**A process is a block and a point is a wire.** The Process Design page's editor derives its
+nodes and edges from the document on every render and turns every gesture back into a document
+edit, so the schematic has no graph of its own to keep in step with the chart's. React Flow is
+used in its *controlled* mode for exactly this reason; letting it own the nodes would create the
+second graph this design exists to avoid.
+
+**A recirculating circuit is a loop, and the resolver walks the document once.** Loops are cut
+with a **tear**: one point is specified rather than computed (`PointSource` kind `tear`), the
+resolver ignores the edge into it, and the gap between the specified state and what the upstream
+process actually produced is reported as `tearMismatch`. That gap is the convergence error an
+iterative solver would hide. Do not "fix" it by iterating — the room condition is a design input,
+which is why the tear falls there. Tear edges are also excluded from the auto-layout walk, since
+following them is precisely what would not terminate.
 
 Rendering is a strict Z-index pipeline (`REQUIREMENTS.md` §7), Layer 0 → 4, each layer an
 independent React component so a new visual layer can be added without touching the others.

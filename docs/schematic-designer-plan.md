@@ -1,6 +1,8 @@
 # Plan — the schematic designer, and the circuit it has to draw
 
-Status: **proposal.** Branch `claude/psypro-state-points-processes-n8mves`.
+Status: **implemented.** Branch `claude/psypro-state-points-processes-n8mves`. Sections 1–3 are
+kept as written — the mapping and the tear-stream argument are the design, and both survived
+contact with the code. Section 5 records what was decided.
 
 The Process Design page draws seven fixed blocks in a row and greys out the ones the macro does
 not run. It is a picture of *one* cycle. What is wanted is an editor: drag blocks out, wire them
@@ -115,22 +117,35 @@ shown side by side and stay in step because there is nothing to keep in step.
 
 ## 4. Order
 
-| Step | Contents |
-|---|---|
-| A | `load` and `split` kinds, `toSecondId`, tear points, resolver and tests |
-| B | `useSchematicStore`, auto-layout, format 3 |
-| C | The canvas: blocks, wires, ports, palette, pan and zoom |
-| D | Selection correspondence both ways; the Design page rebuilt around it |
+| Step | Contents | State |
+|---|---|---|
+| A | `load` and `split` kinds, `toSecondId`, tear points, resolver | **done** — 4 engine cases, 6 document cases |
+| B | `useSchematicStore`, auto-layout, format 3 | **done** — 4 layout cases |
+| C | The canvas: blocks, wires, ports, palette, drag and drop | **done** |
+| D | Selection correspondence both ways | **done** — asserted across a page switch |
 
-A is answer-independent and lands first. The macro's cycle then becomes an ordinary document that
-the schematic draws, which retires the special case rather than adding a second one beside it.
+## 5. Decisions taken
 
-## 5. Open questions
+1. **`@xyflow/react`, in controlled mode.** MIT, and its tree is MIT/ISC/BSD-3; it reuses the
+   `zustand` already present rather than adding a second state library. It is used with `nodes`
+   and `edges` recomputed from the document every render, so the concern the question raised —
+   a component model that wants to own the graph — is answered by never letting it: it owns the
+   interaction and nothing else. The real cost turned out to be larger than estimated:
+   **191 kB raw, 61 kB gzipped**, which is the biggest dependency in the bundle after the engine.
+2. **The eight-field design case stays**, as the fastest path from a room load to a sized system.
+   It materialises a circuit onto the canvas rather than printing a strip, so it starts a document
+   instead of being a separate calculator.
+3. **The airside train**, plus the §4.7 pass-through blocks. The §4.8 terminal units are deferred:
+   each needs its own model and its own validation — a chilled beam must never be given a latent
+   capacity — and that is a phase of its own rather than a palette entry.
 
-1. **Hand-roll the node canvas, or take `@xyflow/react`?** It is MIT and would save perhaps 400
-   lines, at the cost of ~100 kB and a component model that wants to own the graph — which is
-   exactly the thing this plan says the document already owns.
-2. **What happens to the eight-field design case?** It can stay as a "start a circuit from a load"
-   form that materialises a circuit, or be retired now that the circuit is directly editable.
-3. **How much palette in the first landing** — the airside train, or the terminal units of §4.8
-   as well?
+## 6. What is not done
+
+* **Side-by-side chart and circuit.** Selection crosses between the pages and the two views are
+  the same document, but they are still two tabs. A split view is the change that would make the
+  correspondence obvious rather than merely true.
+* **Pass-through blocks have a store, a layout slot and a renderer, but no way to add one** from
+  the UI yet.
+* **A fan block.** §4.7 is explicit that fan heat is not zero; it is expressible today as a
+  sensible process, but not as a fan with a pressure rise and an efficiency.
+* **Terminal units and DOAS** (§4.8), which is where the palette goes next.

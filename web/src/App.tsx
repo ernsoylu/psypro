@@ -121,6 +121,17 @@ export function App() {
   const [fileHandle, setFileHandle] = useState<FileHandle>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [cycleSent, setCycleSent] = useState(false);
+  /**
+   * Which of the two selections was made most recently.
+   *
+   * Points and processes are selected independently — the process panel adds
+   * "from the selected point", so choosing a process must not clear it — but the
+   * circuit can only highlight one block. This says which, and it is the whole
+   * of the chart-to-schematic correspondence: both views read the same two
+   * selections, so picking a coil on the circuit highlights its vector on the
+   * chart and picking the vector highlights the block.
+   */
+  const [lastSelected, setLastSelected] = useState<'point' | 'process'>('point');
 
   /**
    * The last state the canvas drew, kept for export.
@@ -387,7 +398,25 @@ export function App() {
     }
   }, [engineReady, selected, altitude, project.isSi, project.realGas]);
 
-  const { addPoint, updatePoint, selectPoint } = psych;
+  const { addPoint, updatePoint } = psych;
+
+  /** Selects a point, and remembers that a point is what was selected. */
+  const selectPoint = useCallback(
+    (id: string | null) => {
+      psych.selectPoint(id);
+      setLastSelected('point');
+    },
+    [psych],
+  );
+
+  /** Selects a process, and remembers that a process is what was selected. */
+  const selectProcess = useCallback(
+    (id: string | null) => {
+      proc.selectProcess(id);
+      setLastSelected('process');
+    },
+    [proc],
+  );
 
   /** Save, open, and the export menu. */
   const onFileAction = useCallback(
@@ -785,12 +814,12 @@ export function App() {
         // for a fitted line.
         stateOf: () => null,
       });
-      proc.selectProcess(id);
+      selectProcess(id);
       // One gesture, one process: drop back to Select so the next drag pans the
       // view rather than scattering lines across the chart.
       setTool('select');
     },
-    [addPoint, project.isSi, proc],
+    [addPoint, project.isSi, selectProcess],
   );
 
   const onPlacePoint = useCallback(
@@ -926,9 +955,9 @@ export function App() {
                 const key = PROCESS_KINDS.find(([k]) => k === process.kind)?.[1];
                 return key ? t(key) : process.kind;
               }}
-              selectedId={proc.selectedId ?? psych.selectedId}
+              selectedId={lastSelected === 'process' ? proc.selectedId : psych.selectedId}
               isSi={project.isSi}
-              onSelectProcess={proc.selectProcess}
+              onSelectProcess={selectProcess}
               onSelectPoint={selectPoint}
               onMove={schematic.setPositions}
               onConnect={onConnectBlocks}
@@ -985,7 +1014,7 @@ export function App() {
                   selectedId={psych.selectedId}
                   processes={resolvedProcesses}
                   selectedProcessId={proc.selectedId}
-                  onSelectProcess={proc.selectProcess}
+                  onSelectProcess={selectProcess}
                   protractor={protractor}
                   envelopes={envelopes}
                   weatherBins={weather.result?.bins ?? null}
@@ -1034,7 +1063,7 @@ export function App() {
                   selectedProcessId={proc.selectedId}
                   isSi={project.isSi}
                   onSelectPoint={selectPoint}
-                  onSelectProcess={proc.selectProcess}
+                  onSelectProcess={selectProcess}
                 />
               }
               producedBy={selectedProducer}
@@ -1047,7 +1076,7 @@ export function App() {
                   : undefined
               }
               onDetach={onDetachPoint}
-              onSelectProducer={proc.selectProcess}
+              onSelectProducer={selectProcess}
               onRealGasChange={project.setRealGas}
               onChange={(patch) => selected && updatePoint(selected.id, patch)}
               onAdd={() =>
