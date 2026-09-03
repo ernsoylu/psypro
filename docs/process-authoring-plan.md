@@ -1,6 +1,9 @@
 # Plan — state points, processes, and the real-world coil
 
-Status: **proposal, not yet implemented.** Branch `claude/psypro-state-points-processes-n8mves`.
+Status: **implemented**, in four commits on `claude/psypro-state-points-processes-n8mves`.
+Sections 1 and 2 are kept as written — the analysis of what was wrong and the design that
+answers it — with an implementation note against each step. Section 5 records the decisions
+taken, including one correction the tests forced.
 
 This plan answers four complaints, all of which are the same complaint seen from different
 sides: *the document is a bag of points with some arrows drawn near them, rather than an air
@@ -100,7 +103,9 @@ Four changes, in dependency order. Each is useful on its own and each is separat
 All in `crates/psychro-core`, exposed through `psychro-wasm`. No TypeScript arithmetic, per
 `CLAUDE.md` §Architecture.
 
-**A1 — `cool_to(inlet, t_target, bypass_factor, mdot_da, atm)`.**
+**A1 — `cool_to(inlet, t_target, bypass_factor, mdot_da, atm)`.** *(Implemented, with one
+correction: the dry/wet branch is decided on the **surface**, not on the target temperature —
+see the note under §5.)*
 
 * `t_target ≥ t_dp,in` → dry coil. Horizontal, `W` held, exactly what `sensible_to` does now.
 * `t_target < t_dp,in` → **wet coil**, and this is the fix. The leaving state lies on the line
@@ -241,12 +246,25 @@ document's own units.
 
 ## 3. Order of work
 
-| Step | Contents | Depends on |
+| Step | Contents | State |
 |---|---|---|
-| A | Engine: `cool_to`, `cooling` + `desiccant`, `identify`, wasm bindings, conformance tests | — |
-| B | Point provenance, document graph solver, format v2 + migration, store tests | A (for the new kinds) |
-| C | Process list, draw tool, fit-and-convert, wet-target UI, derived defaults | B |
-| D | Cycle → document, adopt-from-point, block binding | B |
+| A | Engine: `cool_to`, `cool_by_duty`, `cooling` + `desiccant`, `identify`, wasm bindings | **done** — 14 cases in `crates/psychro-core/tests/wet_cooling.rs` |
+| B | Point provenance, document graph solver, format v2 + migration | **done** — 17 cases in `web/src/store/document.test.ts` |
+| C | Outline, draw tool, fit-and-adopt, wet-target UI, derived defaults | **done** — snapping in `geometry.test.ts`, flow in `App.test.tsx` |
+| D | Cycle → document | **done** — adopt-from-point and block binding stay deferred |
+
+Two things the implementation added that the plan did not foresee:
+
+* **`cool_by_duty`.** `sensible_duty` carried the same refusal as `sensible_to`, and fixing
+  only the temperature form would have left the identical bug one field away. It turned out to
+  be the *closed-form* half of the pair — the coil's balances interpolate enthalpy exactly, so
+  the surface enthalpy inverts directly and nothing needs iterating.
+* **A secant refinement on the apparatus dew point.** The plan's closed form places the ADP by
+  the *temperature* form of the bypass factor, but a coil mixes its contacted and bypassed
+  streams on mass and energy, so the `(W, h)` chord is the definition and interpolating
+  temperature is the approximation. Without the refinement the bypass factor read back off the
+  solved coil differs in the third decimal from the one typed in the field beside it, and a
+  reader who spots that has no way to tell which of the two numbers is the lie.
 
 A is worth landing on its own: it fixes the reported physics bug and adds two missing process
 kinds without touching the document model. B is the structural change and carries the file
@@ -266,10 +284,23 @@ format. C and D are independent of each other once B lands.
 
 ## 5. Decisions taken
 
-1. **Default bypass factor for a wet cooling process: `BF = 0.1`, visible and editable.** A
-   saturated leaving state is a condition no coil actually delivers, so defaulting to it would
-   make every result quietly optimistic on latent capacity. `BF = 0` remains available by
-   typing it, and it is the ideal-coil bound the tests pin.
+1. **Default bypass factor for a wet cooling process: `BF = 0.1`, visible and editable.** The
+   decision stands; the reasoning behind it was backwards and the tests caught it. At a fixed
+   *leaving temperature* — which is how a user states a coil — zero bypass means a **warmer**
+   surface, so the air leaves saturated and the coil removes the **least** water, not the most.
+   Zero therefore understates the dehumidification rather than overstating it. The intuition
+   that less bypass means more water out holds only at a fixed apparatus dew point. Ten percent
+   is right because it puts the leaving air near 90% RH, where coils are actually measured, and
+   `no_bypass_leaves_saturated_air_and_the_least_condensate` pins the direction so the
+   confusion cannot come back.
+
+   A second correction from the same test run: **the dry/wet branch is decided on the surface
+   the bypass factor implies, not on the target temperature.** Testing the target against the
+   entering dew point puts a step in the condensate at the boundary; testing the surface makes
+   it continuous, because at `t_adp = t_dp` the saturated surface humidity equals the entering
+   humidity and the wet branch meets the dry one exactly. The residual left over is 1e-7 kg/s,
+   which is the backend's own dew-point round trip; branching on the target instead steps by
+   7e-4, three orders larger.
 2. **Dragging a derived point inverts into the process parameter.** Dragging the outlet of a
    sensible process moves its target temperature; dragging an evaporative outlet moves its
    effectiveness. Kinds whose outlet is fixed by two parameters — mixing, recovery — refuse the

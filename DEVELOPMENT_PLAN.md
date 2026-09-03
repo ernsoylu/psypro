@@ -83,6 +83,7 @@ that an upgrade frees needs lands in frees, and PsyPro then depends on it:
 | 11 — Teaching mode | **Done** — four worked examples graded against their books, every step cited |
 | 12 — Export, import, and persistence | **Done** — round trip byte-identical; DXF audits clean under ezdxf |
 | 13 — Customization, distribution, docs | **Done** — self-hosts via `docker run`, exit-checked for real; license audit clean |
+| 14 — Process authoring and the wet coil | **Done** — the document is a graph, the draw tool draws, and a target below the dew point is a coil rather than an error. See `docs/process-authoring-plan.md` |
 
 ---
 
